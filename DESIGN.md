@@ -48,7 +48,7 @@ Use colour sparingly. Do not use colour as the primary way to categorise health 
 ## 4. Screens
 
 Welcome: headline → short explanation → subtle visual → primary action. Main: Get started → Patient setup.
-States: Loading — none expected. Broken — retry if content fails to load. Done — Get started advances to Authentication.
+States: Loading — none expected. Broken — retry if content fails to load. Done — Get started advances to Patient setup.
 
 Authentication: headline → email → email OTP → brief security reassurance. Main: Continue → persistent timeline. Authentication happens after first value in the initial V1 flow; returning users authenticate when required.
 States: Loading — verifying OTP. Broken — invalid/expired OTP or delivery failure with retry. Done — authenticated; continue to patient setup or restore record.
@@ -63,10 +63,10 @@ States: Recording — “Listening…” while the user speaks; do not show live
 
 **V1 voice constraint:** voice recordings are limited to 30 seconds per capture. The product must not silently truncate longer recordings.
 AI interpretation: patient → event → date/time → relevant structured info → Edit/Save. Main: Save → First value → Authentication.
-States: Loading — “Understanding what you told me…” with no editable assumptions shown yet. Broken — AI cannot reliably identify patient/date/event: ask a specific question rather than guess, e.g. “Which person is this about?” / “What day did this happen?” AI failure: allow retry or edit manually. Done — interpretation shown for confirmation; Save only after user confirms.
+States: Loading — “Understanding what you told me…” with no editable assumptions shown yet. Broken — AI cannot reliably identify patient/date/event: ask a specific question rather than guess, e.g. “Which person is this about?” / “What day did this happen?” AI failure: allow retry or edit manually. Done — interpretation shown for confirmation; Save confirms the first value; email + OTP authentication follows before the health record becomes persistent.
 
 Patient timeline: patient → Add update → optional summary → chronological events. Main: Add update → Capture.
-States: Loading — timeline skeleton while events load. Broken — “We couldn’t load the timeline. Try again.” Empty — explain that no health events have been saved yet, with Add update as the primary action. Done — chronological health events displayed, newest first.
+States: Loading — timeline skeleton while events load. Broken — “We couldn’t load the timeline. Try again.” Empty — explain that no health events have been persisted yet, with Add update as the primary action. Done — chronological health events displayed, newest first.
 
 AI summary/doctor brief: period → overall progress → changes → measurements → notable events → questions/observations → Review/Share. Main: Review & share → Share.
 States: Loading — “Preparing your health summary…” Broken — explain that the summary couldn’t be generated; retry without losing events. Empty — “There’s nothing to summarise for this period yet.” If only 1–2 events — show the available information and explicitly say the summary is based on limited updates. Done — summary ready for review; Share becomes available.

@@ -430,7 +430,9 @@ The first value is not the dashboard.
 
 It is:
 
-> **The first health event successfully captured and saved to the patient's timeline.**
+> **The first health event successfully captured, confirmed and shown as the start of the patient's health story.**
+
+The first event is demonstrated before authentication. It becomes part of the persistent health record only after the user completes email + OTP authentication.
 
 Example:
 
@@ -495,31 +497,7 @@ Removes:
 
 ---
 
-#### 2. Authenticate
-
-User is asked to securely create/access their account.
-
-Preferred V1 hypothesis:
-
-> **Enter your mobile number**
->
-> [Continue]
-
-Then:
-
-> **Enter OTP**
-
-Authentication establishes the caregiver's identity and creates/accesses the account under which the family health record will persist.
-
-Removes:
-
-> "Will my information still be there when I come back?"
-
-Authentication should be lightweight and should not require a password or lengthy profile setup.
-
----
-
-#### 3. Create first patient
+#### 2. Create first patient
 
 Ask:
 
@@ -536,7 +514,24 @@ Answer: No.
 
 ---
 
-#### 4. First capture
+#### 3. First capture
+
+Ask:
+
+> **Who are you keeping track of?**
+
+- Name
+- Relationship
+
+Removes:
+
+> "Do I need to build a complete medical profile?"
+
+Answer: No.
+
+---
+
+#### 3. First capture
 
 Immediately ask:
 
@@ -556,7 +551,7 @@ Removes:
 
 ---
 
-#### 5. AI interpretation
+#### 4. AI interpretation
 
 Show exactly what the product understood.
 
@@ -576,7 +571,7 @@ Removes:
 
 ---
 
-#### 6. First value
+#### 5. First value
 
 After saving:
 
