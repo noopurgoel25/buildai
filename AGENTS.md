@@ -12,7 +12,7 @@ Third party:
 - **Convex** — application backend, database, server-side functions/actions, authentication integration and server-side secrets. Keys/configuration live in Convex environment variables.
 - **Convex Auth** — email-based authentication and OTP login. V1 uses email + OTP only; no mobile-number authentication and no password.
 - **Sarvam AI / Saaras v4** — voice transcription for spoken health updates. V1 uses the REST Speech-to-Text API with `model="saaras:v4"` and keyterm prompting. API credentials live in Convex environment variables.
-- **OpenAI** — GPT-6-Astra for health-event interpretation, clarification, summaries and doctor briefs. The AI call runs server-side in a Convex action. API credentials live in Convex environment variables.
+- **OpenAI** — GPT-6 Astra for health-event interpretation, clarification, summaries and doctor briefs. The AI call runs server-side in a Convex action. API credentials live in Convex environment variables.
 
 Not in v1:
 - Mobile-number authentication
@@ -78,7 +78,7 @@ Before I share the link: I open it on my phone, logged out, on mobile data, and 
 
 ## 4. The AI call
 
-Model: GPT-6-Astra, thinking medium.
+Model: GPT-6 Astra, thinking medium.
 
 What goes in, and its limit:
 - For voice input, Sarvam AI transcribes the user's spoken update before the health-event interpretation call.
