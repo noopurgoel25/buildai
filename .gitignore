@@ -1,0 +1,11 @@
+
+.env.local
+node_modules/
+dist/
+test-results/
+playwright-report/
+.impeccable/review/
+.agents/
+public/build-sprint/portrait.png
+design/passport-portrait-style-anchor.md
+design/portrait.png

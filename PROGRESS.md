@@ -1,4 +1,2 @@
-[date] Milestone [n] 
-done: [what works now]. 
-Decided: [ ]. 
-Still broken: [or "nothing known"].
+2026-10-05 Milestone 1 confirmed working on phone: landing page and Get started → patient-setup entry. No signup before first value. Local preview checked; commit, push and deploy pending because this folder has no Git repository or configured deployment command.
+2026-10-05 Milestone 2 confirmed working on phone: temporary name and caregiver relationship, validation, Back preserves details, Continue → capture entry. Both browser tests and production build passed. GitHub and Convex hosting configured for publishing milestones 1–2; deployment target is aware-starfish-233.convex.site.

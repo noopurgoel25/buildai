@@ -56,6 +56,8 @@ States: Loading — verifying OTP. Broken — invalid/expired OTP or delivery fa
 Patient setup: name → relationship → reassurance no medical profile. Main: Continue → First Capture.
 States: Loading — none expected. Broken — save failure with retry; preserve entered details. Done — patient created; move to First Capture.
 
+Milestone 2 implementation: patient identity is a temporary draft held in the open page, not a stored patient record. Ask for their name and the caregiver's relationship in text fields. Empty entries show a specific correction message and preserve the other entered details. Continue opens the capture entry; Back preserves the draft. Refresh clears it, with this limitation explained on screen. Permanent storage follows email + OTP authentication in milestone 6; voice/text capture is milestone 3.
+
 Capture: patient → What happened? → voice-first → text. Main: Tell me → record → stop → transcribe → AI interpretation.
 States: Recording — “Listening…” while the user speaks; do not show live transcription. Transcribing — “Transcribing…” after the user stops. Broken — mic blocked: explain permission and offer text input; empty/unusable recording: “I couldn’t hear anything. Try again or type it instead.” Recording over 30 seconds: ask the user to record a shorter update; never silently truncate. Done — transcript received; move to AI interpretation.
 
