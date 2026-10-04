@@ -1,0 +1,107 @@
+# DESIGN.md
+
+Read this before building or changing any screen. If a choice isn't covered here, ask me instead of guessing.
+
+## 1\. The feeling, in labels
+
+* **Calm reassurance** — The product should reduce caregiver anxiety, not feel like a clinical dashboard.
+* **Warm trust** — Friendly, human and approachable, while still feeling credible enough for health information.
+* **Quiet intelligence** — AI should make the experience easier without making the product feel like a chatbot.
+* **Effortless capture** — Speaking or typing an update should feel easier than maintaining a health diary.
+* **Evidence clarity** — Health information should be easy to understand, verify and distinguish from AI interpretation.
+
+## 2\. References, one per component
+
+**Welcome / onboarding:** Headspace  
+Take: Warmth, approachable language, generous whitespace, rounded surfaces and one clear primary action.  
+Ignore: Meditation/wellness imagery, content merchandising and its distinctive brand colours.
+
+**Health data / timeline:** Withings Health Mate  
+Take: Strong information hierarchy, clear health-data presentation, restrained navigation and easy scanning of historical information.  
+Ignore: Device-centric metrics, health scores, achievement mechanics and the broader connected-device ecosystem.
+
+**AI confirmation / summary:** Combine the above principles rather than copying either product.  
+Take: Short, human language; clear hierarchy; visible evidence; one obvious decision at a time.  
+Ignore: Chatbot-style interfaces, avatars, gamification and decorative AI effects.
+
+The product should feel inspired by these systems, not visually imitate them.
+
+## 3\. Type and colour
+
+Font: **Inter**
+
+Sizes:
+
+* **32 px** — primary screen headline
+* **22 px** — section/patient/summary heading
+* **16 px** — body, input and button text
+* **13 px** — metadata and supporting information
+
+Colours:
+
+* **Text:** #24302D on **background:** #F8F7F3
+* **Surfaces:** #FFFFFF
+* **Secondary surface:** #F1F0EA
+* **Accent:** #2F7D72, primarily for the main action and selected states
+* **Errors:** #B54747
+* **Secondary text:** #68736F
+
+Use colour sparingly. Do not use colour as the primary way to categorise health events or communicate whether a health condition is "good" or "bad."
+
+## 4\. Screens
+
+Welcome: headline → short explanation → subtle visual → primary action. Main: Get started → Authentication.
+States: Loading — none expected. Broken — retry if content fails to load. Done — Get started advances to Authentication.
+
+Authentication: headline → email → email OTP → brief security reassurance. Main: Continue → patient setup or returning record.
+States: Loading — verifying OTP. Broken — invalid/expired OTP or delivery failure with retry. Done — authenticated; continue to patient setup or restore record.
+
+Patient setup: name → relationship → reassurance no medical profile. Main: Continue → First Capture.
+States: Loading — none expected. Broken — save failure with retry; preserve entered details. Done — patient created; move to First Capture.
+
+Capture: patient → What happened? → voice-first → text. Main: Tell me → record → stop → transcribe → AI interpretation.
+States: Recording — “Listening…” while the user speaks; do not show live transcription. Transcribing — “Transcribing…” after the user stops. Broken — mic blocked: explain permission and offer text input; empty/unusable recording: “I couldn’t hear anything. Try again or type it instead.” Recording over 30 seconds: ask the user to record a shorter update; never silently truncate. Done — transcript received; move to AI interpretation.
+
+**V1 voice constraint:** voice recordings are limited to 30 seconds per capture. The product must not silently truncate longer recordings.
+AI interpretation: patient → event → date/time → relevant structured info → Edit/Save. Main: Save → Timeline.
+States: Loading — “Understanding what you told me…” with no editable assumptions shown yet. Broken — AI cannot reliably identify patient/date/event: ask a specific question rather than guess, e.g. “Which person is this about?” / “What day did this happen?” AI failure: allow retry or edit manually. Done — interpretation shown for confirmation; Save only after user confirms.
+
+Patient timeline: patient → Add update → optional summary → chronological events. Main: Add update → Capture.
+States: Loading — timeline skeleton while events load. Broken — “We couldn’t load the timeline. Try again.” Empty — explain that no health events have been saved yet, with Add update as the primary action. Done — chronological health events displayed, newest first.
+
+AI summary/doctor brief: period → overall progress → changes → measurements → notable events → questions/observations → Review/Share. Main: Review \& share → Share.
+States: Loading — “Preparing your health summary…” Broken — explain that the summary couldn’t be generated; retry without losing events. Empty — “There’s nothing to summarise for this period yet.” If only 1–2 events — show the available information and explicitly say the summary is based on limited updates. Done — summary ready for review; Share becomes available.
+
+V1 should feel like one continuous journey, not a collection of feature screens.
+
+## 5\. The first screen's words
+
+Headline: **Remember what happens between doctor visits.**
+
+Under it: **Tell us what happened to someone you care for. We'll remember it for the next appointment.**
+
+Button: **Get started** → Authentication.
+
+Do not lead with "AI", "tracking", "health records", "medical data" or "Family Health OS." Lead with the user's outcome: **not having to remember everything alone.**
+
+## 6\. Principles
+
+* **One screen, one job.**
+* **The health record is the product; features should enrich it, not compete with it.**
+* **Capture before categorise.** Never make the user choose a medical category before speaking or typing.
+* **AI shows what it understood before anything is saved.**
+* **Evidence over inference.** Preserve whether information was measured, reported, observed or documented.
+* **Never imply diagnosis or treatment advice in V1.**
+* **Voice is the fastest path; text is always available.** V1 uses record → stop → transcribe; never imply live transcription or real-time AI understanding.
+* **Do not make the user maintain the app.** No required daily check-ins, streaks or scores.
+* **The timeline is more important than a dashboard.** V1 is about remembering events.
+* **Use progressive disclosure.** Ask for additional medical/contextual information only when it helps the current task.
+* **The caregiver controls recording, editing, deletion and sharing.**
+* **Authentication protects persistent health information.** No permanent anonymous health record.
+* **Keep AI embedded in the workflow rather than creating a separate chatbot destination.**
+* **Keep visual density low.** Important health information should be scannable in seconds.
+* **Do not use colour to create clinical "good/bad" states.**
+* **Design for imperfect information.** Missing dates and uncertain observations are normal and should be represented honestly.
+* **Design for the second visit.** Returning to the same patient and continuing the same health story is a core success condition.
+* **Keep future Family Health OS complexity invisible in V1.**
+
