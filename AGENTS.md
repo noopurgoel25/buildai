@@ -95,8 +95,6 @@ Reply cap: max_output_tokens 500.
 
 Calls cap: at most 100 AI calls an hour across the app, checked server-side in Convex.
 
-Provider limit: a hard monthly OpenAI spend limit of [$ amount], set by me.
-
 When a cap is hit or the call fails:
 - Show: **"Busy right now. Try again in a few minutes."**
 - Do not save an unverified AI interpretation as a permanent health event.
