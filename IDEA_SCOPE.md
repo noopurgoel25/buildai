@@ -54,7 +54,8 @@ Who they trust on this decision: Themselves and the doctor.
 Would they pay? (what exists today that people pay for): Maybe; Apps like Eka Care exist which store patients historical and latest reports, scans and health data like heart rate from wearables but the UX is extremely poor and not user friendly. They have random ads on every page and journey and a banner to prompt to upgrade to paid plan. They also don't have the option to add change in symptoms with date stamp which can be recorded and assimilated to show some trend in patient's health.
 
 PRODUCT
-Onboarding 
+Onboarding:
+The user should experience the core value before being asked to sign up. Landing → patient setup → capture → AI interpretation → confirmation → first value → email + OTP authentication → persistent health record.
 
 The core loop (user stories, written by me):
 1. \*\*Something happens.\*\*
@@ -107,22 +108,15 @@ AI identifies the relevant patient, event type, information and date/time.
 
 5\. \*\*The caregiver confirms or corrects it.\*\*
 
-6\. \*\*The product saves the event to the patient's health timeline.\*\*
+6\. \*\*The product confirms the event, shows it as the first item in the patient's health story, then asks the caregiver to authenticate before making the record persistent.\*\*
 
 7\. \*\*The caregiver continues with their day.\*\*
 
-
-
 &#x20;  No forms.
-
-
 
 &#x20;  No required daily check-in.
 
-
-
 &#x20;  No need to categorize the event manually.
-
 
 
 8\. \*\*More events accumulate naturally.\*\*
@@ -131,15 +125,9 @@ AI identifies the relevant patient, event type, information and date/time.
 
 10\. \*\*AI organizes the accumulated information.\*\*
 
-
-
 &#x20;   Example:
 
-
-
 > "Mom reported dizziness 3 times since 14 September. Episodes were recorded primarily after meals. BP has decreased overall during the same period."
-
-
 
 11\. \*\*Before the doctor visit, the caregiver asks the product to share a summary since the last visit/or from an earlier date\*\*
 
@@ -152,7 +140,6 @@ AI identifies the relevant patient, event type, information and date/time.
 15\. \*\*The caregiver enters the next care period with the previous history preserved.\*\*
 
 
-
 \### The job done, in their terms
 
 
@@ -163,11 +150,7 @@ The AI-first part (onboarding, engagement or the core loop):
 
 AI converts the update into a structured health event
 
-
-
 The event should capture, where available:
-
-
 
 \* Patient
 
@@ -185,27 +168,12 @@ The event should capture, where available:
 
 \* Source
 
-
-
 The AI must preserve uncertainty.
 
-
-
 Example:
-
-
-
 > "Mom seems much better."
-
-
-
 should remain a caregiver observation, not become:
-
-
-
 > "Patient's condition improved."
-
-
 
 MARKET
 Competitors: Eka Care (not the same use case)

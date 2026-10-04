@@ -11,8 +11,8 @@ Database: The product needs to remember the caregiver account, family, patient/p
 Third party:
 - **Convex** — application backend, database, server-side functions/actions, authentication integration and server-side secrets. Keys/configuration live in Convex environment variables.
 - **Convex Auth** — email-based authentication and OTP login. V1 uses email + OTP only; no mobile-number authentication and no password.
-- **Sarvam AI / Saaras v4** — voice transcription for spoken health updates. V1 uses the REST Speech-to-Text API with `model="saaras:v4"` and keyterm prompting. API credentials live in Convex environment variables.
-- **OpenAI** — GPT-6 Astra for health-event interpretation, clarification, summaries and doctor briefs. The AI call runs server-side in a Convex action. API credentials live in Convex environment variables.
+- **Sarvam AI** — voice transcription for spoken health updates. API credentials live in Convex environment variables.
+- **OpenAI** — GPT-6-Astra for health-event interpretation, clarification, summaries and doctor briefs. The AI call runs server-side in a Convex action. API credentials live in Convex environment variables.
 
 Not in v1:
 - Mobile-number authentication
@@ -55,9 +55,9 @@ When I report a bug, I'll name the part. Look there first, and tell me if you th
 
 ## 3. Shipping
 
-Live link: [aware-starfish-233.convex.site]
+Live link: [your .convex.site link]
 
-Repo: [github.com/noopurgoel25/buildai], public
+Repo: [github.com/you/your-repo], public
 
 Deploy: npm run deploy. A push never deploys by itself. After I say a milestone works: commit, push, then deploy.
 
@@ -78,7 +78,7 @@ Before I share the link: I open it on my phone, logged out, on mobile data, and 
 
 ## 4. The AI call
 
-Model: GPT-6 Astra, thinking medium.
+Model: GPT-6-Astra, thinking medium.
 
 What goes in, and its limit:
 - For voice input, Sarvam AI transcribes the user's spoken update before the health-event interpretation call.
@@ -95,12 +95,14 @@ Reply cap: max_output_tokens 500.
 
 Calls cap: at most 100 AI calls an hour across the app, checked server-side in Convex.
 
+Provider limit: a hard monthly OpenAI spend limit of [$ amount], set by me.
+
 When a cap is hit or the call fails:
 - Show: **"Busy right now. Try again in a few minutes."**
 - Do not save an unverified AI interpretation as a permanent health event.
 - The user's original input must not be silently discarded.
 
-Login: Email authentication with OTP through Convex Auth is required before the first permanent health event is saved. Returning users authenticate when required and are returned to their existing patient/timeline; they do not repeat patient setup.
+Login: Email authentication with OTP through Convex Auth happens after the user reaches first value in the initial V1 flow. The user can experience the core capture → AI interpretation → confirmation flow before signup; authentication is required before the health record is made persistent. Returning users authenticate when required and are returned to their existing patient/timeline; they do not repeat patient setup.
 
 The AI must never:
 - Give a medical diagnosis.
@@ -119,69 +121,33 @@ If the patient or date is ambiguous, ask a specific clarification question rathe
 
 Voice input: The user can speak a health update from the phone.
 
-Transcription provider: **Sarvam AI — Saaras v4**.
-
-V1 API: **Sarvam Speech-to-Text REST API** using `model="saaras:v4"`.
-
-Mode: **`transcribe`** by default. Preserve the original spoken language rather than translating the user's health update to English.
-
-Keyterm prompting:
-- Use Saaras v4 `keyterms` to bias recognition toward relevant domain-specific terms.
-- Maximum 50 distinct keyterms per request.
-- Maximum 64 characters per keyterm.
-- Send phrases as one keyterm, not comma-separated terms.
-- Keyterms improve recognition but do not guarantee that the term appears in the transcript.
-- Build the request's keyterm set from a small, relevant vocabulary; do not send unnecessary patient health information to Sarvam.
-- Prefer medically relevant terms, medication names, condition names, clinician/hospital names and other terms likely to be difficult for speech recognition.
-- Never treat a keyterm as evidence that the user actually said that term.
-
-REST limit: Maximum 30 seconds of audio per request. V1 should therefore keep voice captures within this limit and handle longer recordings as an explicit product constraint rather than silently truncating them.
-
-Not in V1: Sarvam Realtime STT, streaming transcription, Batch STT, speech-to-English translation and Sarvam text-generation APIs.
+Transcription provider: Sarvam AI.
 
 Key: SARVAM_API_KEY in Convex environment variables, dev and prod.
 
-Where it runs: Server-side. The interface sends the recording through the application's backend flow; the Sarvam API key is never exposed to the browser.
-
-V1 voice flow:
-1. User taps the voice action and records an update.
-2. User stops recording.
-3. The recording is sent to the server-side transcription flow.
-4. Saaras v4 returns the transcript.
-5. The transcript is passed to GPT-6-Astra for health-event interpretation.
-6. The user reviews the interpretation.
-7. Only after confirmation is the health event saved.
-
-Important distinction:
-- **Audio is not a health event.**
-- **Transcript is not a health event.**
-- **AI interpretation is not a confirmed health fact.**
-- Only the user-confirmed structured event becomes part of the permanent health record.
+Where it runs: Server-side. The interface sends the recording/input through the application's backend flow; API credentials are never exposed to the browser.
 
 While recording/transcribing:
-- Show a recording/transcribing state, not live transcription.
-- Do not imply that words are being understood in real time.
-- After transcription completes, show the captured text or proceed to the AI interpretation state.
+- Show a clear listening/transcription state.
+- Do not show live transcription in V1; show transcription after recording stops.
+- Let the user stop, retry or switch to text.
 
 If microphone access is blocked:
 - Explain that microphone permission is required for voice capture.
 - Provide text input as an immediate alternative.
 
-If the recording is empty, unusable or transcription fails:
-- Say that nothing usable was captured.
+If the recording is empty or transcription produces no usable text:
+- Say that nothing was captured.
 - Offer retry and text input.
 - Never create an empty health event.
-
-If the audio exceeds the V1 limit:
-- Tell the user the recording is too long and ask them to record a shorter update.
-- Do not silently truncate the recording.
 
 ## 6. Product rules the agent must preserve
 
 - The record is the product; features enrich the patient's persistent health story.
 - Capture before categorise.
 - Voice is the fastest path; text is always available.
-- AI shows what it understood before anything becomes permanent.
+- AI shows what it understood before anything is saved as a health event.
+- Do not require authentication before the first-value experience; ask for email + OTP after the user confirms the first event and before persistent storage.
 - Evidence beats inference.
 - The caregiver controls recording, editing, deleting and sharing.
 - Never silently guess the patient, date or medically significant meaning.
