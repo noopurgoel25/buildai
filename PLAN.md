@@ -23,6 +23,7 @@ Last: I can close it, reopen it, and my data is still there.
 Approved correction before milestone 7: one capture contains observations approved together in one whole-update review, with individual symptom timing and a shared device-local capture timestamp. Preserve explicit negative statements; clarify missing/conflicting timing without guessing, allow confirmed approximate/unknown timing, and save all remaining observations together. The approved CareNama redesign reduces visible bookkeeping with plain facts, optional Record details and empathetic wording across the existing flow. Milestone 7 now includes the timeline and adding further updates through the existing flow. Historical editing/deletion and additional kinds of capture remain in their existing milestones.
 
 Parked (not now):
+- [ ] Separate Summary and doctor-brief screens: evaluate after V1; keep one Summary view for now.
 - [ ] Group linked observations into one entry (for example BP with explicit no dizziness), with caregiver review of grouping; keep distinct occasions separate without inferring medical causes.
 - [ ] Multiple patients / full family management UI
 - [ ] Multiple caregivers and permissions
@@ -43,3 +44,5 @@ Approved summary refinement and milestone 11 scope: a short source-linked overvi
 Current status (2026-10-06): milestones 1-11 published after user confirmation, including the compact timeline, source-linked overview and sign-in recheck correction. Next: milestone 12, concise doctor-ready brief based only on the selected patient’s saved notes for a chosen period.
 
 Approved milestone 12 scope: generate a concise patient-bound doctor brief for a chosen occurrence-date period, accessible from the timeline or prepared summary. Reuse the owner-checked, bounded Sarvam summary snapshot; preserve source-linked progress, explicit reported improvement/worsening/new symptoms, other observations, exact measurements and recorded care wording. Discussion points use recorded questions or supported overview sources, not invented medical questions. Uncertain dates stay separate, and sparse/empty/oversized/error states remain honest. Up to three facts per section are shown initially; all remaining facts remain available in a disclosure. No saved brief, correction or sharing controls until milestones 13/14.
+
+Approved V1 simplification (2026-10-06): one Summary entry and one prepared result serve everyday review and doctor visits. Remove separate doctor-visit navigation and brief preparation CTA. Keep the owner-protected brief API and source-based sections underneath; show explicit reported changes within existing categories and visit discussion notes in an optional disclosure. Reconsider separate views after V1. Preparation makes one bounded AI call.

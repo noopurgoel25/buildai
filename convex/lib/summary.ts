@@ -30,6 +30,15 @@ export function selectSources(records:{id:string;revision:number;details:Infer<t
   undated.forEach((source,index)=>source.key=`u${index+1}`);
   return {dated,undated};
 }
+// One category per input position avoids repeated titles and lost source keys.
+export function validateCategories(raw:unknown,sources:{key:string;evidence?:string;event?:string}[]):Infer<typeof summaryGroup>[] {
+  const categories=(raw as {categories?:unknown})?.categories;
+  if(!Array.isArray(categories) || categories.length!==sources.length || categories.some(category=>!Number.isInteger(category) || category<1 || category>4))throw new Error('invalid-summary-categories');
+  const titles=['Symptoms and observations','Measurements','Care and visits','Appetite, sleep and energy'];
+  const grouped=new Map<string,string[]>();
+  categories.forEach((category,index)=>{const title=titles[category-1];grouped.set(title,[...(grouped.get(title)||[]),sources[index].key]);});
+  return validateGroups({groups:[...grouped].map(([title,keys])=>({title,keys}))},sources);
+}
 export function validateGroups(raw:unknown,sources:{key:string;evidence?:string;event?:string}[]):Infer<typeof summaryGroup>[] {
   const groups=(raw as {groups?:unknown})?.groups;
   if(!Array.isArray(groups) || groups.length<1 || groups.length>4)throw new Error('invalid-summary');

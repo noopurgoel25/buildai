@@ -13,7 +13,7 @@ const timing=data(read('lib/observationTiming.ts'));
 const helper=data(read('lib/summary.ts').replace("'convex/values'",values).replace("'./healthEvent'",JSON.stringify(health)).replace("'./observationTiming'",JSON.stringify(timing)));
 const source=read('summaries.ts').replace("'./_generated/server'",JSON.stringify(server)).replace("'./_generated/api'",JSON.stringify(api)).replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))).replace("'convex/server'",JSON.stringify(import.meta.resolve('convex/server'))).replace("'convex/values'",values).replace("'./lib/healthEvent'",JSON.stringify(health)).replace("'./lib/summary'",JSON.stringify(helper));
 const {sourcePage,unchanged,organize,generate}=await import(data(source));
-const {checkPeriod,selectSources,validateGroups,overviewCandidates,selectOverview}=await import(helper);
+const {checkPeriod,selectSources,validateGroups,validateCategories,overviewCandidates,selectOverview}=await import(helper);
 const observation=(id,event,date)=>({id,event,when:date||'Unknown',supportingWords:event,evidence:'Patient-reported',polarity:'present',timing:{date,time:null,precision:date?'date':'unknown',resolved:true},confirmed:true,edited:false});
 const capture=(observations,capturedAt=Date.parse('2026-10-06T06:00:00Z'))=>({confirmationId:'00000000-0000-4000-8000-000000000001',event:observations.map(o=>o.event).join('; '),when:'Multiple observations',evidence:'Not specified',source:'text',originalText:observations.map(o=>o.event).join('; '),edited:false,aiInterpretation:null,clarifications:[],capturedAt,timeZone:'Asia/Kolkata',observations});
 const records=[{id:'healthEvents:1',revision:0,details:capture([observation('1','Mira Example felt tired.','2026-10-01'),{...observation('2','No dizziness.','2026-10-06'),polarity:'absent'},observation('3','Sometime last week.',null)])}];
@@ -64,7 +64,7 @@ test('summary uses every selected current fact and refuses source deletion or co
 test('registered summary action uses bounded Sarvam JSON, shared allowance, and validates response before returning',async()=>{
   const previousFetch=globalThis.fetch,previousKey=process.env.SARVAM_API_KEY;process.env.SARVAM_API_KEY='test-placeholder';
   const sources=selectSources(records,'2026-10-01','2026-10-06').dated.map(({key,event,when,evidence,polarity,date})=>({key,event,when,evidence,polarity,date}));
-  let requests=0;globalThis.fetch=async(_url,options)=>{requests++;const body=JSON.parse(options.body);assert.equal(body.model,'sarvam-105b');assert.equal(body.max_tokens,500);assert.equal(body.reasoning_effort,null);assert.ok(!options.body.includes('Sometime last week'));return{ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({groups:[{title:'Symptoms and observations',keys:['1','2']}],highlights:[]})}}]})};};
+  let requests=0;globalThis.fetch=async(_url,options)=>{requests++;const body=JSON.parse(options.body);assert.equal(body.model,'sarvam-105b');assert.equal(body.max_tokens,500);assert.equal(body.reasoning_effort,null);assert.ok(!options.body.includes('Sometime last week'));return{ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify({categories:[1,1],highlights:[]})}}]})};};
   try{await assert.rejects(organize._handler({runMutation:async()=>false},{sources}),/Busy/);assert.equal(requests,0);assert.equal((await organize._handler({runMutation:async()=>true},{sources})).groups.length,1);}
   finally{globalThis.fetch=previousFetch;if(previousKey===undefined)delete process.env.SARVAM_API_KEY;else process.env.SARVAM_API_KEY=previousKey;}
 });
@@ -119,4 +119,10 @@ test('doctor brief preserves medicine instructions, numbers, uncertainty and neg
   const period={status:'ready',name:'Mira Example',groups:[{title:'Appetite, sleep and energy',keys:['1']},{title:'Symptoms and observations',keys:['2','3','6','7']},{title:'Measurements',keys:['4']},{title:'Care and visits',keys:['5']}],sources,undated:[],undatedCount:0,recordCount:7,message:'',generatedAt:1,overview:[]};
   const brief=composeBrief(period,'2026-10-01','2026-10-06');assert.deepEqual(brief.sections.find(s=>s.title==='Reported improvements').keys,['1']);assert.deepEqual(brief.sections.find(s=>s.title==='Reported worsening or new symptoms').keys,['2']);assert.ok(brief.sections.find(s=>s.title==='Other observations').keys.includes('6'));assert.deepEqual(brief.sections.find(s=>s.title==='Recorded measurements').keys,['4']);assert.deepEqual(brief.sections.find(s=>s.title==='Care and visits').keys,['5']);assert.deepEqual(brief.discussionKeys,['7']);assert.deepEqual(brief.sources,sources);assert.equal(brief.overview.length,0);
   for(const event of ['She is not better.','If she gets worse, call us.','She might feel better.']){const isolated=composeBrief({...period,sources:[sourceOf('1',event)],groups:[{title:'Symptoms and observations',keys:['1']}]},'2026-10-01','2026-10-06');assert.equal(isolated.sections[0].title,'Other observations');}
+});
+
+test('compact grouping covers every source without repeated titles or omitted references',()=>{
+  const sources=Array.from({length:40},(_,index)=>({key:String(index+1),event:'A recorded observation.'}));
+  assert.deepEqual(validateCategories({categories:sources.map(()=>1)},sources)[0].keys,sources.map(source=>source.key));
+  for(const categories of [[1],Array(40).fill(0),Array(40).fill('1'),Array(41).fill(1)])assert.throws(()=>validateCategories({categories},sources));
 });
