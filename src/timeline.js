@@ -2,6 +2,7 @@ import { escape, savedObservationDetails, occurrenceLabel } from './observation-
 import { mountObservationReview } from './observation-review.js';
 import { createRecordId } from './record-id.js';
 import { mountPeriodSummary } from './summary.js';
+import { mountDoctorBrief } from './doctor-brief.js';
 
 export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut) {
   let disposed=false, busy=false, entries=[], patient=null, cursor=null, isDone=true, loaded=false, error='', errorKind='load', saved=false;
@@ -15,6 +16,7 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut)
       ${saved ? `<p class="saved-message" role="status">Saved to ${escape(patient.name)}’s record.</p>` : ''}
       <button class="primary account-start" id="add-update" type="button">Add update</button>
       ${patient?'<button class="text-action summary-link" id="period-summary" type="button">Summary for a period</button>':''}
+      ${patient?'<button class="text-action brief-link" id="doctor-brief" type="button">For a doctor visit</button>':''}
       ${patient ? '<h2 class="timeline-heading">Your timeline</h2><p class="hint">Newest recorded updates first. Each detail shows when it happened.</p>' : ''}
       ${loaded && !entries.length ? '<div class="timeline-empty"><p>No saved updates yet.</p><p class="hint">You can add a note whenever there’s something you want to remember.</p></div>' : ''}
       <ol class="timeline-list">${entries.map((entry,index)=>timelineEntry(entry,index,openedEntries.has(entry.id))).join('')}</ol>
@@ -23,7 +25,9 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut)
       <button class="text-action timeline-signout" id="signout" type="button">Sign out</button>`);
     root.querySelectorAll('.timeline-disclosure').forEach(details=>details.addEventListener('toggle',()=>{if(details.open)openedEntries.add(details.dataset.entry);else openedEntries.delete(details.dataset.entry);}));
     root.querySelector('#add-update').onclick=()=>onAdd(patient);
-    root.querySelector('#period-summary')?.addEventListener('click',()=>{disposeSummary=mountPeriodSummary(root,session,patient,()=>{disposeSummary();loadPage(true);});});
+    function openBrief(period=null){disposeSummary();disposeSummary=mountDoctorBrief(root,session,patient,()=>{disposeSummary();loadPage(true);},period);}
+    root.querySelector('#period-summary')?.addEventListener('click',()=>{disposeSummary=mountPeriodSummary(root,session,patient,()=>{disposeSummary();loadPage(true);},openBrief);});
+    root.querySelector('#doctor-brief')?.addEventListener('click',()=>openBrief());
     root.querySelector('#load-more')?.addEventListener('click',()=>loadPage(false));
     root.querySelector('#retry-page')?.addEventListener('click',()=>errorKind==='signout'?signOut():loadPage(!loaded));
     root.querySelector('#signout').onclick=signOut;

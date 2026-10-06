@@ -7,6 +7,7 @@ export const summarySource = v.object({key:v.string(),recordId:v.id('healthEvent
 export const summaryTitle = v.union(v.literal('Symptoms and observations'),v.literal('Measurements'),v.literal('Care and visits'),v.literal('Appetite, sleep and energy'));
 export const summaryGroup = v.object({title:summaryTitle,keys:v.array(v.string())});
 export const summaryInsight = v.object({id:v.string(),text:v.string(),keys:v.array(v.string())});
+export const periodResult = v.object({status:v.union(v.literal('ready'),v.literal('empty'),v.literal('too_many')),name:v.string(),groups:v.array(summaryGroup),overview:v.optional(v.array(summaryInsight)),sources:v.array(summarySource),undated:v.array(summarySource),undatedCount:v.number(),recordCount:v.number(),message:v.string(),generatedAt:v.number()});
 export type SummarySource = Infer<typeof summarySource>;
 export function checkPeriod(start:string,end:string) {
   if(!validDate(start) || !validDate(end) || start>end) throw new Error('Choose valid dates, with the start before the end.');

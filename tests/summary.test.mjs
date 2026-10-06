@@ -98,3 +98,25 @@ test('overview links reported changes and repeated days without inventing overal
   assert.equal(selectOverview([],candidates).length,0);assert.deepEqual(selectOverview(['h1'],candidates)[0].keys,['3']);
   for(const ids of [['fake'],['h1','h1'],['h1','h2','h3'],'Dad looks better'])assert.throws(()=>selectOverview(ids,candidates));
 });
+
+const briefHelper=data(read('lib/doctorBrief.ts').replace("'convex/values'",values).replace("'./summary'",JSON.stringify(helper)));
+const {composeBrief}=await import(briefHelper);
+const briefSource=read('doctorBriefs.ts').replace("'./_generated/server'",JSON.stringify(server)).replace("'convex/values'",values).replace("'./summaries'",JSON.stringify(data(source))).replace("'./lib/doctorBrief'",JSON.stringify(briefHelper));
+const {generate:generateBrief}=await import(data(briefSource));
+
+test('doctor brief uses owner-checked current notes, makes one bounded AI call and excludes undated facts from dated sections',async()=>{
+  const c=context();const brief=await generateBrief._handler(c.ctx,{patientId:patient._id,start:'2026-10-01',end:'2026-10-06'});assert.equal(brief.status,'ready');assert.equal(brief.start,'2026-10-01');assert.equal(brief.end,'2026-10-06');assert.equal(c.calls(),1);
+  assert.deepEqual(brief.sections.flatMap(s=>s.keys),['1','2']);assert.equal(brief.sources[1].polarity,'absent');assert.equal(brief.undated[0].date,null);assert.equal(brief.undatedCount,1);
+  assert.equal(brief.sections.some(s=>s.title==='Reported improvements'),false);
+  for(const owner of [null,'users:other']){const denied=context(records,owner);await assert.rejects(generateBrief._handler(denied.ctx,{patientId:patient._id,start:'2026-10-01',end:'2026-10-06'}));assert.equal(denied.calls(),0);}
+  const empty=context();assert.equal((await generateBrief._handler(empty.ctx,{patientId:patient._id,start:'2026-09-01',end:'2026-09-30'})).status,'empty');assert.equal(empty.calls(),0);
+  const changed=context();changed.ctx.runAction=async()=>{records[0].revision++;return{groups:[{title:'Symptoms and observations',keys:['1','2']}],overview:[]};};try{await assert.rejects(generateBrief._handler(changed.ctx,{patientId:patient._id,start:'2026-10-01',end:'2026-10-06'}),/Busy/);}finally{records[0].revision--;}
+});
+
+test('doctor brief preserves medicine instructions, numbers, uncertainty and negatives without inferring improvement or new symptoms',()=>{
+  const sourceOf=(key,event,polarity='present')=>({...selectSources(records,'2026-10-01','2026-10-06').dated[0],key,event,supportingWords:event,polarity});
+  const sources=[sourceOf('1','She said her appetite seems better.','uncertain'),sourceOf('2','She said her headache was worse.'),sourceOf('3','She did not feel dizzy.','absent'),sourceOf('4','BP 142/88'),sourceOf('5','Doctor said to reduce medicine from 10 mg to 5 mg.'),sourceOf('6','First note of tiredness.'),sourceOf('7','She asked whether the doctor had seen the previous reading?')];
+  const period={status:'ready',name:'Mira Example',groups:[{title:'Appetite, sleep and energy',keys:['1']},{title:'Symptoms and observations',keys:['2','3','6','7']},{title:'Measurements',keys:['4']},{title:'Care and visits',keys:['5']}],sources,undated:[],undatedCount:0,recordCount:7,message:'',generatedAt:1,overview:[]};
+  const brief=composeBrief(period,'2026-10-01','2026-10-06');assert.deepEqual(brief.sections.find(s=>s.title==='Reported improvements').keys,['1']);assert.deepEqual(brief.sections.find(s=>s.title==='Reported worsening or new symptoms').keys,['2']);assert.ok(brief.sections.find(s=>s.title==='Other observations').keys.includes('6'));assert.deepEqual(brief.sections.find(s=>s.title==='Recorded measurements').keys,['4']);assert.deepEqual(brief.sections.find(s=>s.title==='Care and visits').keys,['5']);assert.deepEqual(brief.discussionKeys,['7']);assert.deepEqual(brief.sources,sources);assert.equal(brief.overview.length,0);
+  for(const event of ['She is not better.','If she gets worse, call us.','She might feel better.']){const isolated=composeBrief({...period,sources:[sourceOf('1',event)],groups:[{title:'Symptoms and observations',keys:['1']}]},'2026-10-01','2026-10-06');assert.equal(isolated.sections[0].title,'Other observations');}
+});

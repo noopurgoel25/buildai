@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false } = {}) {
-  let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0;
+async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, briefReply = null, failBrief = false } = {}) {
+  let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0, briefCalls=0;
   const entries=initialEvents.map((details,index)=>({id:String(index+1),details}));
   const savedIds = [];
   await page.route('**/src/session.js*', route => route.fulfill({ contentType: 'application/javascript', body: `
@@ -18,6 +18,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
         async getTimeline(options) {const response=await fetch('/__test/timeline',{method:'POST',body:JSON.stringify(options)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async correctUpdate(value) {const response=await fetch('/__test/correct',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());return response.json();},
         async deleteUpdate(value) {const response=await fetch('/__test/delete',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());},
+        async generateDoctorBrief(value) {const response=await fetch('/__test/brief',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Busy');return response.json();},
         async generateSummary(value) {const response=await fetch('/__test/summary',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Busy');return response.json();},
         async matchingPatient(patient) {const response=await fetch('/__test/match',{method:'POST',body:JSON.stringify(patient)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async saveMatchedUpdate(value) {return state.saveUpdate(value);},
@@ -38,6 +39,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
       const options=route.request().postDataJSON(),start=Number(options.cursor||0),ordered=[...entries].sort((a,b)=>b.details.capturedAt-a.details.capturedAt || Number(b.id)-Number(a.id)),page=ordered.slice(start,start+options.numItems);
       return route.fulfill({json:{patient:record?{id:'person-test',name:record.name,relationship:record.relationship}:null,page,isDone:start+page.length>=entries.length,continueCursor:String(start+page.length)}});
     }
+    if(path.endsWith('brief')) {briefCalls++;if(failBrief && briefCalls===1)return route.fulfill({status:503,body:'Busy'});return route.fulfill({json:briefReply || {status:'empty',name:'Mira Example',start:'2026-10-01',end:'2026-10-06',overview:[],sections:[],discussionKeys:[],sources:[],undated:[],undatedCount:0,recordCount:0,message:'',generatedAt:Date.now()}});}
     if(path.endsWith('summary')) {
       summaryCalls++;if(failSummary && summaryCalls===1)return route.fulfill({status:503,body:'Busy'});
       return route.fulfill({json:summaryReply || {status:'empty',name:'Mira Example',groups:[],sources:[],undated:[],undatedCount:0,recordCount:0,message:'',generatedAt:Date.now()}});
@@ -77,7 +79,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (route.request().url().endsWith('/capture-text')) return route.fulfill({ json: { text: route.request().postDataJSON().text, source: 'text' } });
     return route.fulfill({ json: interpretation || { status: 'ready', event: 'Mira Example said she felt tired today.', when: 'today', evidence: 'Patient-reported', question: '', message: '' } });
   });
-  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls, summaryCalls }) };
+  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls, summaryCalls, briefCalls }) };
 }
 async function confirm(page) {
   await page.goto('/');
@@ -513,4 +515,33 @@ test('checking an existing sign-in never signs out or clears a typed update, and
   const reads=mock.state().timelineCalls;
   await page.evaluate(()=>window.__testSessionChange({isLoading:false,isAuthenticated:true}));await expect(page.locator('.period-result')).toBeVisible();expect(mock.state().timelineCalls).toBe(reads);
   await page.getByRole('button',{name:'Back to timeline'}).click();await page.getByRole('button',{name:'Sign out'}).click();await expect(page.getByRole('link',{name:'Already started? Sign in'})).toBeVisible();
+});
+
+const briefFixture=()=>{
+  const base=summaryFixture(),sources=[base.sources[0],...[
+    ['2','She said her appetite seems better.','uncertain','Patient-reported'],['3','She said her headache was worse.','present','Patient-reported'],['4','BP 142/88','present','Measured'],['5','Doctor said to reduce medicine from 10 mg to 5 mg.','present','Not specified'],['6','She asked about the previous reading?','uncertain','Patient-reported']
+  ].map(([key,event,polarity,evidence])=>({...base.sources[0],key,recordId:key,event,polarity,evidence,supportingWords:event}))];
+  return {...base,start:'2026-10-01',end:'2026-10-06',overview:[],sources,recordCount:6,sections:[{title:'Reported improvements',keys:['2']},{title:'Reported worsening or new symptoms',keys:['3']},{title:'Other observations',keys:['1']},{title:'Recorded measurements',keys:['4']},{title:'Care and visits',keys:['5']}],discussionKeys:['6']};
+};
+
+test('doctor brief checks dates, retries without losing period, retains source wording and looks right at phone and desktop widths (services mocked)',async({page})=>{
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));const brief=briefFixture(),mock=await mockSession(page,{initialEvents:[legacyEvent(1)],briefReply:brief,failBrief:true});await page.goto('/#record');await page.getByRole('button',{name:'For a doctor visit'}).click();
+  await page.getByLabel('From',{exact:true}).fill('2026-10-07');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare doctor brief'}).click();await expect(page.getByRole('alert')).toContainText('start before the end');expect(mock.state().briefCalls).toBe(0);
+  await page.getByLabel('From',{exact:true}).fill('2026-10-01');await page.getByRole('button',{name:'Prepare doctor brief'}).click();await expect(page.getByRole('alert')).toContainText('Busy right now');await expect(page.getByLabel('From',{exact:true})).toHaveValue('2026-10-01');await page.getByRole('button',{name:'Prepare doctor brief'}).click();
+  await expect(page.getByRole('heading',{name:'Overall progress'})).toBeVisible();await expect(page.getByText('The saved notes do not establish an overall change in health for this period.',{exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Reported improvements'})).toBeVisible();await expect(page.getByText('Doctor said to reduce medicine from 10 mg to 5 mg.',{exact:true}).first()).toBeVisible();await expect(page.getByText('Patient-reported \u00b7 Uncertain',{exact:true}).first()).toBeVisible();
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390 || width===1440)await page.screenshot({path:`.impeccable/review/doctor-brief-${width}.png`,fullPage:true});}
+  await page.getByText('View source',{exact:true}).first().click();await expect(page.getByText('Corrected by you.',{exact:true}).first()).toBeVisible();await expect(page.getByText(/^Captured on /).first()).toBeVisible();await page.getByText('1 detail with uncertain timing',{exact:true}).click();await expect(page.getByText('Her appetite seemed better sometime last week.',{exact:true}).first()).toBeVisible();
+  await expect(page.getByRole('button',{name:/Share|Save brief|Edit brief/})).toHaveCount(0);
+  await page.getByText('Change dates',{exact:true}).click();await page.getByLabel('From',{exact:true}).fill('2026-09-01');await expect(page.locator('.brief-result')).toHaveCount(0);await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);expect(mock.state().briefCalls).toBe(2);expect(errors).toEqual([]);
+});
+
+test('doctor brief from summary keeps its selected period and collapses additional facts without discarding them (services mocked)',async({page})=>{
+  const brief=briefFixture();brief.sections.find(s=>s.title==='Other observations').keys.push('7','8','9');for(const key of ['7','8','9'])brief.sources.push({...brief.sources[0],key,event:'Long fictional observation '+key+' '+ 'x'.repeat(500),supportingWords:'x'.repeat(700)});
+  let requested;await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture(),briefReply:brief});await page.route('**/__test/brief',route=>{requested=route.request().postDataJSON();return route.fulfill({json:brief});});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByLabel('From',{exact:true}).fill('2026-10-01');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare summary'}).click();await page.getByRole('button',{name:'Prepare doctor brief'}).click();await expect(page.locator('.doctor-brief')).toBeVisible();expect(requested).toEqual({patientId:'person-test',start:'2026-10-01',end:'2026-10-06'});
+  const more=page.getByText('1 more recorded detail',{exact:true});await more.focus();await page.keyboard.press('Enter');await expect(page.getByText(/^Long fictional observation 9 /).first()).toBeVisible();await page.setViewportSize({width:320,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.evaluate(()=>window.__testSessionChange({isLoading:true,isAuthenticated:false}));await page.evaluate(()=>window.__testSessionChange({isLoading:false,isAuthenticated:true}));await expect(page.locator('.doctor-brief')).toBeVisible();
+});
+
+for(const status of ['empty','too_many'])test(`doctor brief ${status} preserves notes and period (services mocked)`,async({page})=>{
+  const brief={...briefFixture(),status,sections:[],sources:[],overview:[],discussionKeys:[],message:'Choose a shorter period.',undated:[],undatedCount:0};await mockSession(page,{initialEvents:[legacyEvent(1)],briefReply:brief});await page.goto('/#record');await page.getByRole('button',{name:'For a doctor visit'}).click();await page.getByRole('button',{name:'Prepare doctor brief'}).click();await expect(page.getByText(status==='empty'?'There are no dated updates to include in a doctor brief for this period.':'Choose a shorter period.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);
 });

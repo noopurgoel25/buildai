@@ -10,9 +10,11 @@
 
 import type * as auth from "../auth.js";
 import type * as capture from "../capture.js";
+import type * as doctorBriefs from "../doctorBriefs.js";
 import type * as http from "../http.js";
 import type * as interpretation from "../interpretation.js";
 import type * as lib_captureValidation from "../lib/captureValidation.js";
+import type * as lib_doctorBrief from "../lib/doctorBrief.js";
 import type * as lib_formatSpokenTime from "../lib/formatSpokenTime.js";
 import type * as lib_healthEvent from "../lib/healthEvent.js";
 import type * as lib_observationTiming from "../lib/observationTiming.js";
@@ -30,9 +32,11 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   capture: typeof capture;
+  doctorBriefs: typeof doctorBriefs;
   http: typeof http;
   interpretation: typeof interpretation;
   "lib/captureValidation": typeof lib_captureValidation;
+  "lib/doctorBrief": typeof lib_doctorBrief;
   "lib/formatSpokenTime": typeof lib_formatSpokenTime;
   "lib/healthEvent": typeof lib_healthEvent;
   "lib/observationTiming": typeof lib_observationTiming;

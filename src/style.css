@@ -211,3 +211,17 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 
 .summary-period-picker { margin-top: 20px; font-size: 13px; }
 .summary-period-picker > summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: #32695f; }
+.brief-link { margin: 0 auto; }
+.brief-result { margin-top: 32px; }
+.brief-result > h2 { font-size: 18px; line-height: 1.5; }
+.doctor-brief { background: #fff; border-radius: 14px; padding: 20px; margin-top: 24px; overflow-wrap: anywhere; }
+.brief-section + .brief-section { border-top: 1px solid #e5e8e2; padding-top: 20px; margin-top: 24px; }
+.brief-section h3 { font-size: 18px; line-height: 1.4; margin: 0 0 12px; }
+.brief-section .update-facts { margin: 0; }
+.brief-section .update-facts li:last-child { padding-bottom: 0; }
+.brief-section > p { color: #24302d; }
+.brief-evidence { font-size: 12px; line-height: 1.5; color: #52665e; margin-top: 5px; }
+.brief-more { font-size: 13px; margin-top: 12px; }
+.brief-more > summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
+.brief-limits { margin-top: 20px; }
+@media (max-width: 350px) { .doctor-brief { padding: 16px; } }

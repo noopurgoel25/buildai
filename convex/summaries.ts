@@ -1,11 +1,12 @@
 import { action, internalAction, internalQuery } from './_generated/server';
+import type { ActionCtx } from './_generated/server';
 import { internal } from './_generated/api';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { paginationOptsValidator } from 'convex/server';
 import { v, type Infer } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 import { confirmedEvent } from './lib/healthEvent';
-import { checkPeriod, selectSources, summarySource, summaryGroup, summaryInsight, validateGroups, overviewCandidates, selectOverview } from './lib/summary';
+import { checkPeriod, selectSources, summarySource, summaryGroup, summaryInsight, periodResult, validateGroups, overviewCandidates, selectOverview } from './lib/summary';
 
 export const sourcePage=internalQuery({
   args:{caregiverId:v.id('users'),patientId:v.id('people'),paginationOpts:paginationOptsValidator},
@@ -51,8 +52,12 @@ export const organize=internalAction({
 });
 export const generate=action({
   args:{patientId:v.id('people'),start:v.string(),end:v.string()},
-  returns:v.object({status:v.union(v.literal('ready'),v.literal('empty'),v.literal('too_many')),name:v.string(),groups:v.array(summaryGroup),overview:v.optional(v.array(summaryInsight)),sources:v.array(summarySource),undated:v.array(summarySource),undatedCount:v.number(),recordCount:v.number(),message:v.string(),generatedAt:v.number()}),
-  handler:async(ctx,args)=>{
+  returns:periodResult,
+  handler:preparePeriod,
+});
+
+// Shared owner-checked snapshot; briefs and summaries use the same bounded Sarvam call.
+export async function preparePeriod(ctx:ActionCtx,args:{patientId:Id<'people'>;start:string;end:string}):Promise<Infer<typeof periodResult>> {
     const caregiverId=await getAuthUserId(ctx);if(!caregiverId)throw new Error('Sign in to prepare a summary.');
     checkPeriod(args.start,args.end);
     const records:{id:Id<'healthEvents'>;revision:number;details:Infer<typeof confirmedEvent>}[]=[];let cursor:null|string=null,name='',done=false;
@@ -71,5 +76,4 @@ export const generate=action({
       if(!await ctx.runQuery(internal.summaries.unchanged,{caregiverId,sources:[...dated,...selected.undated]}))throw new Error('changed');
       return{...selected,status:'ready' as const,...organized,sources:dated,generatedAt:Date.now()};
     }catch{throw new Error('Busy right now. Try again in a few minutes.');}
-  },
-});
+}
