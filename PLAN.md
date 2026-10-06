@@ -48,3 +48,5 @@ Approved milestone 12 scope: generate a concise patient-bound doctor brief for a
 Approved V1 simplification (2026-10-06): one Summary entry and one prepared result serve everyday review and doctor visits. Remove separate doctor-visit navigation and brief preparation CTA. Keep the owner-protected brief API and source-based sections underneath; show explicit reported changes within existing categories and visit discussion notes in an optional disclosure. Reconsider separate views after V1. Preparation makes one bounded AI call.
 
 Approved Summary correction (2026-10-06): an isolated reported better/worse entry is not a period overview. Only supported connections between multiple dated notes qualify; otherwise show neutral add-more-updates wording. Individual reported changes remain in their category. After preparation, show selected dates and Change dates in one compact row, with date inputs disclosed on demand and no repeated date heading.
+
+Current release status (2026-10-06): milestones 1-12 published, with doctor-brief preparation merged into Summary. Next milestone: 13, review/edit the prepared Summary before sharing; native sharing remains milestone 14.
