@@ -9,19 +9,23 @@ import { savedObservationDetails } from './observation-display.js';
 import { createRecordId } from './record-id.js';
 
 const app = document.querySelector('#app');
-// Draft identity stays in memory until authentication is added in milestone 6.
+// Unsaved capture details stay only in this open page.
 const patient = { name: '', relationship: '' };
 const captureDraft = { text: '', source: 'text', audio: null, interpretation: null };
 let disposeCapture = () => {};
 let disposeAccount = () => {};
 let session = { isLoading: true, isAuthenticated: false };
 let authResolved = false;
+// A non-sensitive routing hint, never identity or authorization.
+function returningRecord(){try{return localStorage.getItem('carenama.returning')==='1';}catch{return false;}}
+function rememberRecord(){try{localStorage.setItem('carenama.returning','1');}catch{}}
 const loginDraft = { email: '', code: '', codeSent: false };
 const escapeHtml = (value) => value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 function render() {
   disposeCapture();
   disposeAccount();
+  if(!authResolved){app.innerHTML='<section class="screen"><h1>Opening CareNama</h1><p role="status">Checking your sign-in.</p></section>';return;}
   if (location.hash === '#signin') {
     if (session.isAuthenticated) { location.replace('#record'); return; }
     disposeAccount = mountSignIn(app, loginDraft, session, Boolean(captureDraft.confirmed));
@@ -36,7 +40,7 @@ function render() {
         clearDraft();
         if(savedPatient){Object.assign(patient,savedPatient);captureDraft.existingPatient=true;location.hash='#capture';}
         else location.hash='#patient-setup';
-      }, () => { clearDraft(); location.hash = '#'; });
+      }, () => { clearDraft(); location.hash = '#'; }, rememberRecord);
     return;
   }
   const setup = location.hash === '#patient-setup';
@@ -181,5 +185,6 @@ startSession(next => {
     if (location.hash === '#record') render();
     else location.hash = '#record';
   }
-  else if ((firstResolved || authChanged) && ['#signin', '#record'].includes(location.hash)) render();
+  else if(firstResolved && returningRecord() && ['', '#'].includes(location.hash)){location.replace('#signin');}
+  else if(firstResolved || (authChanged && ['#signin', '#record'].includes(location.hash))) render();
 });

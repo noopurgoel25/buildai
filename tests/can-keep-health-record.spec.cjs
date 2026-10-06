@@ -1,6 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
-async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0 } = {}) {
+async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0, pendingSession = false } = {}) {
   let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0, shareCheckCalls=0;
   const entries=initialEvents.map((details,index)=>({id:String(index+1),details}));
   const savedIds = [];
@@ -23,7 +23,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
         async matchingPatient(patient) {const response=await fetch('/__test/match',{method:'POST',body:JSON.stringify(patient)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async saveMatchedUpdate(value) {return state.saveUpdate(value);},
         async saveUpdate(value) {const response=await fetch('/__test/append',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Unavailable');},
-      }; window.__testSessionChange = next => { Object.assign(state,next);onChange({...state}); }; queueMicrotask(() => onChange({ ...state }));
+      }; window.__testSessionChange = next => { Object.assign(state,next);onChange({...state}); }; window.__testResolveSession=()=>onChange({...state});queueMicrotask(() => onChange({ ...state,isLoading:${pendingSession} }));
     }` }));
   await page.route('**/__test/**', route => {
     const path = new URL(route.request().url()).pathname;
@@ -614,4 +614,35 @@ test('slow copy check needs a fresh tap without checking again (device and servi
 
 test('Copy text writes the reviewed draft to the actual browser clipboard (account services mocked)',async({page,context})=>{
  await context.grantPermissions(['clipboard-read','clipboard-write']);await openSharing(page);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();const copied=await page.evaluate(async expected=>{const text=await navigator.clipboard.readText();return{matches:text.replace(/\r\n/g,'\n')===expected,length:text.length,lineFeeds:(text.match(/\n/g)||[]).length,carriageReturns:(text.match(/\r/g)||[]).length};},sharingFixtureText);expect(copied.matches).toBe(true);
+});
+
+
+test('returning caregiver reopens an unfinished capture at the saved timeline without setup (services mocked)',async({page,context})=>{
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],interpretation:multiInterpretation()});await page.goto('/');await expect(page.locator('.timeline-entry')).toHaveCount(1);
+ await page.getByRole('button',{name:'Add update',exact:true}).click();await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('An unfinished note.');
+ await page.reload();await expect(page.getByRole('heading',{name:'Your timeline',exact:true})).toBeVisible();await expect(page.getByLabel('Their name')).toHaveCount(0);expect(mock.state().savedCalls).toBe(0);
+ await page.getByRole('button',{name:'Add update',exact:true}).click();await expect(page.getByRole('heading',{name:'Mira Example',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();await resolveMulti(page);await page.getByRole('button',{name:'Save update',exact:true}).click();
+ await expect(page.locator('.timeline-entry')).toHaveCount(2);await page.goto('/');await expect(page.locator('.timeline-entry')).toHaveCount(2);expect(mock.state().appendCalls).toBe(1);expect(mock.state().codeRequests).toBe(0);
+ await page.screenshot({path:'.impeccable/review/returning-caregiver-mobile.png',fullPage:true});
+ const storedEvents=mock.state().entries.map(entry=>entry.details);await page.close();const reopened=await context.newPage();const next=await mockSession(reopened,{initialEvents:storedEvents});await reopened.goto('/');await expect(reopened.locator('.timeline-entry')).toHaveCount(2);await expect(reopened.getByLabel('Their name')).toHaveCount(0);expect(next.state().savedCalls).toBe(0);await reopened.close();
+});
+
+test('expired returning session reopens at sign-in and returns to the same notes (services mocked)',async({page})=>{
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],signedOutInitially:true});await page.addInitScript(()=>localStorage.setItem('carenama.returning','1'));await page.goto('/');
+ await expect(page.getByRole('heading',{name:'Welcome back.',exact:true})).toBeVisible();expect(mock.state().timelineCalls).toBe(0);
+ await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('12345678');await page.getByRole('button',{name:'Verify code'}).click();
+ await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();
+});
+
+test('reopening waits for sign-in verification and retries timeline failure without creating records (services mocked)',async({page})=>{
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],failTimelineAt:1,pendingSession:true});
+ await page.goto('/#capture');await expect(page.getByRole('heading',{name:'Opening CareNama',exact:true})).toBeVisible();await expect(page.getByLabel('Their name')).toHaveCount(0);expect(mock.state().timelineCalls).toBe(0);await page.evaluate(()=>window.__testResolveSession());await expect(page.getByRole('alert')).toContainText('load the timeline');await expect(page.getByLabel('Their name')).toHaveCount(0);await expect(page.getByRole('button',{name:'Add update',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Try again',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);
+});
+
+
+test('blocked browser storage still allows returning to the server-owned timeline (services mocked)',async({page})=>{
+ await mockSession(page,{initialEvents:[legacyEvent(1)]});await page.addInitScript(()=>{Storage.prototype.getItem=()=>{throw new DOMException('Blocked','SecurityError');};Storage.prototype.setItem=()=>{throw new DOMException('Blocked','SecurityError');};});
+ await page.goto('/');await expect(page.locator('.timeline-entry')).toHaveCount(1);await page.reload();await expect(page.locator('.timeline-entry')).toHaveCount(1);await expect(page.getByLabel('Their name')).toHaveCount(0);
 });
