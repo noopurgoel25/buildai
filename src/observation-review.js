@@ -15,7 +15,7 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
       <blockquote>${escape(first.event)}</blockquote>
       <p>${/not specified/i.test(first.when) ? 'When did this happen?' : `You mentioned “${escape(first.when)}”. Which day was that?`}</p>
       <p class="hint">It’s okay if you don’t remember exactly.</p>
-      ${shared.includes(first) && shared.length > 1 ? `<label class="shared-date"><input type="checkbox" id="shared-date" ${draft.sharedDateForId === first.id && draft.sharedDateSelected ? 'checked' : ''}> Use this date for these details:<span>${shared.map(item=>`“${escape(item.event)}”`).join('<br>')}</span></label>` : ''}
+      ${shared.includes(first) && shared.length > 1 ? `<label class="shared-date"><input type="checkbox" id="shared-date" ${draft.sharedDateForId === first.id && draft.sharedDateSelected ? 'checked' : ''}><span class="shared-date-content"><span class="shared-date-title">Use the day I choose for these details:</span><span class="shared-date-details">${shared.map(item=>`“${escape(item.event)}”`).join('<br>')}</span></span></label>` : ''}
       <div class="date-choices"><button class="secondary" data-day="today" type="button">Today</button><button class="secondary" data-day="yesterday" type="button">Yesterday</button></div>
       <button class="secondary" id="choose-date" type="button">Choose a date</button>
       <form id="date-form" novalidate ${first.choosingDate ? '' : 'hidden'}><label for="event-day">Date for this detail</label><input id="event-day" type="date" value="${escape(first.dayDraft || '')}"><button class="primary" type="submit">Use this date</button></form>

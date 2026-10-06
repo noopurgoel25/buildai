@@ -200,7 +200,7 @@ test('one confirmation approves all visible facts, preserves explicit negatives 
 
 test('changes return to whole-update review; removal is inside the editor and removing every fact never saves (services mocked)',async({page})=>{
   const mock=await mockSession(page,{interpretation:multiInterpretation()});await openMulti(page);
-  await page.getByRole('checkbox',{name:/Use this date for these details/}).check();
+  await page.getByRole('checkbox',{name:/Use the day I choose for these details/}).check();
   await page.getByRole('button',{name:'Choose a date'}).click();await resolveMulti(page);
   await page.getByRole('button',{name:'Yes, continue'}).click();await page.getByRole('link',{name:'Back to review'}).click();
   await page.getByRole('button',{name:'Change detail 1'}).click();await page.getByLabel('What happened',{exact:true}).fill('BP 140/88 this morning');
@@ -220,11 +220,17 @@ test('a shared date requires an explicit choice, names both facts and preserves 
   const result=multiInterpretation();result.event=text;result.observations[0].event=result.observations[0].supportingWords='mild headache';
   result.observations[1].event=result.observations[1].supportingWords='noticed an allergy flare up';result.observations[1].polarity='present';result.observations[1].evidence='Caregiver-observed';result.observations[1].when='at 5 in the evening';result.observations[1].timing.time='17:00';result.observations[1].timing.precision='approximate';
   await mockSession(page,{interpretation:result});await openMulti(page,text);
-  const shared=page.getByRole('checkbox',{name:/Use this date for these details/});await expect(shared).not.toBeChecked();
+  const shared=page.getByRole('checkbox',{name:/Use the day I choose for these details/});await expect(shared).not.toBeChecked();
   await expect(shared).toHaveAccessibleName(/mild headache.*noticed an allergy flare up/);
+  for(const width of [320,390,768,1440]){
+    await page.setViewportSize({width,height:844});
+    const geometry=await page.locator('.shared-date').evaluate(label=>{const box=label.querySelector('input').getBoundingClientRect(),title=label.querySelector('.shared-date-title')?.getBoundingClientRect(),detail=label.querySelector('.shared-date-details')?.getBoundingClientRect();return{width:box.width,height:box.height,aligned:!!title&&Math.abs(box.top-title.top)<=4,stacked:!!detail&&!!title&&detail.top>=title.bottom,overflow:document.documentElement.scrollWidth>innerWidth};});
+    expect(geometry).toEqual({width:20,height:20,aligned:true,stacked:true,overflow:false});
+    if(width===390)await page.screenshot({path:'.impeccable/review/timing-checkbox-mobile.png',fullPage:true});
+  }
   await shared.check();await page.getByRole('button',{name:'Choose a date'}).click();
   // Opening the date picker must preserve the explicit shared-date choice.
-  await expect(page.getByRole('checkbox',{name:/Use this date for these details/})).toBeChecked();
+  await expect(page.getByRole('checkbox',{name:/Use the day I choose for these details/})).toBeChecked();
   await page.getByLabel('Date for this detail').fill('2026-10-06');await page.getByRole('button',{name:'Use this date'}).click();
   await expect(page.getByRole('heading',{name:'Does this look right?'})).toBeVisible();
   await expect(page.locator('.fact-time').nth(1)).toHaveText('6 Oct 2026 at 17:00');

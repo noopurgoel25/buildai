@@ -82,8 +82,7 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .observation { border-top: 1px solid #e2e5df; margin-top: 24px; padding-top: 20px; }
 .observation h3 { font-size: 18px; margin: 0 0 12px; }
 .observation input, .capture-result input, .capture-result select { max-width: 100%; }
-.shared-date { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; font-weight: 400; }
-.shared-date input { width: 20px; height: 20px; flex: 0 0 20px; margin: 2px 0; }
+
 
 [hidden] { display: none !important; }
 :root { --ink: #24302d; --green: #2f7d72; --soft-green: #d6e9e4; scrollbar-color: #a8b3ad #f8f7f3; }
@@ -123,7 +122,10 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .flow-actions { margin-top: 28px; }.flow-actions .hint { text-align: center; }.flow-actions .text-action { display: flex; margin: 8px auto 0; }
 .timing-question blockquote { margin: 24px 0; padding: 20px; background: #d6e9e4; color: #24302d; border-radius: 16px; line-height: 1.6; overflow-wrap: anywhere; }
 .date-choices { display: flex; gap: 12px; margin-top: 16px; }.date-choices .secondary { margin: 0; }
-.shared-date { display: grid; grid-template-columns: 20px 1fr; font-size: 14px; line-height: 1.6; margin: 24px 0; }.shared-date span { grid-column: 2; color: #52665e; }
+.shared-date { display: grid; grid-template-columns: 20px minmax(0,1fr); align-items: start; gap: 10px; font-size: 14px; font-weight: 400; line-height: 1.6; margin: 16px 0; min-height: 44px; cursor: pointer; }
+.shared-date input { width: 20px; height: 20px; min-height: 20px; padding: 0; margin: 2px 0 0; border-radius: 4px; accent-color: #2f7d72; }
+.shared-date-content, .shared-date-title, .shared-date-details { display: block; min-width: 0; }
+.shared-date-details { color: #52665e; margin-top: 8px; overflow-wrap: anywhere; }
 .editor-extra { margin-top: 28px; }.editor-extra summary { min-height: 44px; }.editor-extra label { margin-top: 20px; }
 .capture-result form label:not(:first-child) { margin-top: 20px; }.remove-action { color: #9a3c3c; display: flex; margin: 8px auto; }
 .temporary-notice h2 { font-size: 20px; }.temporary-notice .account-start { margin-top: 20px; }
