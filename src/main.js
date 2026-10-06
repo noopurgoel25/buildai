@@ -5,6 +5,7 @@ import { mountCapture } from './capture.js';
 import { startSession } from './session.js';
 import { mountSignIn, mountRecord } from './account.js';
 import { savedObservationDetails } from './observation-display.js';
+import { createRecordId } from './record-id.js';
 
 const app = document.querySelector('#app');
 // Draft identity stays in memory until authentication is added in milestone 6.
@@ -109,7 +110,7 @@ function render() {
     captureDraft.confirmed = structuredClone({
       event: result.event, when: result.when, evidence: result.evidence,
       edited: Boolean(result.edited || result.observations?.some(o => o.edited)), source: captureDraft.source,
-      confirmationId: captureDraft.confirmed?.confirmationId || crypto.randomUUID(),
+      confirmationId: captureDraft.confirmed?.confirmationId || createRecordId(),
       aiInterpretation: captureDraft.aiInterpretation || null,
       capturedAt: captureDraft.capturedAt || Date.now(),
       timeZone: captureDraft.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,

@@ -2,6 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 async function mockSession(page, { failSave = false, interpretation = null } = {}) {
   let signed = false, record = null, savedCalls = 0, codeRequests = 0;
+  const savedIds = [];
   await page.route('**/src/session.js', route => route.fulfill({ contentType: 'application/javascript', body: `
     export function startSession(onChange) {
       const state = { isLoading: false, isAuthenticated: ${signed},
@@ -26,6 +27,7 @@ async function mockSession(page, { failSave = false, interpretation = null } = {
     if (path.endsWith('signout')) { signed = false; return route.fulfill({ json: {} }); }
     if (path.endsWith('save')) {
       savedCalls++;
+      savedIds.push(route.request().postDataJSON().event.confirmationId);
       if (failSave && savedCalls === 1) return route.fulfill({ status: 503, json: {} });
       const input = route.request().postDataJSON();
       record = { ...input.patient, event: input.event }; return route.fulfill({ json: {} });
@@ -36,7 +38,7 @@ async function mockSession(page, { failSave = false, interpretation = null } = {
     if (route.request().url().endsWith('/capture-text')) return route.fulfill({ json: { text: route.request().postDataJSON().text, source: 'text' } });
     return route.fulfill({ json: interpretation || { status: 'ready', event: 'Mira Example said she felt tired today.', when: 'today', evidence: 'Patient-reported', question: '', message: '' } });
   });
-  return { state: () => ({ signed, record, savedCalls, codeRequests }) };
+  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds }) };
 }
 async function confirm(page) {
   await page.goto('/');
@@ -109,8 +111,8 @@ function multiInterpretation() {
     {id:'2',event:'she did not feel dizzy',supportingWords:'she did not feel dizzy',when:'Not specified',evidence:'Not specified',polarity:'absent',timing:{date:null,time:null,precision:'unknown',resolved:false},confirmed:false,edited:false},
   ]};
 }
-async function openMulti(page, text=multiText) {
-  await page.goto('/'); await page.getByRole('link',{name:'Get started',exact:true}).click();
+async function openMulti(page, text=multiText, url='/') {
+  await page.goto(url); await page.getByRole('link',{name:'Get started',exact:true}).click();
   await page.getByLabel('Their name').fill('Mira Example'); await page.getByLabel('Your relationship to them').fill('Daughter');
   await page.getByRole('button',{name:'Continue',exact:true}).click(); await page.getByLabel('Or type your update').fill(text);
   await page.getByRole('button',{name:'Continue with text'}).click();
@@ -182,3 +184,36 @@ test('LIVE: real interpretation splits observations, preserves local capture tim
   await page.getByRole('button',{name:'Save update',exact:true}).click();
   await expect(page.getByText('Not saved for next time')).toBeVisible(); await expect(page.getByText(/^Captured on /)).toHaveText(captured);
 });
+
+for (const preview of ['desktop', 'phone HTTP']) {
+  test(`${preview}: confirmed observations survive a failed save, retry and refresh without changing record ID (services mocked)`, async ({page, baseURL}) => {
+    const address = Object.values(require('node:os').networkInterfaces()).flat().find(item => item.family === 'IPv4' && !item.internal)?.address;
+    test.skip(preview === 'phone HTTP' && !address, 'Requires a local network address.');
+    const origin = preview === 'desktop' ? baseURL : `http://${address}:${new URL(baseURL).port}`;
+    const errors=[]; page.on('pageerror', error=>errors.push(error.message));
+    const mock=await mockSession(page,{failSave:true,interpretation:multiInterpretation()});
+    await openMulti(page,multiText,origin);
+    expect(await page.evaluate(()=>isSecureContext)).toBe(preview === 'desktop');
+    if(preview === 'phone HTTP') expect(await page.evaluate(()=>typeof crypto.randomUUID)).toBe('undefined');
+    await page.getByRole('button',{name:'Keep approximate timing'}).click();
+    await page.getByRole('button',{name:'Confirm observation 1'}).click();
+    await page.getByRole('button',{name:/I don.t remember/}).click();
+    await page.getByRole('button',{name:'Confirm observation 2'}).click();
+    await page.getByRole('button',{name:'Save update',exact:true}).click();
+    await page.getByRole('link',{name:'Keep this health record',exact:true}).click();
+    await page.getByLabel('Your email').fill('caregiver@example.test');
+    await page.getByRole('button',{name:'Continue',exact:true}).click();
+    await page.getByLabel('Email code').fill('12345678');
+    await page.getByRole('button',{name:'Verify code'}).click();
+    await expect(page.getByRole('alert')).toContainText('Try again without closing this page.');
+    await page.getByRole('button',{name:'Try again',exact:true}).click();
+    await expect(page.getByText('Your confirmed update is saved for next time.')).toBeVisible();
+    const {savedIds,record}=mock.state();
+    expect(savedIds).toHaveLength(2); expect(savedIds[0]).toBe(savedIds[1]);
+    expect(savedIds[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(record.event.observations).toHaveLength(2);
+    await page.reload();
+    await expect(page.getByText('Your confirmed update is saved for next time.')).toBeVisible();
+    expect(mock.state().savedCalls).toBe(2); expect(errors).toEqual([]);
+  });
+}

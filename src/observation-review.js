@@ -1,5 +1,6 @@
 import { escape, observationDetails, captureLabel } from './observation-display.js';
 import { validDate } from '../convex/lib/observationTiming.ts';
+import { createRecordId } from './record-id.js';
 
 export function mountObservationReview(root, draft, onConfirm, onReturn) {
   const items = draft.interpretation.observations;
@@ -49,7 +50,7 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
     root.querySelector('#save-update').onclick = () => { if (items.length && items.every(o => o.confirmed && o.timing.resolved)) onConfirm(); };
     root.querySelector('#return-capture').onclick = onReturn;
     root.querySelector('#add-observation')?.addEventListener('click', () => {
-      const item={id:crypto.randomUUID(),event:'',when:'Not specified',supportingWords:draft.originalText || draft.text,evidence:'Not specified',polarity:'uncertain',timing:{date:null,time:null,precision:'unknown',resolved:true},confirmed:false,edited:true};
+      const item={id:createRecordId(),event:'',when:'Not specified',supportingWords:draft.originalText || draft.text,evidence:'Not specified',polarity:'uncertain',timing:{date:null,time:null,precision:'unknown',resolved:true},confirmed:false,edited:true};
       items.push(item); draft.confirmed=null; edit(item);
     });
   }

@@ -1,5 +1,6 @@
 import { toWav } from './audio.js';
 import { mountObservationReview } from './observation-review.js';
+import { createRecordId } from './record-id.js';
 
 const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const BUSY = 'Busy right now. Try again in a few minutes.';
@@ -259,7 +260,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
     root.querySelector('#manual-edit')?.addEventListener('click', () => {
       draft.aiInterpretation = null;
       draft.originalText ||= draft.text;
-      const item={id:crypto.randomUUID(),event:draft.originalText,when:'Not specified',supportingWords:draft.originalText,evidence:'Not specified',polarity:'uncertain',timing:{date:null,time:null,precision:'unknown',resolved:false},confirmed:false,edited:true};
+      const item={id:createRecordId(),event:draft.originalText,when:'Not specified',supportingWords:draft.originalText,evidence:'Not specified',polarity:'uncertain',timing:{date:null,time:null,precision:'unknown',resolved:false},confirmed:false,edited:true};
       draft.interpretation={status:'ready',event:draft.originalText,when:'Not specified',evidence:'Not specified',question:'',message:'',manual:true,observations:[item]};
       draft.observationEdit=structuredClone(item);
       state='ready'; error=''; draw();
