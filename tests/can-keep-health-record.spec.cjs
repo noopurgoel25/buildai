@@ -304,7 +304,7 @@ test('timeline loads older legacy notes in pages; a loading failure retains visi
   await expect(page.locator('.timeline-entry')).toHaveCount(10);
   await page.getByRole('button',{name:'Try again',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(12);
   await expect(page.getByRole('button',{name:'Load older updates'})).toHaveCount(0);expect(mock.state().timelineCalls).toBe(3);
-  await page.locator('.timeline-entry').last().getByText('Record details',{exact:true}).click();
+  await page.locator('.timeline-disclosure > summary').last().click();
   await expect(page.locator('.timeline-entry').last().getByText(/^Captured on /)).toBeVisible();
 });
 
@@ -339,11 +339,11 @@ test('back from a failed confirmed save does not silently retry saving when open
 
 test('saved updates use whole review for corrections; cancel is safe, retry and refresh retain original capture (services mocked)',async({page})=>{
   const original=legacyEvent(1),mock=await mockSession(page,{initialEvents:[original],failCorrection:true});
-  await page.goto('/#record');await page.getByRole('button',{name:'Change update',exact:true}).click();
+  await page.goto('/#record');await openTimelineNote(page);await page.getByRole('button',{name:'Change update',exact:true}).click();
   await page.getByRole('button',{name:'Change detail 1'}).click();await page.getByLabel('What happened',{exact:true}).fill('Mira Example reported mild tiredness.');
   await page.getByRole('button',{name:'Apply changes'}).click();await page.getByRole('button',{name:'Cancel changes'}).click();
   await expect(page.locator('.fact-text')).toHaveText(original.event);expect(mock.state().correctionCalls).toBe(0);
-  await page.getByRole('button',{name:'Change update',exact:true}).click();await page.getByRole('button',{name:'Change detail 1'}).click();
+  await openTimelineNote(page);await page.getByRole('button',{name:'Change update',exact:true}).click();await page.getByRole('button',{name:'Change detail 1'}).click();
   await page.getByLabel('What happened',{exact:true}).fill('Mira Example reported mild tiredness.');
   await page.getByRole('button',{name:'Remove this detail'}).click();await expect(page.getByRole('alert')).toContainText('Keep one detail');
   await page.getByRole('button',{name:'Apply changes'}).click();
@@ -357,18 +357,18 @@ test('saved updates use whole review for corrections; cancel is safe, retry and 
 
 test('deleting needs explicit confirmation, failures retain the note and deleting the last note retains the patient (services mocked)',async({page})=>{
   const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],failDelete:true});
-  await page.goto('/#record');await page.getByRole('button',{name:'Delete update',exact:true}).click();
+  await page.goto('/#record');await openTimelineNote(page);await page.getByRole('button',{name:'Delete update',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Delete this update?'})).toBeVisible();await page.getByRole('button',{name:'Keep update'}).click();expect(mock.state().deleteCalls).toBe(0);
-  await page.getByRole('button',{name:'Delete update',exact:true}).click();await page.screenshot({path:'.impeccable/review/delete-mobile.png',fullPage:true});
-  await page.getByRole('button',{name:'Delete update',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Your saved note is still there');
-  await page.getByRole('button',{name:'Delete update',exact:true}).click();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();
+  await openTimelineNote(page);await page.getByRole('button',{name:'Delete update',exact:true}).click();await page.screenshot({path:'.impeccable/review/delete-mobile.png',fullPage:true});
+  await openTimelineNote(page);await page.getByRole('button',{name:'Delete update',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Your saved note is still there');
+  await openTimelineNote(page);await page.getByRole('button',{name:'Delete update',exact:true}).click();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();
   await page.reload();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:/Mira Example.*health story/})).toBeVisible();
   await page.getByRole('button',{name:'Add update'}).click();await expect(page.getByLabel('Their name')).toHaveCount(0);expect(mock.state().deleteCalls).toBe(2);
 });
 
 test('a stale saved correction offers reopening instead of overwriting another change (services mocked)',async({page})=>{
   const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],staleCorrection:true});await page.goto('/#record');
-  await page.getByRole('button',{name:'Change update',exact:true}).click();await page.getByRole('button',{name:'Save changes'}).click();
+  await openTimelineNote(page);await page.getByRole('button',{name:'Change update',exact:true}).click();await page.getByRole('button',{name:'Save changes'}).click();
   await expect(page.getByRole('alert')).toContainText('changed or was removed elsewhere');await expect(page.getByRole('button',{name:'Try again'})).toHaveCount(0);
   await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().correctionCalls).toBe(1);
 });
@@ -377,7 +377,7 @@ test('a stale saved correction offers reopening instead of overwriting another c
 test('a correction can remove one fact while preserving the linked negative and original capture (services mocked)',async({page})=>{
   const original=legacyEvent(1);original.originalText='BP 142/88 this morning and she did not feel dizzy';original.event=original.originalText;
   original.observations=[{id:'1',event:'BP 142/88',when:'this morning',supportingWords:'BP 142/88 this morning',evidence:'Measured',polarity:'present',timing:{date:null,time:null,precision:'approximate',resolved:true},confirmed:true,edited:false},{id:'2',event:'she did not feel dizzy',when:'Unknown',supportingWords:'she did not feel dizzy',evidence:'Patient-reported',polarity:'absent',timing:{date:null,time:null,precision:'unknown',resolved:true},confirmed:true,edited:false}];
-  const mock=await mockSession(page,{initialEvents:[original]});await page.goto('/#record');await page.getByRole('button',{name:'Change update',exact:true}).click();
+  const mock=await mockSession(page,{initialEvents:[original]});await page.goto('/#record');await openTimelineNote(page);await page.getByRole('button',{name:'Change update',exact:true}).click();
   await page.getByRole('button',{name:'Change detail 1'}).click();await page.getByRole('button',{name:'Remove this detail'}).click();
   await expect(page.locator('.fact-text')).toHaveText('she did not feel dizzy');await page.getByRole('button',{name:'Save changes'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);
   await page.reload();await expect(page.locator('.fact-text')).toHaveText('she did not feel dizzy');expect(mock.state().entries[0].details.observations[0].polarity).toBe('absent');expect(mock.state().entries[0].details.removedObservations).toHaveLength(1);expect(mock.state().entries[0].details.originalText).toBe(original.originalText);
@@ -449,4 +449,41 @@ test('period summary validates dates, retains period on failure, shows source ev
 
 for(const scenario of ['empty','too_many'])test(`period summary ${scenario} explains available data and retains saved timeline (services mocked)`,async({page})=>{
   await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:{...summaryFixture(),status:scenario,groups:[],sources:[],undated:[],undatedCount:0,recordCount:0,message:'Choose a shorter period.'}});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByText(scenario==='empty'?'There are no dated updates to summarise for this period.':'Choose a shorter period.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);
+});
+
+async function openTimelineNote(page) {
+  const note=page.locator('.timeline-disclosure').first();
+  if(await note.count() && (await note.getAttribute('open')) === null)await note.locator(':scope > summary').click();
+}
+
+test('compact timeline reveals complete notes in one tap, keeps negatives and works across widths and keyboard (services mocked)',async({page})=>{
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  const original=legacyEvent(1);original.observations=[
+    {id:'a',event:'BP 142/88',when:'this morning',evidence:'Measured',polarity:'present',supportingWords:'BP 142/88 this morning',timing:{date:'2026-10-06',time:null,precision:'approximate',resolved:true}},
+    {id:'b',event:'She did not feel dizzy',when:'this morning',evidence:'Patient-reported',polarity:'absent',supportingWords:'she did not feel dizzy',timing:{date:'2026-10-06',time:null,precision:'approximate',resolved:true}},
+    {id:'c',event:'Long fictional detail '.repeat(40),when:'Timing not known',evidence:'Caregiver-observed',polarity:'uncertain',supportingWords:'x'.repeat(600),timing:{date:null,time:null,precision:'unknown',resolved:true}}
+  ];
+  const measured={...legacyEvent(2),event:'BP 120/80',evidence:'Measured'},care={...legacyEvent(3),event:'We visited the doctor.'};
+  const mock=await mockSession(page,{initialEvents:[original,measured,care]});await page.goto('/#record');
+  await expect(page.locator('.timeline-entry')).toHaveCount(3);
+  await expect(page.getByRole('button',{name:'Change update'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Delete update'})).toHaveCount(0);
+  await expect(page.getByText('3 details, View update',{exact:true})).toBeVisible();
+  await expect(page.locator('.marker-note')).toHaveCount(1);await expect(page.locator('.marker-measurement')).toHaveCount(1);await expect(page.locator('.marker-care')).toHaveCount(1);
+  for(const width of [320,390,768,1440]){
+    await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    if(width===390 || width===1440)await page.screenshot({path:`.impeccable/review/compact-timeline-${width}.png`,fullPage:true});
+  }
+  const summary=page.locator('.timeline-disclosure > summary').first();await summary.focus();await page.keyboard.press('Enter');
+  await expect(page.locator('.timeline-expanded').first().getByText('She did not feel dizzy',{exact:true}).first()).toBeVisible();
+  await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();await expect(page.getByText(/^Captured on /).first()).toBeVisible();
+  for(const width of [320,390,1440]){
+    await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    if(width===390)await page.screenshot({path:'.impeccable/review/compact-expanded-mobile.png',fullPage:true});
+  }
+  await page.getByRole('button',{name:'Change update',exact:true}).click();await page.getByRole('button',{name:'Cancel changes',exact:true}).click();
+  await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Delete update',exact:true}).click();await page.getByRole('button',{name:'Keep update'}).click();
+  expect(mock.state().deleteCalls).toBe(0);expect(mock.state().correctionCalls).toBe(0);
+  await page.locator('.timeline-disclosure > summary').first().click();await expect(page.getByRole('button',{name:'Change update'})).toHaveCount(0);expect(errors).toEqual([]);
 });

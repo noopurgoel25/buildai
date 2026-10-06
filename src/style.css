@@ -133,11 +133,34 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 @media (max-width: 359px) { .brand, .screen { padding-left: 20px; padding-right: 20px; }.welcome h1 { font-size: 34px; }.review-surface, .confirmed-event { padding: 16px; } }
 @media (min-width: 700px) { .brand { padding-top: 32px; }.screen { padding-top: 40px; }.welcome { padding-top: 40px; padding-bottom: 32px; } }
 .timeline-heading { font-size: 22px; margin: 36px 0 4px; }
+/* The connected rail follows recorded order; icons describe notes, never health severity. */
 .timeline-list { list-style: none; margin: 24px 0 0; padding: 0; }
-.timeline-list > li { margin-bottom: 28px; }
-.timeline-entry { background: #fff; padding: 20px; border-radius: 16px; }
-.timeline-entry h3 { color: #52665e; font-size: 14px; font-weight: 500; margin: 0 0 20px; }
-.timeline-entry .record-details { margin-bottom: 0; }
+.timeline-list > li { position: relative; padding: 0 0 18px 50px; min-width: 0; }
+.timeline-list > li::before { content: ''; position: absolute; left: 18px; top: 34px; bottom: -2px; width: 1px; background: #cbd8d2; }
+.timeline-list > li:last-child::before { display: none; }
+.timeline-marker { position: absolute; top: 10px; left: 0; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; color: #39675e; background: #e2eee7; }
+.timeline-marker svg { width: 23px; height: 23px; }
+.marker-measurement { background: #e9e7f2; color: #645779; }
+.marker-care { background: #f2e9d9; color: #765f36; }
+.timeline-entry { background: #fff; border-radius: 14px; min-width: 0; }
+.timeline-disclosure > summary { display: flex; align-items: center; gap: 10px; padding: 16px; cursor: pointer; list-style: none; border-radius: 14px; }
+.timeline-disclosure > summary::-webkit-details-marker { display: none; }
+.timeline-disclosure > summary:hover { background: #f1f5f1; }
+.timeline-preview { display: block; min-width: 0; flex: 1; }
+.timeline-recorded { display: block; color: #52665e; font-size: 12px; line-height: 1.5; margin-bottom: 7px; }
+.timeline-preview-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: 16px; font-weight: 500; line-height: 1.5; color: #24302d; }
+.timeline-preview-time { display: block; font-size: 13px; line-height: 1.5; color: #52665e; margin-top: 5px; overflow-wrap: anywhere; }
+.timeline-preview-more { display: block; font-size: 12px; line-height: 1.5; color: #32695f; margin-top: 8px; }
+.timeline-chevron { width: 16px; height: 20px; flex-shrink: 0; color: #39675e; }
+.timeline-disclosure[open] > summary .timeline-chevron { transform: rotate(90deg); }
+.timeline-expanded { padding: 0 16px 12px; overflow-wrap: anywhere; }
+.timeline-expanded > h3 { font-size: 16px; margin: 8px 0 16px; }
+.timeline-expanded .record-details { margin-bottom: 0; }
+.timeline-expanded .detail-evidence h3 { font-size: 14px; margin: 16px 0 8px; }
+.timeline-expanded .note-actions { margin-top: 12px; }
+.timeline-delete { border-top: 1px solid #e5e8e2; margin-top: 12px; padding-top: 4px; }
+.timeline-screen h1 { overflow-wrap: anywhere; }
+@media (max-width: 350px) { .timeline-screen { padding-inline: 18px; } .timeline-list > li { padding-left: 44px; } .timeline-disclosure > summary, .timeline-expanded { padding-inline: 12px; } }
 .timeline-signout { margin: 24px auto 0; }.timeline-empty { margin: 32px 0; }
 .timeline-skeleton { margin-top: 28px; }.timeline-skeleton span { display: block; height: 96px; margin-bottom: 20px; border-radius: 16px; background: #e2e5df; }
 .note-actions { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 16px; }

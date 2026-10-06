@@ -1,4 +1,4 @@
-import { escape, savedObservationDetails } from './observation-display.js';
+import { escape, savedObservationDetails, occurrenceLabel } from './observation-display.js';
 import { mountObservationReview } from './observation-review.js';
 import { createRecordId } from './record-id.js';
 import { mountPeriodSummary } from './summary.js';
@@ -6,6 +6,7 @@ import { mountPeriodSummary } from './summary.js';
 export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut) {
   let disposed=false, busy=false, entries=[], patient=null, cursor=null, isDone=true, loaded=false, error='', errorKind='load', saved=false;
   let confirmedMatch=null, savingPending=false;
+  const openedEntries=new Set();
   let disposeSummary=()=>{};
   function shell(content) { if(!disposed) root.innerHTML=`<section class="screen timeline-screen" aria-labelledby="title">${content}</section>`; }
   function draw() {
@@ -16,10 +17,11 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut)
       ${patient?'<button class="text-action summary-link" id="period-summary" type="button">Summary for a period</button>':''}
       ${patient ? '<h2 class="timeline-heading">Your timeline</h2><p class="hint">Newest recorded updates first. Each detail shows when it happened.</p>' : ''}
       ${loaded && !entries.length ? '<div class="timeline-empty"><p>No saved updates yet.</p><p class="hint">You can add a note whenever there’s something you want to remember.</p></div>' : ''}
-      <ol class="timeline-list">${entries.map((entry,index)=>`<li><article class="timeline-entry"><h3>Recorded ${escape(recordedDate(entry.details))}</h3><div class="capture-result">${savedObservationDetails(entry.details)}</div><div class="note-actions"><button class="text-action" data-change="${index}" type="button">Change update</button><button class="text-action remove-action" data-delete="${index}" type="button">Delete update</button></div></article></li>`).join('')}</ol>
+      <ol class="timeline-list">${entries.map((entry,index)=>timelineEntry(entry,index,openedEntries.has(entry.id))).join('')}</ol>
       ${error ? `<p class="error" role="alert">${escape(error)}</p><button class="secondary" id="retry-page" type="button">Try again</button>` : ''}
       ${!isDone && !error ? `<button class="secondary" id="load-more" type="button" ${busy?'disabled':''}>${busy?'Loading older updates…':'Load older updates'}</button>` : ''}
       <button class="text-action timeline-signout" id="signout" type="button">Sign out</button>`);
+    root.querySelectorAll('.timeline-disclosure').forEach(details=>details.addEventListener('toggle',()=>{if(details.open)openedEntries.add(details.dataset.entry);else openedEntries.delete(details.dataset.entry);}));
     root.querySelector('#add-update').onclick=()=>onAdd(patient);
     root.querySelector('#period-summary')?.addEventListener('click',()=>{disposeSummary=mountPeriodSummary(root,session,patient,()=>{disposeSummary();loadPage(true);});});
     root.querySelector('#load-more')?.addEventListener('click',()=>loadPage(false));
@@ -111,4 +113,11 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut)
 
 function recordedDate(event) {
   return new Intl.DateTimeFormat('en-GB',{timeZone:event.timeZone,dateStyle:'medium'}).format(event.capturedAt);
+}
+
+function timelineEntry(entry,index,open) {
+  const event=entry.details, items=event.observations?.length?event.observations:[event];
+  const first=items[0], kind=items.length>1?'note':first.evidence==='Measured'?'measurement':/\b(doctor|medicine|medication|visit)\b/i.test(first.event)?'care':'note';
+  const paths={note:'<path d="M7 4h8l3 3v13H6V4h1Z M14 4v4h4 M9 12h6 M9 16h4"/>',measurement:'<rect x="5" y="4" width="14" height="16" rx="3"/><path d="M8 9h8 M8 14h2l2-3 2 5 2-2"/>',care:'<path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M5 7h14v13H5Z M12 10v7 M9 13.5h6"/>'};
+  return `<li><span class="timeline-marker marker-${kind}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${paths[kind]}</svg></span><article class="timeline-entry"><details class="timeline-disclosure" data-entry="${escape(entry.id)}" ${open?'open':''}><summary><span class="timeline-preview"><span class="timeline-recorded">Recorded ${escape(recordedDate(event))}</span><span class="timeline-preview-text">${escape(first.event)}</span><span class="timeline-preview-time">${escape(occurrenceLabel(first))}</span><span class="timeline-preview-more">${items.length>1?`${items.length} details, `:''}View update</span></span><svg class="timeline-chevron" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9 5 7 7-7 7"/></svg></summary><div class="timeline-expanded"><h3>Full update</h3><div class="capture-result">${savedObservationDetails(event).replace('<details class="record-details">','<details class="record-details" open>')}</div><div class="note-actions"><button class="text-action" data-change="${index}" type="button">Change update</button></div><div class="timeline-delete"><button class="text-action remove-action" data-delete="${index}" type="button">Delete update</button></div></div></details></article></li>`;
 }

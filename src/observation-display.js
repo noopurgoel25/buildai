@@ -15,7 +15,7 @@ export function updateFacts(event, editable = false) {
   return `<ul class="update-facts">${items.map((item, index) => `<li><div><p class="fact-text">${escape(item.event)}</p><p class="fact-time">${escape(occurrenceLabel(item))}</p></div>${editable ? `<button class="text-action" type="button" data-edit="${escape(item.id)}" aria-label="Change detail ${index + 1}">Change</button>` : ''}</li>`).join('')}</ul>`;
 }
 
-function occurrenceLabel(item) {
+export function occurrenceLabel(item) {
   if (!item.timing) return item.when;
   if (item.timing.precision === 'unknown') return 'Timing not known';
   const label = timingLabel(item.when, item.timing);
