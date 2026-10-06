@@ -8,13 +8,25 @@
  * @module
  */
 
+import type * as capture from "../capture.js";
+import type * as http from "../http.js";
+import type * as interpretation from "../interpretation.js";
+import type * as lib_captureValidation from "../lib/captureValidation.js";
+import type * as lib_formatSpokenTime from "../lib/formatSpokenTime.js";
+
 import type {
   ApiFromModules,
   FilterApi,
   FunctionReference,
 } from "convex/server";
 
-declare const fullApi: ApiFromModules<{}>;
+declare const fullApi: ApiFromModules<{
+  capture: typeof capture;
+  http: typeof http;
+  interpretation: typeof interpretation;
+  "lib/captureValidation": typeof lib_captureValidation;
+  "lib/formatSpokenTime": typeof lib_formatSpokenTime;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.

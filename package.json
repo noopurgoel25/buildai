@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "playwright test",
+    "test": "node --test tests/spoken-time.test.mjs && playwright test",
     "deploy": "convex dev --once && npx @convex-dev/static-hosting upload --build"
   },
   "keywords": [],
@@ -21,6 +21,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
     "vite": "^8.3.2"
   }
 }

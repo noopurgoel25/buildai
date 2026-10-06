@@ -1,13 +1,17 @@
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/600.css';
 import './style.css';
+import { mountCapture } from './capture.js';
 
 const app = document.querySelector('#app');
 // Draft identity stays in memory until authentication is added in milestone 6.
 const patient = { name: '', relationship: '' };
+const captureDraft = { text: '', source: 'text', audio: null, interpretation: null };
+let disposeCapture = () => {};
 const escapeHtml = (value) => value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 function render() {
+  disposeCapture();
   const setup = location.hash === '#patient-setup';
   const capture = location.hash === '#capture';
   if (capture && (!patient.name.trim() || !patient.relationship.trim())) {
@@ -19,7 +23,7 @@ function render() {
       <a class="back" href="#patient-setup">Back</a>
       <div class="patient-context"><h2>${escapeHtml(patient.name)}</h2><p>${escapeHtml(patient.relationship)}</p></div>
       <h1 id="title" tabindex="-1">What happened?</h1>
-      <p class="milestone-note">Voice and text capture are coming next.</p>
+      <div id="capture-controls"></div>
     </section>` : setup ? `
     <section class="screen setup" aria-labelledby="title">
       <a class="back" href="#">Back</a>
@@ -51,9 +55,16 @@ function render() {
       <a class="primary" href="#patient-setup">Get started</a>
     </section>`;
   if (setup || capture) document.querySelector('h1').focus();
+  if (capture) disposeCapture = mountCapture(document.querySelector('#capture-controls'), patient, captureDraft);
   if (setup) {
     const form = document.querySelector('#patient-form');
     form.addEventListener('input', (event) => {
+      if (patient[event.target.name] !== event.target.value) {
+        captureDraft.interpretation = null;
+        captureDraft.editDraft = null;
+        captureDraft.clarificationAnswer = '';
+        captureDraft.clarifications = [];
+      }
       patient[event.target.name] = event.target.value;
       event.target.removeAttribute('aria-invalid');
       document.querySelector(event.target.name === 'name' ? '#name-error' : '#relationship-error').hidden = true;

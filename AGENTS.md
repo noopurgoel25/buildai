@@ -12,8 +12,7 @@ Third party:
 
 * **Convex** — application backend, database, server-side functions/actions, authentication integration and server-side secrets. Keys/configuration live in Convex environment variables.
 * **Convex Auth** — email-based authentication and OTP login. V1 uses email + OTP only; no mobile-number authentication and no password.
-* **Sarvam AI** — voice transcription for spoken health updates. API credentials live in Convex environment variables.
-* **OpenAI** — GPT-6 Astra for health-event interpretation, clarification, summaries and doctor briefs. The AI call runs server-side in a Convex action. API credentials live in Convex environment variables.
+* **Sarvam AI** — Saaras for voice transcription and `sarvam-105b` for health-event interpretation, clarification, summaries and doctor briefs. AI calls run server-side in Convex actions. API credentials live in Convex environment variables. V1 uses existing Sarvam credits and has no OpenAI API dependency.
 
 Not in v1:
 
@@ -67,7 +66,6 @@ Keys:
 
 * Convex Auth configuration lives in Convex environment variables for dev and prod.
 * SARVAM\_API\_KEY lives in Convex environment variables for dev and prod.
-* OPENAI\_API\_KEY lives in Convex environment variables for dev and prod.
 * Never put keys in code, a VITE\_ variable or a committed file.
 * Never ask me to paste a key into chat.
 
@@ -81,7 +79,7 @@ Before I share the link: I open it on my phone, logged out, on mobile data, and 
 
 ## 4\. The AI call
 
-Model: GPT-6 Astra, thinking medium.
+Model: Sarvam `sarvam-105b`. Use `reasoning_effort: null` to keep the bounded reply available within the token cap.
 
 What goes in, and its limit:
 
@@ -93,9 +91,9 @@ What goes in, and its limit:
 
 Where it runs: A Convex action. Never in the interface.
 
-Key: OPENAI\_API\_KEY in Convex environment variables, dev and prod.
+Key: SARVAM\_API\_KEY in Convex environment variables, dev and prod. No separate OpenAI billing or fallback in V1.
 
-Reply cap: max\_output\_tokens 500.
+Reply cap: `max_tokens: 500`. Request structured JSON and validate it server-side before showing an interpretation.
 
 Calls cap: at most 100 AI calls an hour across the app, checked server-side in Convex.
 
@@ -151,10 +149,11 @@ If the recording is empty or transcription produces no usable text:
 ## 6\. Product rules the agent must preserve
 
 * The record is the product; features enrich the patient's persistent health story.
-* Capture before categorise.
+* Capture before categorize.
 * Voice is the fastest path; text is always available.
 * AI shows what it understood before anything is saved as a health event.
 * Do not require authentication before the first-value experience; ask for email + OTP after the user confirms the first event and before persistent storage.
+* The first-value UI must never describe the event as permanently saved or imply that it will survive closing/reopening until authentication succeeds.
 * Evidence beats inference.
 * The caregiver controls recording, editing, deleting and sharing.
 * Never silently guess the patient, date or medically significant meaning.
@@ -169,4 +168,3 @@ If the recording is empty or transcription produces no usable text:
 * The product must be usable and understandable at phone width before desktop optimisation.
 
 When a requirement conflicts with PRODUCT.md, DESIGN.md or this file, stop and ask before coding.
-

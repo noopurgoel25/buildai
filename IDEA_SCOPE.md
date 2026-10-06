@@ -65,6 +65,7 @@ Authentication is email + OTP only. No mobile-number authentication or password 
 The user should not be asked to sign up before experiencing the core capture → AI interpretation → confirmation flow.
 
 The core loop (user stories, written by me):
+
 1. \*\*Something happens.\*\*
 
 
@@ -99,11 +100,11 @@ AI identifies the relevant patient, event type, information and date/time.
 
 
 
-> \\\*\\\*Mom\\\*\\\*
+> \\\\\\\*\\\\\\\*Mom\\\\\\\*\\\\\\\*
 
 &#x20;  >
 
-&#x20;  > Dizziness  
+&#x20;  > Dizziness
 
 &#x20;  > Today, after lunch
 
@@ -165,9 +166,9 @@ AI identifies the relevant patient, event type, information and date/time.
 
 
 
-> \\\*\\\*"I can tell the doctor what actually happened since the last visit without relying on my memory."\\\*\\\*
+> \\\\\\\*\\\\\\\*"I can tell the doctor what actually happened since the last visit without relying on my memory."\\\\\\\*\\\\\\\*
 
-The AI-first part (onboarding, engagement or the core loop): 
+The AI-first part (onboarding, engagement or the core loop):
 
 AI converts the update into a structured health event
 
