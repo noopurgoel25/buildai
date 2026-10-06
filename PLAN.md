@@ -35,3 +35,5 @@ Parked (not now):
 Approved milestone 9 scope: reported medication starts/stops/dose changes, doctor visits and appetite/sleep/energy changes through the existing voice/text capture, review and timeline. Preserve who said what, supplied values and uncertainty; no inferred prescriptions or medical advice.
 
 Approved flow correction during milestone 9: preserve a pre-sign-in capture for a matching existing patient and ask explicit same-person confirmation before appending. No multiple-person UI or automatic identity merge.
+
+Approved milestone 10 scope: selected-period factual summaries beside the patient's timeline, based on saved notes and occurrence dates. Keep source references, explicit negatives, uncertainty and user corrections. Undated details recorded in the period appear separately. Changes/patterns and doctor briefs remain milestones 11 and 12.

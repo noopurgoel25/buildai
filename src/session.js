@@ -20,6 +20,7 @@ export function startSession(onChange) {
         saveUpdate: data => client.mutation(api.records.addUpdate, data),
         matchingPatient: patient => client.query(api.records.matchingPatient, { patient }),
         saveMatchedUpdate: data => client.mutation(api.records.saveMatchedUpdate, data),
+        generateSummary: data => client.action(api.summaries.generate, data),
         correctUpdate: data => client.mutation(api.records.correctUpdate, data),
         deleteUpdate: data => client.mutation(api.records.deleteUpdate, data),
       });

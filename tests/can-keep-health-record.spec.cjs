@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false } = {}) {
-  let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0;
+async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false } = {}) {
+  let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0;
   const entries=initialEvents.map((details,index)=>({id:String(index+1),details}));
   const savedIds = [];
   await page.route('**/src/session.js*', route => route.fulfill({ contentType: 'application/javascript', body: `
@@ -18,6 +18,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
         async getTimeline(options) {const response=await fetch('/__test/timeline',{method:'POST',body:JSON.stringify(options)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async correctUpdate(value) {const response=await fetch('/__test/correct',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());return response.json();},
         async deleteUpdate(value) {const response=await fetch('/__test/delete',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());},
+        async generateSummary(value) {const response=await fetch('/__test/summary',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Busy');return response.json();},
         async matchingPatient(patient) {const response=await fetch('/__test/match',{method:'POST',body:JSON.stringify(patient)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async saveMatchedUpdate(value) {return state.saveUpdate(value);},
         async saveUpdate(value) {const response=await fetch('/__test/append',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Unavailable');},
@@ -36,6 +37,10 @@ async function mockSession(page, { failSave = false, interpretation = null, init
       timelineCalls++;if(timelineCalls===failTimelineAt)return route.fulfill({status:503,json:{}});
       const options=route.request().postDataJSON(),start=Number(options.cursor||0),ordered=[...entries].sort((a,b)=>b.details.capturedAt-a.details.capturedAt || Number(b.id)-Number(a.id)),page=ordered.slice(start,start+options.numItems);
       return route.fulfill({json:{patient:record?{id:'person-test',name:record.name,relationship:record.relationship}:null,page,isDone:start+page.length>=entries.length,continueCursor:String(start+page.length)}});
+    }
+    if(path.endsWith('summary')) {
+      summaryCalls++;if(failSummary && summaryCalls===1)return route.fulfill({status:503,body:'Busy'});
+      return route.fulfill({json:summaryReply || {status:'empty',name:'Mira Example',groups:[],sources:[],undated:[],undatedCount:0,recordCount:0,message:'',generatedAt:Date.now()}});
     }
     if(path.endsWith('match')) {
       matchCalls++;if(failMatch && matchCalls===1)return route.fulfill({status:503,body:'Unavailable'});
@@ -72,7 +77,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (route.request().url().endsWith('/capture-text')) return route.fulfill({ json: { text: route.request().postDataJSON().text, source: 'text' } });
     return route.fulfill({ json: interpretation || { status: 'ready', event: 'Mira Example said she felt tired today.', when: 'today', evidence: 'Patient-reported', question: '', message: '' } });
   });
-  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls }) };
+  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls, summaryCalls }) };
 }
 async function confirm(page) {
   await page.goto('/');
@@ -426,4 +431,22 @@ test('different identity after login stays unsaved and can return to its prepare
   await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('Other Example felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();await page.getByRole('button',{name:'Yes, continue'}).click();await login(page);
   await expect(page.getByRole('alert')).toContainText('each account keeps notes for one person');await expect(page.getByRole('button',{name:'Yes, save to this record'})).toHaveCount(0);expect(mock.state().appendCalls).toBe(0);
   await page.getByRole('link',{name:'Back to your update'}).click();await expect(page.getByRole('heading',{name:'Your update is ready.'})).toBeVisible();expect(mock.state().entries).toHaveLength(1);
+});
+
+
+const summaryFixture=()=>({status:'ready',name:'Mira Example',groups:[{title:'Symptoms and observations',keys:['1']}],sources:[{key:'1',recordId:'1',revision:0,edited:true,event:'She did not feel dizzy.',when:'today',evidence:'Patient-reported',polarity:'absent',date:'2026-10-06',capturedAt:Date.now(),timeZone:'Asia/Kolkata',supportingWords:'She did not feel dizzy.'}],undated:[{key:'u1',recordId:'1',revision:0,event:'Her appetite seemed better sometime last week.',when:'sometime last week',evidence:'Caregiver-observed',polarity:'uncertain',date:null,capturedAt:Date.now(),timeZone:'Asia/Kolkata',supportingWords:'Her appetite seemed better sometime last week.'}],undatedCount:1,recordCount:1,message:'',generatedAt:Date.now()});
+
+test('period summary validates dates, retains period on failure, shows source evidence and undated details, then returns to timeline (services mocked)',async({page})=>{
+  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture(),failSummary:true});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();
+  await page.getByLabel('From',{exact:true}).fill('2026-10-07');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('start before the end');expect(mock.state().summaryCalls).toBe(0);
+  await page.getByLabel('From',{exact:true}).fill('2026-10-01');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('Busy right now');await expect(page.getByLabel('From',{exact:true})).toHaveValue('2026-10-01');
+  await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('heading',{name:'Symptoms and observations'})).toBeVisible();await expect(page.getByText('This is based on only a few updates, so it gives a limited picture of this period.')).toBeVisible();
+  await expect(page.locator('.period-result .fact-text').first()).toHaveText('She did not feel dizzy.');await page.getByText('View source',{exact:true}).first().click();await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();await expect(page.getByText('Corrected by you.',{exact:true})).toBeVisible();
+  await page.getByText('1 detail with uncertain timing',{exact:true}).click();await expect(page.getByText(/^Timing not known/)).toBeVisible();
+  await page.screenshot({path:'.impeccable/review/summary-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:900});await page.screenshot({path:'.impeccable/review/summary-desktop.png',fullPage:true});
+  await page.getByLabel('From',{exact:true}).fill('2026-09-01');await expect(page.locator('.period-result')).toHaveCount(0);await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);
+});
+
+for(const scenario of ['empty','too_many'])test(`period summary ${scenario} explains available data and retains saved timeline (services mocked)`,async({page})=>{
+  await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:{...summaryFixture(),status:scenario,groups:[],sources:[],undated:[],undatedCount:0,recordCount:0,message:'Choose a shorter period.'}});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByText(scenario==='empty'?'There are no dated updates to summarise for this period.':'Choose a shorter period.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);
 });

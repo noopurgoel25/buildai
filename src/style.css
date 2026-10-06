@@ -144,3 +144,13 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .destructive { background: #B54747; }
 .destructive:hover { background: #963b3b; }
 .delete-preview { margin: 24px 0; }
+.summary-link { margin-top: 12px; }
+.period-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.period-dates > div { min-width: 0; }
+.period-dates input { min-width: 0; width: 100%; }
+.period-result { margin-top: 36px; }
+.summary-section { margin-top: 28px; }
+.summary-source { margin-top: 12px; font-size: 13px; }
+.summary-source p { font-size: 13px; }
+.summary-limited { background: #f1f0ea; border-radius: 12px; padding: 16px; }
+.undated-summary { margin-top: 32px; }
