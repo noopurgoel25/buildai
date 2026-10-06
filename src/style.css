@@ -177,3 +177,37 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .summary-source p { font-size: 13px; }
 .summary-limited { background: #f1f0ea; border-radius: 12px; padding: 16px; }
 .undated-summary { margin-top: 32px; }
+
+.period-summary h1 { overflow-wrap: anywhere; }
+.period-summary .back { margin-bottom: 28px; }
+.period-summary form { margin-top: 24px; }
+.period-summary .period-dates input { min-height: 48px; padding: 10px; }
+.period-summary .period-dates label { font-size: 13px; margin-bottom: 6px; }
+.period-result > h2 { font-size: 18px; line-height: 1.5; }
+.summary-overview { margin: 24px 0; }
+.summary-overview h3 { font-size: 20px; line-height: 1.4; margin: 0 0 12px; }
+.summary-narrative { color: #24302d; overflow-wrap: anywhere; }
+.summary-overview .summary-limited { background: none; padding: 0; font-size: 13px; line-height: 1.5; margin-top: 8px; }
+.summary-categories { display: grid; gap: 12px; }
+.summary-category { background: #fff; border-radius: 14px; min-width: 0; }
+.summary-category > summary { display: flex; align-items: center; gap: 12px; padding: 16px; cursor: pointer; list-style: none; border-radius: 14px; }
+.summary-category > summary::-webkit-details-marker { display: none; }
+.summary-category > summary:hover { background: #f1f5f1; }
+.summary-category > summary > span:not(.category-icon) { flex: 1; min-width: 0; }
+.summary-category h3 { font-size: 16px; line-height: 1.5; margin: 0; overflow-wrap: anywhere; }
+.summary-category .hint { margin: 0; }
+.category-icon { width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%; color: #39675e; background: #e2eee7; }
+.category-icon.marker-measurement { color: #645779; background: #e9e7f2; }
+.category-icon.marker-care { color: #765f36; background: #f2e9d9; }
+.category-icon.marker-wellbeing { color: #58657a; background: #e7edf3; }
+.category-icon svg { width: 23px; height: 23px; }
+.category-chevron { width: 16px; height: 20px; flex-shrink: 0; color: #39675e; }
+.summary-category[open] .category-chevron { transform: rotate(90deg); }
+.summary-category > .update-facts { margin: 0; padding: 0 16px 12px; overflow-wrap: anywhere; }
+.overview-sources, .summary-prepared { font-size: 13px; margin-top: 16px; }
+.overview-sources > summary, .summary-prepared > summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
+.undated-summary > summary { min-height: 44px; cursor: pointer; }
+@media (max-width: 350px) { .period-summary { padding-inline: 18px; } .summary-category > summary { gap: 8px; padding: 12px; } }
+
+.summary-period-picker { margin-top: 20px; font-size: 13px; }
+.summary-period-picker > summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: #32695f; }

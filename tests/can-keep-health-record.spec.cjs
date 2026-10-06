@@ -440,11 +440,11 @@ test('period summary validates dates, retains period on failure, shows source ev
   const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture(),failSummary:true});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();
   await page.getByLabel('From',{exact:true}).fill('2026-10-07');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('start before the end');expect(mock.state().summaryCalls).toBe(0);
   await page.getByLabel('From',{exact:true}).fill('2026-10-01');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('Busy right now');await expect(page.getByLabel('From',{exact:true})).toHaveValue('2026-10-01');
-  await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('heading',{name:'Symptoms and observations'})).toBeVisible();await expect(page.getByText('This is based on only a few updates, so it gives a limited picture of this period.')).toBeVisible();
-  await expect(page.locator('.period-result .fact-text').first()).toHaveText('She did not feel dizzy.');await page.getByText('View source',{exact:true}).first().click();await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();await expect(page.getByText('Corrected by you.',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('heading',{name:'Symptoms',exact:true})).toBeVisible();await expect(page.getByText('This is based on only a few updates, so it gives a limited picture of this period.')).toBeVisible();
+  await page.locator('.summary-category > summary').first().click();await expect(page.locator('.period-result .fact-text').first()).toHaveText('She did not feel dizzy.');await page.getByText('View source',{exact:true}).first().click();await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();await expect(page.getByText('Corrected by you.',{exact:true})).toBeVisible();
   await page.getByText('1 detail with uncertain timing',{exact:true}).click();await expect(page.getByText(/^Timing not known/)).toBeVisible();
   await page.screenshot({path:'.impeccable/review/summary-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:900});await page.screenshot({path:'.impeccable/review/summary-desktop.png',fullPage:true});
-  await page.getByLabel('From',{exact:true}).fill('2026-09-01');await expect(page.locator('.period-result')).toHaveCount(0);await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);
+  await page.getByText('Change dates',{exact:true}).click();await page.getByLabel('From',{exact:true}).fill('2026-09-01');await expect(page.locator('.period-result')).toHaveCount(0);await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);
 });
 
 for(const scenario of ['empty','too_many'])test(`period summary ${scenario} explains available data and retains saved timeline (services mocked)`,async({page})=>{
@@ -486,4 +486,19 @@ test('compact timeline reveals complete notes in one tap, keeps negatives and wo
   await page.getByRole('button',{name:'Delete update',exact:true}).click();await page.getByRole('button',{name:'Keep update'}).click();
   expect(mock.state().deleteCalls).toBe(0);expect(mock.state().correctionCalls).toBe(0);
   await page.locator('.timeline-disclosure > summary').first().click();await expect(page.getByRole('button',{name:'Change update'})).toHaveCount(0);expect(errors).toEqual([]);
+});
+
+test('summary starts with supported overview and calm categories, sources disclose on tap and narrow layouts stay intact (services mocked)',async({page})=>{
+  const result=summaryFixture();result.overview=[{id:'h1',text:'A later note explicitly records no dizziness. This describes those notes, not the days between them.',keys:['1']}];
+  for(const [title,key,event] of [['Measurements','2','BP 142/88'],['Care and visits','3','Doctor visit recorded.'],['Appetite, sleep and energy','4','She said she slept poorly.']]){result.groups.push({title,keys:[key]});result.sources.push({...result.sources[0],key,recordId:key,event,polarity:'present'});}
+  result.recordCount=4;const errors=[];page.on('pageerror',e=>errors.push(e.message));await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:result});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();
+  await expect(page.locator('.summary-narrative')).toHaveText(result.overview[0].text);await expect(page.locator('.summary-category')).toHaveCount(4);await expect(page.getByText('Corrected by you.',{exact:true}).first()).not.toBeVisible();
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390 || width===1440)await page.screenshot({path:`.impeccable/review/calm-summary-${width}.png`,fullPage:true});}
+  const category=page.locator('.summary-category > summary').first();await category.focus();await page.keyboard.press('Enter');await page.locator('.summary-category').first().getByText('View source',{exact:true}).click();await expect(page.locator('.summary-category').first().getByText('Explicitly absent',{exact:true})).toBeVisible();
+  await page.getByText('Notes behind this overview',{exact:true}).click();await expect(page.locator('.overview-sources .fact-text')).toHaveText('She did not feel dizzy.');
+  await page.setViewportSize({width:320,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect(errors).toEqual([]);
+});
+
+test('unrelated sparse notes use neutral overview rather than an unsupported better or worse claim (services mocked)',async({page})=>{
+  await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture()});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.locator('.summary-narrative')).toContainText('Add more updates to build a fuller picture.');await expect(page.locator('.summary-narrative')).not.toContainText('looking better');await expect(page.locator('.summary-narrative')).not.toContainText('since last visit');
 });
