@@ -3,6 +3,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v, type Infer } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import { confirmedEvent, validateConfirmedEvent } from "./lib/healthEvent";
+import { paginationOptsValidator } from "convex/server";
 
 export const firstRecord = query({
   args: {},
@@ -49,3 +50,52 @@ export const saveCapture = mutation({args:saveArgs,returns:v.id("healthEvents"),
   if (!args.event.observations?.length) throw new Error("Review each observation before saving.");
   return await persistFirstRecord(ctx,args);
 }});
+
+export const timelinePage = query({
+  args: { paginationOpts: paginationOptsValidator },
+  returns: v.object({
+    patient: v.union(v.null(), v.object({ id: v.id('people'), name: v.string(), relationship: v.string() })),
+    page: v.array(v.object({ id: v.id('healthEvents'), details: confirmedEvent })),
+    isDone: v.boolean(), continueCursor: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const caregiverId = await getAuthUserId(ctx);
+    if (!caregiverId) throw new Error('Sign in to view your timeline.');
+    if (!Number.isInteger(args.paginationOpts.numItems) || args.paginationOpts.numItems < 1 || args.paginationOpts.numItems > 10) throw new Error('Request up to 10 updates at a time.');
+    const empty = { patient: null, page: [], isDone: true, continueCursor: '' };
+    const family = await ctx.db.query('families').withIndex('by_caregiver', q => q.eq('caregiverId', caregiverId)).unique();
+    if (!family) return empty;
+    const person = await ctx.db.query('people').withIndex('by_family', q => q.eq('familyId', family._id)).unique();
+    if (!person) return empty;
+    const patient = { id: person._id, name: person.name, relationship: person.relationship };
+    const record = await ctx.db.query('healthRecords').withIndex('by_person', q => q.eq('personId', person._id)).unique();
+    if (!record) return { ...empty, patient };
+    const timeline = await ctx.db.query('healthTimelines').withIndex('by_record', q => q.eq('recordId', record._id)).unique();
+    if (!timeline) return { ...empty, patient };
+    const result = await ctx.db.query('healthEvents').withIndex('by_timeline_capture', q => q.eq('timelineId', timeline._id))
+      .order('desc').paginate({ ...args.paginationOpts, maximumBytesRead: 400_000 });
+    return { patient, page: result.page.map(event => ({ id: event._id, details: event.details })), isDone: result.isDone, continueCursor: result.continueCursor };
+  },
+});
+
+export const addUpdate = mutation({
+  args: { patientId: v.id('people'), event: confirmedEvent }, returns: v.id('healthEvents'),
+  handler: async (ctx, args) => {
+    const caregiverId = await getAuthUserId(ctx);
+    if (!caregiverId) throw new Error('Sign in before saving this update.');
+    const person = await ctx.db.get(args.patientId);
+    const family = person ? await ctx.db.get(person.familyId) : null;
+    if (!person || family?.caregiverId !== caregiverId) throw new Error('This patient is not available in your account.');
+    validateConfirmedEvent(args.event);
+    if (!args.event.observations?.length) throw new Error('Review the update before saving.');
+    const record = await ctx.db.query('healthRecords').withIndex('by_person', q => q.eq('personId', person._id)).unique();
+    const timeline = record ? await ctx.db.query('healthTimelines').withIndex('by_record', q => q.eq('recordId', record._id)).unique() : null;
+    if (!timeline) throw new Error('We could not find your timeline.');
+    const saved = await ctx.db.query('healthEvents').withIndex('by_caregiver_confirmation', q => q.eq('caregiverId', caregiverId).eq('details.confirmationId', args.event.confirmationId)).unique();
+    if (saved) {
+      if (saved.timelineId !== timeline._id) throw new Error('This update belongs to a different timeline.');
+      return saved._id;
+    }
+    return await ctx.db.insert('healthEvents', { caregiverId, timelineId: timeline._id, details: args.event, confirmedAt: Date.now() });
+  },
+});

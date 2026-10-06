@@ -11,7 +11,8 @@ export default defineSchema({
   healthTimelines: defineTable({ recordId: v.id("healthRecords") }).index("by_record", ["recordId"]),
   healthEvents: defineTable({ caregiverId: v.id("users"), timelineId: v.id("healthTimelines"), details: confirmedEvent, confirmedAt: v.number() })
     .index("by_caregiver_confirmation", ["caregiverId", "details.confirmationId"])
-    .index("by_timeline", ["timelineId"]),
+    .index("by_timeline", ["timelineId"])
+    .index("by_timeline_capture", ["timelineId", "details.capturedAt"]),
   loginEmailUsage: defineTable({ emailHash: v.string(), requestedAt: v.number() })
     .index("by_email_time", ["emailHash", "requestedAt"]).index("by_time", ["requestedAt"]),
   transcriptionUsage: defineTable({ hour: v.number(), count: v.number() }).index("by_hour", ["hour"]),

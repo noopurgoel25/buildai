@@ -120,8 +120,8 @@ Milestone 6 implementation (local, awaiting email setup and real sign-in verific
 
 
 
-Patient timeline: patient → Add update → optional summary → chronological events. Main: Add update → Capture.
-States: Loading — timeline skeleton while events load. Broken — “We couldn’t load the timeline. Try again.” Empty — explain that no health events have been persisted yet, with Add update as the primary action. Done — chronological health events displayed, newest first.
+Patient timeline: patient → Add update → existing Capture/review → save back to timeline. Keep one capture together as one note, with all its facts and their own occurrence times. Order notes by capture timestamp, newest recorded first, and label the date as Recorded so it is never mistaken for symptom timing. Exact capture time, source, original input and corrections stay in Record details. Load older updates in bounded pages; failure loading older notes preserves those already on screen. No summary controls or historical edit/delete actions in milestone 7.
+States: Loading — timeline skeleton while events load. Broken — “We couldn’t load the timeline. Try again.” Empty — explain that no health events have been persisted yet, with Add update as the primary action. Done — saved notes displayed newest recorded first. Returning users reuse their existing patient without setup or another login when already authenticated. Whole-update review uses Save update for a returning patient; first capture still provides temporary first value before sign-in. Save failures retain the confirmed update; retries preserve the confirmation ID and never create duplicate notes.
 
 
 

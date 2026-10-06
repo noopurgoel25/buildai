@@ -8,7 +8,7 @@ Landing page first, one hour. Then the milestones from PRODUCT.md, riskiest part
 4. I can see what the AI understood and edit it before saving.
 5. I can save the confirmed health event and see my first value.
 6. I can sign up with email + OTP so my health record can persist.
-7. I can see the patient's health timeline.
+7. I can see the patient's health timeline and add another update through the existing capture/review flow.
 8. I can edit or delete a previous health event.
 9. I can capture different kinds of health information through the same workflow.
 10. I can get an evidence-grounded summary for a selected period.
@@ -20,7 +20,7 @@ Landing page first, one hour. Then the milestones from PRODUCT.md, riskiest part
 
 Last: I can close it, reopen it, and my data is still there.
 
-Approved correction before milestone 7: one capture contains observations approved together in one whole-update review, with individual symptom timing and a shared device-local capture timestamp. Preserve explicit negative statements; clarify missing/conflicting timing without guessing, allow confirmed approximate/unknown timing, and save all remaining observations together. The approved CareNama redesign reduces visible bookkeeping with plain facts, optional Record details and empathetic wording across the existing flow. Timeline, historical editing/deletion and further-event capture remain in their existing milestones.
+Approved correction before milestone 7: one capture contains observations approved together in one whole-update review, with individual symptom timing and a shared device-local capture timestamp. Preserve explicit negative statements; clarify missing/conflicting timing without guessing, allow confirmed approximate/unknown timing, and save all remaining observations together. The approved CareNama redesign reduces visible bookkeeping with plain facts, optional Record details and empathetic wording across the existing flow. Milestone 7 now includes the timeline and adding further updates through the existing flow. Historical editing/deletion and additional kinds of capture remain in their existing milestones.
 
 Parked (not now):
 - [ ] Group linked observations into one entry (for example BP with explicit no dizziness), with caregiver review of grouping; keep distinct occasions separate without inferring medical causes.

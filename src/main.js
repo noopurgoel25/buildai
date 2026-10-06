@@ -3,7 +3,8 @@ import '@fontsource/inter/600.css';
 import './style.css';
 import { mountCapture } from './capture.js';
 import { startSession } from './session.js';
-import { mountSignIn, mountRecord } from './account.js';
+import { mountSignIn } from './account.js';
+import { mountTimeline } from './timeline.js';
 import { savedObservationDetails } from './observation-display.js';
 import { createRecordId } from './record-id.js';
 
@@ -28,9 +29,13 @@ function render() {
   if (location.hash === '#record') {
     if (session.isLoading) { app.innerHTML = '<section class="screen"><h1>Opening your health record…</h1><p role="status">Checking your sign-in.</p></section>'; return; }
     if (!session.isAuthenticated) { location.replace('#signin'); return; }
-    disposeAccount = mountRecord(app, session,
-      captureDraft.confirmed && !captureDraft.persisted ? { patient: { ...patient }, event: captureDraft.confirmed } : null,
-      () => { captureDraft.persisted = true; }, () => { clearDraft(); location.hash = '#'; });
+    disposeAccount = mountTimeline(app, session,
+      captureDraft.confirmed && !captureDraft.persisted && (!captureDraft.existingPatient || captureDraft.saveRequested) ? { patient: { ...patient }, event: captureDraft.confirmed, existingPatient:Boolean(captureDraft.existingPatient) } : null,
+      () => { captureDraft.persisted = true; captureDraft.saveRequested=false; }, savedPatient => {
+        clearDraft();
+        if(savedPatient){Object.assign(patient,savedPatient);captureDraft.existingPatient=true;location.hash='#capture';}
+        else location.hash='#patient-setup';
+      }, () => { clearDraft(); location.hash = '#'; });
     return;
   }
   const setup = location.hash === '#patient-setup';
@@ -64,7 +69,7 @@ function render() {
       </div>
     </section>` : capture ? `
     <section class="screen setup" aria-labelledby="title">
-      <a class="back" href="#patient-setup">Back</a>
+      <a class="back" id="capture-back" href="${captureDraft.existingPatient ? '#record' : '#patient-setup'}">${captureDraft.existingPatient ? 'Back to timeline' : 'Back'}</a>
       <div class="patient-context"><h2>${escapeHtml(patient.name)}</h2><p>${escapeHtml(patient.relationship)}</p></div>
       <div class="capture-intro"><h1 id="title" tabindex="-1">What would you like to note about ${escapeHtml(patient.name)}?</h1><p>Say it in your own words.</p></div>
       <div id="capture-controls"></div>
@@ -107,8 +112,10 @@ function render() {
       clarifications: captureDraft.clarifications || [],
       ...(result.observations ? {observations:result.observations,removedObservations:captureDraft.removedObservations || []} : {}),
     });
-    location.hash = '#first-value';
+    if(captureDraft.existingPatient && session.isAuthenticated){captureDraft.saveRequested=true;location.hash='#record';}
+    else location.hash = '#first-value';
   });
+  if(capture) document.querySelector('#capture-back').onclick=()=>{captureDraft.saveRequested=false;};
   if (setup) {
     const form = document.querySelector('#patient-form');
     form.addEventListener('input', (event) => {
@@ -149,6 +156,7 @@ window.addEventListener('hashchange', render);
 render();
 function clearDraft() {
   patient.name = ''; patient.relationship = '';
+  delete patient.id;
   for (const key of Object.keys(captureDraft)) delete captureDraft[key];
   Object.assign(captureDraft, { text: '', source: 'text', audio: null, interpretation: null });
   Object.assign(loginDraft, { email: '', code: '', codeSent: false, sentAt: 0 });

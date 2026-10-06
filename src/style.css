@@ -132,3 +132,11 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 @media (prefers-reduced-motion: reduce) { *, *:before, *:after { transition: none !important; scroll-behavior: auto !important; } }
 @media (max-width: 359px) { .brand, .screen { padding-left: 20px; padding-right: 20px; }.welcome h1 { font-size: 34px; }.review-surface, .confirmed-event { padding: 16px; } }
 @media (min-width: 700px) { .brand { padding-top: 32px; }.screen { padding-top: 40px; }.welcome { padding-top: 40px; padding-bottom: 32px; } }
+.timeline-heading { font-size: 22px; margin: 36px 0 4px; }
+.timeline-list { list-style: none; margin: 24px 0 0; padding: 0; }
+.timeline-list > li { margin-bottom: 28px; }
+.timeline-entry { background: #fff; padding: 20px; border-radius: 16px; }
+.timeline-entry h3 { color: #52665e; font-size: 14px; font-weight: 500; margin: 0 0 20px; }
+.timeline-entry .record-details { margin-bottom: 0; }
+.timeline-signout { margin: 24px auto 0; }.timeline-empty { margin: 32px 0; }
+.timeline-skeleton { margin-top: 28px; }.timeline-skeleton span { display: block; height: 96px; margin-bottom: 20px; border-radius: 16px; background: #e2e5df; }
