@@ -121,9 +121,7 @@ export const deleteUpdate = mutation({
   },
 });
 
-export const addUpdate = mutation({
-  args: { patientId: v.id('people'), event: confirmedEvent }, returns: v.id('healthEvents'),
-  handler: async (ctx, args) => {
+async function persistUpdate(ctx: MutationCtx, args: { patientId: import('./_generated/dataModel').Id<'people'>; event: Infer<typeof confirmedEvent> }) {
     const caregiverId = await getAuthUserId(ctx);
     if (!caregiverId) throw new Error('Sign in before saving this update.');
     const person = await ctx.db.get(args.patientId);
@@ -140,5 +138,37 @@ export const addUpdate = mutation({
       return saved._id;
     }
     return await ctx.db.insert('healthEvents', { caregiverId, timelineId: timeline._id, details: args.event, confirmedAt: Date.now() });
+}
+export const addUpdate = mutation({
+  args: { patientId: v.id('people'), event: confirmedEvent }, returns: v.id('healthEvents'), handler: persistUpdate,
+});
+
+function sameIdentity(left: {name:string;relationship:string}, right: {name:string;relationship:string}) {
+  if ([left.name,left.relationship,right.name,right.relationship].some(value=>!value.trim() || value.length>500)) return false;
+  const normalize = (value: string) => value.normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+  return normalize(left.name) === normalize(right.name) && normalize(left.relationship) === normalize(right.relationship);
+}
+export const matchingPatient = query({
+  args: { patient: saveArgs.patient },
+  returns: v.union(v.null(), v.object({ id: v.id('people'), name: v.string(), relationship: v.string() })),
+  handler: async (ctx,args) => {
+    const caregiverId = await getAuthUserId(ctx);
+    if (!caregiverId) throw new Error('Sign in before checking your record.');
+    if (!args.patient.name.trim() || !args.patient.relationship.trim() || args.patient.name.length > 500 || args.patient.relationship.length > 500) throw new Error('Check the patient details.');
+    const family = await ctx.db.query('families').withIndex('by_caregiver', q=>q.eq('caregiverId',caregiverId)).unique();
+    const person = family ? await ctx.db.query('people').withIndex('by_family', q=>q.eq('familyId',family._id)).unique() : null;
+    return person && sameIdentity(person,args.patient) ? {id:person._id,name:person.name,relationship:person.relationship} : null;
+  },
+});
+export const saveMatchedUpdate = mutation({
+  args: { patientId: v.id('people'), patient: saveArgs.patient, event: confirmedEvent, samePersonConfirmed: v.literal(true) },
+  returns: v.id('healthEvents'),
+  handler: async (ctx,args) => {
+    const caregiverId = await getAuthUserId(ctx);
+    if (!caregiverId) throw new Error('Sign in before saving this update.');
+    const person = await ctx.db.get(args.patientId);
+    const family = person ? await ctx.db.get(person.familyId) : null;
+    if (!person || family?.caregiverId !== caregiverId || !sameIdentity(person,args.patient) || args.samePersonConfirmed !== true) throw new Error('Confirm the matching person before saving.');
+    return await persistUpdate(ctx,args);
   },
 });

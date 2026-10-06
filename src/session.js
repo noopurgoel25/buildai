@@ -18,6 +18,8 @@ export function startSession(onChange) {
         getTimeline: paginationOpts => client.query(api.records.timelinePage, { paginationOpts }),
         saveRecord: data => client.mutation(data.event.observations ? api.records.saveCapture : api.records.saveFirstRecord, data),
         saveUpdate: data => client.mutation(api.records.addUpdate, data),
+        matchingPatient: patient => client.query(api.records.matchingPatient, { patient }),
+        saveMatchedUpdate: data => client.mutation(api.records.saveMatchedUpdate, data),
         correctUpdate: data => client.mutation(api.records.correctUpdate, data),
         deleteUpdate: data => client.mutation(api.records.deleteUpdate, data),
       });

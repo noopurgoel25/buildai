@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false } = {}) {
-  let signed = initialEvents.length>0, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0;
+async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false } = {}) {
+  let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0;
   const entries=initialEvents.map((details,index)=>({id:String(index+1),details}));
   const savedIds = [];
   await page.route('**/src/session.js*', route => route.fulfill({ contentType: 'application/javascript', body: `
@@ -13,11 +13,13 @@ async function mockSession(page, { failSave = false, interpretation = null, init
           if (params.code) { state.isAuthenticated = true; onChange({ ...state }); }
         },
         async signOut() { await fetch('/__test/signout'); state.isAuthenticated = false; onChange({ ...state }); },
-        async saveRecord(value) { const response = await fetch('/__test/save', { method: 'POST', body: JSON.stringify(value) }); if (!response.ok) throw new Error('Unavailable'); },
+        async saveRecord(value) { const response = await fetch('/__test/save', { method: 'POST', body: JSON.stringify(value) }); if (!response.ok) throw new Error(await response.text()); },
         async getRecord() { return (await fetch('/__test/record')).json(); },
         async getTimeline(options) {const response=await fetch('/__test/timeline',{method:'POST',body:JSON.stringify(options)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async correctUpdate(value) {const response=await fetch('/__test/correct',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());return response.json();},
         async deleteUpdate(value) {const response=await fetch('/__test/delete',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());},
+        async matchingPatient(patient) {const response=await fetch('/__test/match',{method:'POST',body:JSON.stringify(patient)});if(!response.ok)throw new Error('Unavailable');return response.json();},
+        async saveMatchedUpdate(value) {return state.saveUpdate(value);},
         async saveUpdate(value) {const response=await fetch('/__test/append',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Unavailable');},
       }; queueMicrotask(() => onChange({ ...state }));
     }` }));
@@ -34,6 +36,11 @@ async function mockSession(page, { failSave = false, interpretation = null, init
       timelineCalls++;if(timelineCalls===failTimelineAt)return route.fulfill({status:503,json:{}});
       const options=route.request().postDataJSON(),start=Number(options.cursor||0),ordered=[...entries].sort((a,b)=>b.details.capturedAt-a.details.capturedAt || Number(b.id)-Number(a.id)),page=ordered.slice(start,start+options.numItems);
       return route.fulfill({json:{patient:record?{id:'person-test',name:record.name,relationship:record.relationship}:null,page,isDone:start+page.length>=entries.length,continueCursor:String(start+page.length)}});
+    }
+    if(path.endsWith('match')) {
+      matchCalls++;if(failMatch && matchCalls===1)return route.fulfill({status:503,body:'Unavailable'});
+      const input=route.request().postDataJSON(),normalize=value=>value.trim().replace(/\s+/g,' ').toLowerCase();
+      return route.fulfill({json:record && normalize(input.name)===normalize(record.name) && normalize(input.relationship)===normalize(record.relationship)?{id:'person-test',name:record.name,relationship:record.relationship}:null});
     }
     if(path.endsWith('correct')) {
       correctionCalls++;const input=route.request().postDataJSON();
@@ -54,6 +61,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (path.endsWith('save')) {
       savedCalls++;
       savedIds.push(route.request().postDataJSON().event.confirmationId);
+      if (initialEvents.length)return route.fulfill({status:409,body:'This account already has a health record.'});
       if (failSave && savedCalls === 1) return route.fulfill({ status: 503, json: {} });
       const input = route.request().postDataJSON();
       record = { ...input.patient, event: input.event }; if(!entries.some(entry=>entry.details.confirmationId===input.event.confirmationId))entries.push({id:String(entries.length+1),details:input.event}); return route.fulfill({ json: {} });
@@ -64,7 +72,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (route.request().url().endsWith('/capture-text')) return route.fulfill({ json: { text: route.request().postDataJSON().text, source: 'text' } });
     return route.fulfill({ json: interpretation || { status: 'ready', event: 'Mira Example said she felt tired today.', when: 'today', evidence: 'Patient-reported', question: '', message: '' } });
   });
-  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls }) };
+  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls }) };
 }
 async function confirm(page) {
   await page.goto('/');
@@ -395,4 +403,27 @@ for(const sample of [
   await expect(page.locator('.fact-text')).toHaveCount(sample.count);const facts=await page.locator('.fact-text').allTextContents();for(const fact of facts)expect(sample.text).toContain(fact);
   if(sample.count===1){expect(facts[0]).toContain('Doctor said');expect(facts[0]).toContain('10 mg to 5 mg');}
   const captured=await page.getByText(/^Captured on /).textContent();await page.getByRole('button',{name:'Yes, continue'}).click();await expect(page.getByRole('heading',{name:'Your update is ready.'})).toBeVisible();await expect(page.getByText(/^Captured on /)).toHaveText(captured);
+});
+
+
+test('same-person capture before login is kept, explicitly matched, retried and appended without re-entry (services mocked)',async({page})=>{
+  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],signedOutInitially:true,interpretation:multiInterpretation(),failMatch:true,failAppend:true});
+  await openMulti(page);await resolveMulti(page);await page.getByRole('button',{name:'Yes, continue'}).click();await login(page);
+  await expect(page.getByRole('alert')).toContainText('check your existing record');await page.getByRole('button',{name:'Try again'}).click();
+  await expect(page.getByRole('heading',{name:'Is this update for Mira Example?'})).toBeVisible();expect(mock.state().appendCalls).toBe(0);
+  await expect(page.locator('.fact-text')).toHaveCount(2);await page.screenshot({path:'.impeccable/review/match-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:900});await page.screenshot({path:'.impeccable/review/match-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:844});
+  await page.getByRole('link',{name:'No, back to my update'}).click();await expect(page.getByRole('heading',{name:'Your update is ready.'})).toBeVisible();expect(mock.state().appendCalls).toBe(0);
+  await page.getByRole('link',{name:'Save this update',exact:true}).click();await expect(page.getByRole('heading',{name:'Is this update for Mira Example?'})).toBeVisible();
+  const captured=await page.getByText(/^Captured on /).textContent();await page.getByRole('button',{name:'Yes, save to this record'}).click();await expect(page.getByRole('alert')).toContainText('hasn');
+  await page.getByRole('button',{name:'Try again'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(2);
+  expect(mock.state().savedIds.at(-1)).toBe(mock.state().savedIds.at(-2));expect(mock.state().entries[1].details.observations).toHaveLength(2);expect(mock.state().entries[1].details.observations[1].polarity).toBe('absent');
+  await page.reload();await expect(page.locator('.timeline-entry')).toHaveCount(2);await expect(page.getByText(/^Captured on /).first()).toHaveText(captured);expect(mock.state().codeRequests).toBe(1);
+});
+
+test('different identity after login stays unsaved and can return to its prepared update (services mocked)',async({page})=>{
+  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],signedOutInitially:true});
+  await page.goto('/');await page.getByRole('link',{name:'Get started',exact:true}).click();await page.getByLabel('Their name').fill('Other Example');await page.getByLabel('Your relationship to them').fill('Father');await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('Other Example felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();await page.getByRole('button',{name:'Yes, continue'}).click();await login(page);
+  await expect(page.getByRole('alert')).toContainText('each account keeps notes for one person');await expect(page.getByRole('button',{name:'Yes, save to this record'})).toHaveCount(0);expect(mock.state().appendCalls).toBe(0);
+  await page.getByRole('link',{name:'Back to your update'}).click();await expect(page.getByRole('heading',{name:'Your update is ready.'})).toBeVisible();expect(mock.state().entries).toHaveLength(1);
 });

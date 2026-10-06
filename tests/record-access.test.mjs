@@ -12,7 +12,7 @@ const source = stripTypeScriptTypes(readFileSync(new URL('../convex/records.ts',
   .replace('"convex/values"', JSON.stringify(import.meta.resolve('convex/values')))
   .replace('"convex/server"', JSON.stringify(import.meta.resolve('convex/server')))
   .replace('"./lib/healthEvent"', JSON.stringify(validatorsUrl));
-const { firstRecord, saveFirstRecord, saveCapture, timelinePage, addUpdate, correctUpdate, deleteUpdate } = await import(dataUrl(source));
+const { firstRecord, saveFirstRecord, saveCapture, timelinePage, addUpdate, correctUpdate, deleteUpdate, matchingPatient, saveMatchedUpdate } = await import(dataUrl(source));
 const { validateConfirmedEvent } = await import(validatorsUrl);
 const event = { confirmationId: '00000000-0000-4000-8000-000000000001', event: 'Mira Example reported tiredness.', when: 'Today', evidence: 'Patient-reported', source: 'text', originalText: 'Mira Example said she felt tired today.', edited: true, aiInterpretation: null, clarifications: [], capturedAt: Date.now(), timeZone: 'Asia/Kolkata' };
 function database() {
@@ -143,4 +143,26 @@ test('deletion requires ownership and current revision; retry is safe and removi
   const page=await timelinePage._handler(owner,{paginationOpts:{numItems:10,cursor:null}});assert.equal(page.page.length,0);assert.equal(page.patient.name,'Mira Example');assert.equal(db.count('people'),1);
   const next={...event,confirmationId:'00000000-0000-4000-8000-000000000002',observations:[observation('1',event.originalText)]};
   await addUpdate._handler(owner,{patientId:page.patient.id,event:next});assert.equal(db.count('people'),1);assert.equal(db.count('healthEvents'),1);
+});
+
+
+test('post-login matching is account-owned and requires an explicit same-person confirmation before duplicate-safe append',async()=>{
+  const db=database(),owner=ctx(db,'users:owner'),patient={name:'Mira Example',relationship:'Daughter'};
+  await saveFirstRecord._handler(owner,{patient,event});
+  const typed={name:'  MIRA   EXAMPLE ',relationship:' daughter '};
+  const match=await matchingPatient._handler(owner,{patient:typed});assert.equal(match.name,patient.name);
+  assert.equal(await matchingPatient._handler(ctx(db,'users:other'),{patient:typed}),null);
+  await assert.rejects(matchingPatient._handler(ctx(db,null),{patient:typed}),/Sign in/);
+  for(const mismatch of [{name:'Someone Else',relationship:'Daughter'},{name:'Mira Example',relationship:'Father'}]) assert.equal(await matchingPatient._handler(owner,{patient:mismatch}),null);
+  const next={...event,confirmationId:'00000000-0000-4000-8000-000000000009',observations:[observation('1',event.originalText)]};
+  const input={patientId:match.id,patient:typed,event:next,samePersonConfirmed:true};
+  await assert.rejects(saveMatchedUpdate._handler(ctx(db,null),input),/Sign in/);
+  await assert.rejects(saveMatchedUpdate._handler(ctx(db,'users:other'),input),/Confirm/);
+  await assert.rejects(saveMatchedUpdate._handler(owner,{...input,samePersonConfirmed:false}),/Confirm/);
+  await assert.rejects(saveMatchedUpdate._handler(owner,{...input,patient:{name:'Other Example',relationship:'Daughter'}}),/Confirm/);
+  await assert.rejects(saveMatchedUpdate._handler(owner,{...input,event:{...next,observations:[{...next.observations[0],confirmed:false}]}}),/Review/);
+  assert.equal(db.count('healthEvents'),1);
+  const id=await saveMatchedUpdate._handler(owner,input);assert.equal(await saveMatchedUpdate._handler(owner,input),id);
+  assert.equal(db.count('healthEvents'),2);assert.equal(db.count('people'),1);assert.equal(db.count('families'),1);
+  assert.deepEqual((await db.get(id)).details,next);
 });

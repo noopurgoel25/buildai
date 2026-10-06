@@ -33,3 +33,5 @@ Parked (not now):
 - [ ] WhatsApp capture/bot and other integrations
 
 Approved milestone 9 scope: reported medication starts/stops/dose changes, doctor visits and appetite/sleep/energy changes through the existing voice/text capture, review and timeline. Preserve who said what, supplied values and uncertainty; no inferred prescriptions or medical advice.
+
+Approved flow correction during milestone 9: preserve a pre-sign-in capture for a matching existing patient and ask explicit same-person confirmation before appending. No multiple-person UI or automatic identity merge.

@@ -4,6 +4,7 @@ import { createRecordId } from './record-id.js';
 
 export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut) {
   let disposed=false, busy=false, entries=[], patient=null, cursor=null, isDone=true, loaded=false, error='', errorKind='load', saved=false;
+  let confirmedMatch=null, savingPending=false;
   function shell(content) { if(!disposed) root.innerHTML=`<section class="screen timeline-screen" aria-labelledby="title">${content}</section>`; }
   function draw() {
     shell(`<h1 id="title" tabindex="-1">${patient ? `${escape(patient.name)}’s health story` : 'Your health story starts here.'}</h1>
@@ -63,18 +64,41 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut)
     }
   }
   async function savePending() {
+    if(savingPending || disposed)return;
+    savingPending=true;
     shell('<h1 id="title" tabindex="-1">Saving your update…</h1><p role="status">Keeping it with your saved notes.</p>');
     try {
-      if(pending.existingPatient) await session.saveUpdate({patientId:pending.patient.id,event:pending.event});
+      if(confirmedMatch) await session.saveMatchedUpdate({patientId:confirmedMatch.id,patient:{name:pending.patient.name,relationship:pending.patient.relationship},event:pending.event,samePersonConfirmed:true});
+      else if(pending.existingPatient) await session.saveUpdate({patientId:pending.patient.id,event:pending.event});
       else await session.saveRecord({patient:{name:pending.patient.name,relationship:pending.patient.relationship},event:pending.event});
       if(disposed)return;
       saved=true;onSaved();await loadPage(true);
     } catch(cause) {
       if(disposed)return;
       const conflict=/already has a health record/.test(cause.message || '');
+      if(conflict && !confirmedMatch){await checkMatch();return;}
+      saveFailure(conflict);
+    } finally {savingPending=false;}
+  }
+  function saveFailure(conflict) {
       shell(`<h1 id="title" tabindex="-1">Your update is still here.</h1><p class="error" role="alert">${conflict?'For now, each account keeps notes for one person. This account already has a record, so we haven’t saved this new update.':'Your update hasn’t been saved yet. Try again without closing this page.'}</p>${conflict?'<p class="hint">You can open the existing timeline. Your new update stays only in this open page; refreshing or closing clears it.</p><button class="primary account-start" id="existing-record">Open existing timeline</button>':'<button class="primary account-start" id="retry-save">Try again</button>'}<a class="text-action account-link" href="${pending.existingPatient?'#capture':'#first-value'}">Back to your update</a>`);
       root.querySelector('#retry-save')?.addEventListener('click',savePending);
       root.querySelector('#existing-record')?.addEventListener('click',()=>loadPage(true));
+  }
+  async function checkMatch() {
+    if(disposed)return;
+    shell('<h1 id="title" tabindex="-1">Checking your existing record…</h1><p role="status">Your prepared update is still here.</p>');
+    try {
+      const match=await session.matchingPatient({name:pending.patient.name,relationship:pending.patient.relationship});
+      if(disposed)return;
+      if(!match){saveFailure(true);return;}
+      shell(`<h1 id="title" tabindex="-1">Is this update for ${escape(match.name)}?</h1><p>This account already has a record for ${escape(match.name)} (${escape(match.relationship)}). The name and relationship match what you entered.</p><div class="capture-result">${savedObservationDetails(pending.event)}</div><p class="hint">Confirm it’s the same person before we add this update to their existing timeline. Nothing new has been saved yet.</p><button class="primary account-start" id="confirm-match">Yes, save to this record</button><a class="text-action account-link" href="#first-value">No, back to my update</a>`);
+      root.querySelector('h1').focus();
+      root.querySelector('#confirm-match').onclick=()=>{confirmedMatch=match;savePending();};
+    } catch {
+      if(disposed)return;
+      shell('<h1 id="title" tabindex="-1">Your update is still here.</h1><p class="error" role="alert">We couldn’t check your existing record. Try again without closing this page.</p><button class="primary account-start" id="retry-match">Try again</button><a class="text-action account-link" href="#first-value">Back to your update</a>');
+      root.querySelector('#retry-match').onclick=checkMatch;
     }
   }
   if(pending)savePending();else loadPage(true);
