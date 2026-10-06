@@ -14,7 +14,7 @@ export function mountSummarySharing(root,session,patient,period,result,draft) {
     root.querySelector('#manual-copy')?.toggleAttribute('hidden',!manualCopy);
   }
   function draw(){if(disposed)return;
-    root.innerHTML=`<section class="sharing-review" aria-labelledby="sharing-title"><h2 id="sharing-title" tabindex="-1">Make it yours before sharing</h2><p>Read through and change anything you’d like. Your saved health notes stay as they are.</p>${draft.text===null?'<p role="status">Opening your sharing draft…</p>':`<label for="sharing-text">Text to share</label><textarea id="sharing-text" rows="12" maxlength="40000" aria-describedby="sharing-help sharing-count">${escape(draft.text)}</textarea><p class="hint" id="sharing-count"></p><p class="hint" id="sharing-help">This draft stays only in this open page. Changes won’t be saved to the health record.</p>${canShare()?'': '<p class="hint">Use Copy text to paste this into the app you choose.</p>'}<div class="sharing-actions">${canShare()?'<button class="primary" type="button" data-send="share">Share</button>':''}<button class="${canShare()?'secondary':'primary'}" type="button" data-send="copy">Copy text</button></div><p class="hint" id="manual-copy" hidden>Automatic copying isn’t available here. The text is selected; use Copy on your device.</p>`}<p class="hint" id="sharing-status" role="status" hidden></p><p class="error" id="sharing-error" role="alert" hidden></p>${draft.text===null?'<button class="secondary" id="sharing-retry" type="button" hidden>Try again</button>':''}</section>`;
+    root.innerHTML=`<section class="sharing-review" aria-labelledby="sharing-title"><h2 id="sharing-title" tabindex="-1">Make it yours before sharing</h2><p>Read through and change anything you’d like. Your saved health notes stay as they are.</p>${draft.text===null?'<p role="status">Opening your sharing draft…</p>':`<label for="sharing-text">Text to share</label><textarea id="sharing-text" rows="12" maxlength="40000" aria-describedby="sharing-help sharing-count">${escape(draft.text)}</textarea><p class="hint" id="sharing-count"></p><p class="hint" id="sharing-help">This draft stays only in this open page. Changes won’t be saved to the health record.</p>${canShare()?'': '<p class="hint">Use Copy text to paste this into the app you choose.</p>'}<div class="sharing-actions">${canShare()?'<button class="primary" type="button" data-send="share">Share</button>':''}<button class="${canShare()?'secondary':'primary'}" type="button" data-send="copy">Copy text</button></div><p class="hint" id="manual-copy" hidden>Automatic copying isn’t available here. Touch and hold the text, choose Select all, then Copy.</p>`}<p class="hint" id="sharing-status" role="status" hidden></p><p class="error" id="sharing-error" role="alert" hidden></p>${draft.text===null?'<button class="secondary" id="sharing-retry" type="button" hidden>Try again</button>':''}</section>`;
     root.querySelector('#sharing-retry')?.addEventListener('click',open);
     root.querySelector('#sharing-text')?.addEventListener('input',event=>{draft.text=event.target.value;pendingHandoff=null;error='';notice='';manualCopy=false;controls();});
     root.querySelectorAll('[data-send]').forEach(button=>button.onclick=()=>send(button.dataset.send));
@@ -26,20 +26,31 @@ export function mountSummarySharing(root,session,patient,period,result,draft) {
     try{
       // A slow server check can outlast the browser's click permission. A second
       // explicit click hands off the same just-checked text without another wait.
-      const response=kind==='share' && pendingHandoff && pendingHandoff.text===draft.text && Date.now()-pendingHandoff.checkedAt<15000?pendingHandoff:await check();if(disposed)return;if(!response)return;
+      const response=pendingHandoff?.kind===kind && pendingHandoff.text===draft.text && Date.now()-pendingHandoff.checkedAt<15000?pendingHandoff:await check();if(disposed)return;if(!response)return;
       pendingHandoff=null;
       checked=true;const payload={title:response.title,text:response.text};
       if(kind==='share'){
         if(!canShare() || (navigator.canShare && !navigator.canShare(payload))){notice='Sharing isn’t available here. Use Copy text instead.';return;}
-        if(navigator.userActivation && !navigator.userActivation.isActive){pendingHandoff={...response,checkedAt:Date.now()};notice='Your draft is checked. Tap Share to open your device’s menu.';return;}
+        if(navigator.userActivation && !navigator.userActivation.isActive){pendingHandoff={...response,kind,checkedAt:Date.now()};notice='Your draft is checked. Tap Share to open your device’s menu.';return;}
         await navigator.share(payload);if(disposed)return;notice='Sharing completed on this device. Your draft is still here.';
       }else{
-        if(!window.isSecureContext || !navigator.clipboard?.writeText){selectText();return;}
-        try{await navigator.clipboard.writeText(response.text);if(disposed)return;notice='Copied. Paste it into the app you choose.';}catch{if(disposed)return;selectText();}
+        if(navigator.userActivation && !navigator.userActivation.isActive){pendingHandoff={...response,kind,checkedAt:Date.now()};notice='Your draft is checked. Tap Copy text again to copy it.';return;}
+        if(!window.isSecureContext || !navigator.clipboard?.writeText){copySelectedText();return;}
+        try{await navigator.clipboard.writeText(response.text);if(disposed)return;notice='Copied. Paste it into the app you choose.';}catch{if(disposed)return;copySelectedText();}
       }
     }catch(cause){if(disposed)return;if(kind==='share' && cause.name==='AbortError')notice='Sharing cancelled. Your draft is still here.';
       else error=kind==='share' && checked?'We couldn’t open sharing. Your draft is still here. Try again or use Copy text.':'We couldn’t check the saved notes. Your draft is still here. Try again.';
     }finally{if(!disposed){busy=false;controls();if(manualCopy)selectText();}}
+  }
+  function copySelectedText(){
+    const editor=root.querySelector('#sharing-text');if(!editor)return;
+    // The phone HTTP preview has no Clipboard API. Copy the visible draft
+    // through the browser selection command, with the editor enabled.
+    editor.disabled=false;editor.readOnly=true;
+    try{editor.focus({preventScroll:true});editor.select();editor.setSelectionRange(0,editor.value.length);
+      if(document.execCommand('copy')){notice='Copied. Paste it into the app you choose.';return;}
+    }catch{}finally{editor.readOnly=false;}
+    selectText();
   }
   function selectText(){manualCopy=true;notice='';const editor=root.querySelector('#sharing-text');if(editor){editor.focus();editor.select();}}
   draw();if(draft.text===null)open();else root.querySelector('#sharing-title').focus();

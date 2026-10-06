@@ -581,7 +581,7 @@ for(const nativeError of ['AbortError','DataError'])test(`summary sharing ${nati
 });
 
 test('summary copy fallback selects text when device sharing or clipboard is unavailable (device and services mocked)',async({page})=>{
- await sharingDevice(page,{available:false,clipboardError:true});await openSharing(page);await expect(page.getByRole('button',{name:'Share',exact:true})).toHaveCount(0);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText(/Automatic copying isn’t available/)).toBeVisible();expect(await page.getByLabel('Text to share').evaluate(element=>element.selectionEnd-element.selectionStart)).toBe(sharingFixtureText.length);await expect(page.getByLabel('Text to share')).toBeEnabled();
+ await sharingDevice(page,{available:false,clipboardError:true});await page.addInitScript(()=>document.execCommand=()=>false);await openSharing(page);await expect(page.getByRole('button',{name:'Share',exact:true})).toHaveCount(0);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText(/Automatic copying isn’t available/)).toBeVisible();expect(await page.getByLabel('Text to share').evaluate(element=>element.selectionEnd-element.selectionStart)).toBe(sharingFixtureText.length);await expect(page.getByLabel('Text to share')).toBeEnabled();
 });
 
 test('server checks prevent stale or failed sharing without discarding the edited draft (device and services mocked)',async({page})=>{
@@ -594,8 +594,22 @@ test('slow server check needs a fresh share tap and leaving before completion ne
  let release;await page.route('**/__test/share-check',async route=>{await new Promise(resolve=>release=resolve);await route.fulfill({json:{status:'ready',title:'Mira Example summary',text:sharingFixtureText,message:''}});});await page.getByRole('button',{name:'Share',exact:true}).click();await expect(page.getByText('Checking your saved notes…',{exact:true})).toBeVisible();await expect.poll(()=>typeof release).toBe('function');await page.getByRole('button',{name:'Back to summary',exact:true}).click();release();await expect(page.locator('.summary-narrative')).toBeVisible();expect(await page.evaluate(()=>window.__deviceShares.length)).toBe(1);
 });
 
-test('phone HTTP preview offers manual copying while preserving the sharing draft (services mocked)',async({page,baseURL})=>{
- const address=Object.values(require('node:os').networkInterfaces()).flat().find(item=>item.family==='IPv4'&&!item.internal)?.address;test.skip(!address,'Requires a local network address.');await sharingDevice(page);await openSharing(page,{},`http://${address}:${new URL(baseURL).port}`);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);expect(await page.evaluate(()=>isSecureContext)).toBe(false);await expect(page.getByRole('button',{name:'Share',exact:true})).toHaveCount(0);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.locator('#manual-copy')).toBeVisible();expect(await page.getByLabel('Text to share').evaluate(element=>element.selectionEnd-element.selectionStart)).toBe(sharingFixtureText.length);
+test('phone HTTP preview copies the reviewed text into the actual clipboard (services mocked)',async({page,context,baseURL})=>{
+ const address=Object.values(require('node:os').networkInterfaces()).flat().find(item=>item.family==='IPv4'&&!item.internal)?.address;test.skip(!address,'Requires a local network address.');
+ await context.grantPermissions(['clipboard-read','clipboard-write']);await page.setViewportSize({width:390,height:844});
+ await openSharing(page,{},`http://${address}:${new URL(baseURL).port}`);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);
+ expect(await page.evaluate(()=>isSecureContext)).toBe(false);await expect(page.getByRole('button',{name:'Share',exact:true})).toHaveCount(0);
+ const revised=sharingFixtureText+'\nA caregiver edit.';await page.getByLabel('Text to share').fill(revised);
+ await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();
+ await expect(page.getByLabel('Text to share')).toHaveValue(revised);await expect(page.getByLabel('Text to share')).toBeEnabled();
+ const reader=await context.newPage();await reader.goto('/');expect(await reader.evaluate(async expected=>(await navigator.clipboard.readText()).replace(/\r\n/g,'\n')===expected,revised)).toBe(true);await reader.close();
+});
+
+test('slow copy check needs a fresh tap without checking again (device and services mocked)',async({page})=>{
+ await sharingDevice(page,{slowCheck:true});const mock=await openSharing(page);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);
+ await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Your draft is checked. Tap Copy text again to copy it.',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>window.__deviceCopies.length)).toBe(0);await page.evaluate(()=>window.__allowActivation=true);
+ await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();expect(mock.state().shareCheckCalls).toBe(2);expect(await page.evaluate(()=>window.__deviceCopies)).toEqual([sharingFixtureText]);
 });
 
 test('Copy text writes the reviewed draft to the actual browser clipboard (account services mocked)',async({page,context})=>{
