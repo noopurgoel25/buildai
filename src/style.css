@@ -78,3 +78,9 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .returning-signin { text-align: center; color: #2f7d72; text-underline-offset: 4px; padding: 8px; }
 @media (min-width: 700px) { .screen { padding-top: 64px; padding-bottom: 64px; } }
 @media (max-height: 600px) { .welcome { gap: 24px; } .memory { height: 160px; } }
+/* Keep each observation distinct without turning capture into a medical form. */
+.observation { border-top: 1px solid #e2e5df; margin-top: 24px; padding-top: 20px; }
+.observation h3 { font-size: 18px; margin: 0 0 12px; }
+.observation input, .capture-result input, .capture-result select { max-width: 100%; }
+.shared-date { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0; font-weight: 400; }
+.shared-date input { width: 20px; height: 20px; flex: 0 0 20px; margin: 2px 0; }

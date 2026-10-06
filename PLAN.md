@@ -20,6 +20,8 @@ Landing page first, one hour. Then the milestones from PRODUCT.md, riskiest part
 
 Last: I can close it, reopen it, and my data is still there.
 
+Approved correction before milestone 7: one capture contains separately confirmed observations, with individual symptom timing and a shared device-local capture timestamp. Preserve explicit negative statements; clarify missing/conflicting timing without guessing, allow confirmed approximate/unknown timing, and save all remaining observations together. Timeline, historical editing/deletion and further-event capture remain in their existing milestones.
+
 Parked (not now):
 - [ ] Multiple patients / full family management UI
 - [ ] Multiple caregivers and permissions

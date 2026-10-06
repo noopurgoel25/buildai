@@ -15,7 +15,7 @@ export function startSession(onChange) {
     useEffect(() => {
       onChange({ isLoading, isAuthenticated, signIn, signOut,
         getRecord: () => client.query(api.records.firstRecord, {}),
-        saveRecord: data => client.mutation(api.records.saveFirstRecord, data),
+        saveRecord: data => client.mutation(data.event.observations ? api.records.saveCapture : api.records.saveFirstRecord, data),
       });
     }, [isLoading, isAuthenticated, signIn, signOut]);
     return null;

@@ -4,6 +4,7 @@ import './style.css';
 import { mountCapture } from './capture.js';
 import { startSession } from './session.js';
 import { mountSignIn, mountRecord } from './account.js';
+import { savedObservationDetails } from './observation-display.js';
 
 const app = document.querySelector('#app');
 // Draft identity stays in memory until authentication is added in milestone 6.
@@ -53,7 +54,7 @@ function render() {
       <p>Here’s the first update you confirmed.</p>
       <article class="capture-result confirmed-event" aria-labelledby="confirmed-title">
         <h2 id="confirmed-title">Your confirmed update</h2>
-        <dl>${[['What happened', confirmed.event], ['When', confirmed.when], ['Evidence', confirmed.evidence]].map(([label, value]) => `<dt>${label}</dt><dd>${escapeHtml(value)}</dd>`).join('')}</dl>
+        ${savedObservationDetails(confirmed)}
         ${confirmed.edited ? '<p class="hint">Edited by you.</p>' : ''}
         ${confirmed.clarifications.length ? `<details><summary>Your clarification</summary>${confirmed.clarifications.map(item => `<p>${escapeHtml(item.question)}</p><p class="original-update">${escapeHtml(item.answer)}</p>`).join('')}</details>` : ''}
         <details><summary>Your original update</summary><p class="original-update">${escapeHtml(confirmed.originalText)}</p></details>
@@ -104,15 +105,17 @@ function render() {
   if (capture) disposeCapture = mountCapture(document.querySelector('#capture-controls'), patient, captureDraft, () => {
     const result = captureDraft.interpretation;
     if (result?.status !== 'ready' || !result.event.trim() || captureDraft.editDraft) return;
+    if (result.observations && (!result.observations.length || result.observations.some(o => !o.confirmed || !o.timing.resolved))) return;
     captureDraft.confirmed = structuredClone({
       event: result.event, when: result.when, evidence: result.evidence,
-      edited: Boolean(result.edited), source: captureDraft.source,
+      edited: Boolean(result.edited || result.observations?.some(o => o.edited)), source: captureDraft.source,
       confirmationId: captureDraft.confirmed?.confirmationId || crypto.randomUUID(),
       aiInterpretation: captureDraft.aiInterpretation || null,
       capturedAt: captureDraft.capturedAt || Date.now(),
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZone: captureDraft.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       originalText: captureDraft.originalText || captureDraft.text,
       clarifications: captureDraft.clarifications || [],
+      ...(result.observations ? {observations:result.observations,removedObservations:captureDraft.removedObservations || []} : {}),
     });
     location.hash = '#first-value';
   });
@@ -124,6 +127,7 @@ function render() {
         captureDraft.aiInterpretation = null;
         captureDraft.confirmed = null;
         captureDraft.editDraft = null;
+        captureDraft.observationEdit = null;
         captureDraft.clarificationAnswer = '';
         captureDraft.clarifications = [];
       }

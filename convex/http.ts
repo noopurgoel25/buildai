@@ -86,9 +86,14 @@ http.route({ path: "/api/transcribe", method: "POST", handler: httpAction(async 
 
 http.route({ path: "/api/interpret", method: "POST", handler: httpAction(async (ctx, request) => {
   let args;
+  let capturedAt: number | undefined;
   try {
     const body = JSON.parse(new TextDecoder().decode(await readBody(request, 40_000)));
     const text = validateText(body.text);
+    if (body.capturedAt !== undefined) {
+      if (typeof body.capturedAt !== 'number' || !Number.isFinite(body.capturedAt) || body.capturedAt <= 0 || body.capturedAt > Date.now()+300000) throw new Error('invalid-capture-time');
+      capturedAt = body.capturedAt;
+    }
     if (!body.patient || typeof body.patient.name !== "string" || !body.patient.name.trim() || body.patient.name.length > 500 ||
       typeof body.patient.relationship !== "string" || !body.patient.relationship.trim() || body.patient.relationship.length > 500 ||
       !["text", "voice"].includes(body.source) || typeof body.timeZone !== "string" || body.timeZone.length > 100) throw new Error("invalid-input");
@@ -98,7 +103,8 @@ http.route({ path: "/api/interpret", method: "POST", handler: httpAction(async (
     return Response.json({ error: "Check your update and patient details, then try again." }, { status: 400, headers: headers(request) });
   }
   try {
-    const result = await ctx.runAction(internal.interpretation.interpret, args);
+    const result = capturedAt === undefined ? await ctx.runAction(internal.interpretation.interpret, args)
+      : await ctx.runAction(internal.interpretation.interpretCapture, {...args, capturedAt});
     return Response.json(result, { headers: headers(request) });
   } catch {
     return Response.json({ error: BUSY }, { status: 503, headers: headers(request) });

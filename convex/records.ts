@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
+import type { MutationCtx } from "./_generated/server";
 import { confirmedEvent, validateConfirmedEvent } from "./lib/healthEvent";
 
 export const firstRecord = query({
@@ -23,10 +24,8 @@ export const firstRecord = query({
   },
 });
 
-export const saveFirstRecord = mutation({
-  args: { patient: v.object({ name: v.string(), relationship: v.string() }), event: confirmedEvent },
-  returns: v.id("healthEvents"),
-  handler: async (ctx, args) => {
+const saveArgs = { patient: v.object({ name: v.string(), relationship: v.string() }), event: confirmedEvent };
+async function persistFirstRecord(ctx: MutationCtx, args: { patient: {name:string;relationship:string}; event: Infer<typeof confirmedEvent> }) {
     const caregiverId = await getAuthUserId(ctx);
     if (!caregiverId) throw new Error("Sign in before saving this health record.");
     validateConfirmedEvent(args.event);
@@ -42,5 +41,11 @@ export const saveFirstRecord = mutation({
     const recordId = await ctx.db.insert("healthRecords", { personId });
     const timelineId = await ctx.db.insert("healthTimelines", { recordId });
     return await ctx.db.insert("healthEvents", { caregiverId, timelineId, details: args.event, confirmedAt: Date.now() });
-  },
-});
+}
+
+// Legacy API remains available while the new frontend is reviewed and deployed.
+export const saveFirstRecord = mutation({args:saveArgs,returns:v.id("healthEvents"),handler:persistFirstRecord});
+export const saveCapture = mutation({args:saveArgs,returns:v.id("healthEvents"),handler:async (ctx,args) => {
+  if (!args.event.observations?.length) throw new Error("Review each observation before saving.");
+  return await persistFirstRecord(ctx,args);
+}});

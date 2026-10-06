@@ -1,4 +1,5 @@
 import { toWav } from './audio.js';
+import { mountObservationReview } from './observation-review.js';
 
 const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const BUSY = 'Busy right now. Try again in a few minutes.';
@@ -51,11 +52,12 @@ export function mountCapture(root, patient, draft, onConfirm) {
     try {
       const result = await request('interpret', JSON.stringify({
         text: draft.text, source: draft.source, patient: { ...patient },
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        timeZone: draft.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+        capturedAt: draft.capturedAt,
       }));
       if (disposed) return;
       draft.interpretation = result;
-      draft.aiInterpretation = result.status === 'ready' ? { ...result } : null;
+      draft.aiInterpretation = result.status === 'ready' ? structuredClone(result) : null;
       state = 'ready';
       retryStep = '';
       draw();
@@ -76,7 +78,6 @@ export function mountCapture(root, patient, draft, onConfirm) {
       draft.clarifications = [];
       draft.clarificationAnswer = '';
       draft.source = 'voice';
-      draft.capturedAt = Date.now();
       await interpret();
     } catch (cause) { fail(cause); }
   }
@@ -138,7 +139,10 @@ export function mountCapture(root, patient, draft, onConfirm) {
     draft.text = root.querySelector('textarea').value;
     if (!draft.text.trim()) { fail(new Error('Type what happened before continuing.')); root.querySelector('textarea').focus(); return; }
     draft.source = 'text'; draft.interpretation = null;
-    draft.aiInterpretation = null; draft.capturedAt = Date.now();
+    draft.aiInterpretation = null;
+    if (draft.captureText !== draft.text || !draft.capturedAt) stampCapture();
+    draft.captureText = draft.text;
+    draft.removedObservations = [];
     error = ''; retryStep = 'text'; state = 'submitting'; draw();
     try {
       const result = await request('capture-text', JSON.stringify({ text: draft.text }));
@@ -190,6 +194,10 @@ export function mountCapture(root, patient, draft, onConfirm) {
       return;
     }
     if (state === 'ready') {
+      if (result.status === 'ready' && result.observations?.length) {
+        mountObservationReview(root, draft, onConfirm, () => { draft.confirmed=null; draft.interpretation=null; draft.observationEdit=null; state='idle'; draw(); });
+        return;
+      }
       root.innerHTML = `<div class="capture-result">
         <h2 tabindex="-1">${result.status === 'ready' ? result.manual ? 'Review your update' : 'Here’s what I understood' : 'A little more detail'}</h2>
         ${result.status === 'ready' ? `<dl>${[[clarified ? 'Original observation' : 'What happened', result.event], [timingClarified ? 'Clarified timing' : 'When', result.when], ['Evidence', result.evidence]].map(([label, value]) => `<dt>${label}</dt><dd>${escape(value)}</dd>`).join('')}</dl>` : `<p>${escape(result.question || result.message)}</p>`}
@@ -236,7 +244,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
     root.querySelector('#voice').onclick = () => {
       if (recording) {
         if (performance.now() - startedAt >= 30_000) { cancelRecording(); fail(new Error('Recording stopped at the 30-second limit. Please record a shorter update; this recording was not sent.')); }
-        else { state = 'processing'; recorder.stop(); releaseMic(); draw(); }
+        else { stampCapture(); draft.captureText=null; draft.removedObservations=[]; state = 'processing'; recorder.stop(); releaseMic(); draw(); }
       } else startRecording();
     };
     root.querySelector('#switch-text')?.addEventListener('click', () => { cancelRecording(); state = 'idle'; error = ''; draw(); root.querySelector('textarea').focus(); });
@@ -250,8 +258,11 @@ export function mountCapture(root, patient, draft, onConfirm) {
     });
     root.querySelector('#manual-edit')?.addEventListener('click', () => {
       draft.aiInterpretation = null;
-      editDraft = draft.editDraft = { status: 'ready', event: draft.text, when: 'Not specified', evidence: 'Not specified', question: '', message: '', edited: true, manual: true };
-      state = 'editing'; error = ''; draw(); root.querySelector('textarea').focus();
+      draft.originalText ||= draft.text;
+      const item={id:crypto.randomUUID(),event:draft.originalText,when:'Not specified',supportingWords:draft.originalText,evidence:'Not specified',polarity:'uncertain',timing:{date:null,time:null,precision:'unknown',resolved:false},confirmed:false,edited:true};
+      draft.interpretation={status:'ready',event:draft.originalText,when:'Not specified',evidence:'Not specified',question:'',message:'',manual:true,observations:[item]};
+      draft.observationEdit=structuredClone(item);
+      state='ready'; error=''; draw();
     });
   }
 
@@ -259,4 +270,6 @@ export function mountCapture(root, patient, draft, onConfirm) {
   const dispose = () => { disposed = true; cancelRecording(); requestController?.abort(); window.removeEventListener('pagehide', dispose); };
   window.addEventListener('pagehide', dispose);
   return dispose;
+
+  function stampCapture() { draft.capturedAt=Date.now(); draft.timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone; }
 }

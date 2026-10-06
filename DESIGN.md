@@ -1,5 +1,13 @@
 # DESIGN.md
 
+### Approved observation review and timing update
+
+Keep the existing phone-first capture screen. A single update opens a list of observations, separated by quiet rules rather than nested cards. Each item shows What happened, When it happened, Evidence and whether the statement is explicitly present, absent or uncertain. Show one shared Captured on date/time with seconds and the original device time zone.
+
+Ask one timing question at a time. Provide a date choice, explicit approximate timing and “I don’t remember”; conflicting timing directs the caregiver to choose a correction or explicitly retain uncertainty. An unchecked shared-date option names the observations it will affect. Never assign a shared date automatically. Per-item Confirm, Edit and Remove from this update controls precede the final Save update button. Editing requires reconfirming only that item. No permanent storage precedes login; first value continues to explain the temporary state.
+
+Loading and provider failures retain the original input and capture timestamp. Manual recovery uses the same observation review and permits adding another observation from the original update. Removing all items returns to capture without saving. Saved records display all confirmed observations and original input; old voice records explain that their older capture timestamp was recorded after transcription. This update supersedes the earlier single-description confirmation layout, while timeline layout remains a subsequent milestone.
+
 Read this before building or changing any screen. If a choice isn't covered here, ask me instead of guessing.
 
 ## 1\. The feeling, in labels

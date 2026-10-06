@@ -1,3 +1,4 @@
+import { savedObservationDetails } from './observation-display.js';
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 export function mountSignIn(root, draft, session, hasUpdate) {
@@ -65,7 +66,7 @@ export function mountRecord(root, session, pending, onSaved, onSignOut) {
       if (pending && trySave) onSaved();
       shell(record ? `<h1 id="title" tabindex="-1">${escape(record.name)}’s health story</h1>
         <p>Your confirmed update is saved for next time.</p>
-        <article class="capture-result confirmed-event"><h2>Your saved update</h2><dl>${[['What happened', record.event.event], ['When', record.event.when], ['Evidence', record.event.evidence]].map(([label, value]) => `<dt>${label}</dt><dd>${escape(value)}</dd>`).join('')}</dl>
+        <article class="capture-result confirmed-event"><h2>Your saved update</h2>${savedObservationDetails(record.event)}
         ${record.event.edited ? '<p class="hint">Edited by you.</p>' : ''}
         ${record.event.clarifications.length ? `<details><summary>Your clarification</summary>${record.event.clarifications.map(item => `<p>${escape(item.question)}</p><p class="original-update">${escape(item.answer)}</p>`).join('')}</details>` : ''}
         <details><summary>Your original update</summary><p class="original-update">${escape(record.event.originalText)}</p></details></article>

@@ -213,10 +213,11 @@ test('LIVE: spoken fictional update reaches actual Sarvam transcription then int
   await expect(page.getByRole('heading', { name: 'Here’s what I understood' })).toBeVisible({ timeout: 90000 });
   expect(calls.map(call => call.status)).toEqual([200, 200]);
   await page.screenshot({ path: '.impeccable/review/capture-live-voice.png', fullPage: true });
-  await page.getByRole('button', { name: 'Edit details' }).click();
-  await page.getByLabel('When', { exact: true }).fill('Today after lunch');
+  await page.getByRole('button', { name: 'Edit observation 1' }).click();
+  await page.getByLabel('Timing words', { exact: true }).fill('Today after lunch');
+  await page.getByLabel('How certain is the timing?').selectOption('approximate');
   await page.getByRole('button', { name: 'Apply changes' }).click();
-  await expect(page.getByText('Today after lunch', { exact: true })).toBeVisible();
+  await expect(page.getByRole('definition').filter({ hasText: 'Today after lunch' })).toBeVisible();
   await page.getByText('Your original update', { exact: true }).click();
   await expect(page.locator('.original-update')).toHaveText(transcript.text);
 });
@@ -227,7 +228,7 @@ test('LIVE: Sarvam asks about unclear patient/timing, rejects off-topic input, a
   await openCapture(page);
   const cases = [
     { text: 'Alex Example felt dizzy today.', status: 'clarification' },
-    { text: 'Mira Example felt dizzy last Monday or Tuesday; I am not sure which day.', status: 'clarification' },
+    { text: 'Mira Example felt dizzy last Monday or Tuesday; I am not sure which day.', status: 'ready', unresolved: true },
     { text: 'What is the capital of France?', status: 'rejected' },
     { text: 'Should I double her blood pressure medicine?', status: 'rejected' },
     { text: 'Mira Example seems better today, but she did not report dizziness.', status: 'ready' },
@@ -241,14 +242,14 @@ test('LIVE: Sarvam asks about unclear patient/timing, rejects off-topic input, a
     const result = await response.json();
     expect(result.status).toBe(item.status);
     if (item.status === 'ready') {
-      expect(result.event).toContain('seems better');
-      expect(result.event).toContain('did not report dizziness');
+      if(item.unresolved) expect(result.observations[0].timing.resolved).toBe(false);
+      else { expect(result.event).toContain('seems better'); expect(result.event).toContain('did not report dizziness'); }
       expect(item.text.includes(result.event)).toBe(true);
     } else if (item.status === 'clarification') {
       expect(result.question.trim().length).toBeGreaterThan(0);
       expect(result.event).toBe('');
     }
-    await expect(page.getByText('Nothing has been saved.')).toBeVisible();
+    await expect(page.getByText(/Nothing has been saved\./)).toBeVisible();
     await page.getByRole('button', { name: 'Return to capture' }).click();
   }
 });
@@ -267,7 +268,7 @@ test('LIVE: voice interpretation formats explicit time but retains the original 
   expect(response.status()).toBe(200);
   const result = await response.json();
   expect(result.event).toBe('She felt pukish at 10 a.m. yesterday, but did not puke.');
-  expect(result.when).toContain('10 a.m.');
+  expect(result.observations[0].when).toContain('10 a.m.');
   await expect(page.getByRole('heading', { name: 'Here’s what I understood' })).toBeVisible();
   await page.getByText('Your original update', { exact: true }).click();
   await expect(page.locator('.original-update')).toHaveText(spoken);
@@ -312,16 +313,16 @@ test('empty edits preserve entered timing, and failed AI offers manual editing',
   await page.getByRole('button', { name: 'Continue with text' }).click();
   await page.getByRole('button', { name: 'Edit manually' }).click();
   await page.getByLabel('What happened', { exact: true }).fill('');
-  await page.getByLabel('When', { exact: true }).fill('Yesterday');
+  await page.getByLabel('Timing words', { exact: true }).fill('Yesterday');
   await page.getByRole('button', { name: 'Apply changes' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Describe what happened before applying your changes.');
-  await expect(page.getByLabel('When', { exact: true })).toHaveValue('Yesterday');
+  await expect(page.getByRole('alert')).toHaveText('Check the description and timing before applying changes.');
+  await expect(page.getByLabel('Timing words', { exact: true })).toHaveValue('Yesterday');
   await page.getByLabel('What happened', { exact: true }).fill('Mira Example reported tiredness.');
   await page.getByRole('button', { name: 'Apply changes' }).click();
   await expect(page.getByText('Edited by you.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Review your update' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Here.s what I understood/ })).toBeVisible();
   await page.screenshot({ path: '.impeccable/review/review-manual-mobile.png', fullPage: true });
-  await expect(page.getByText('Nothing has been saved.')).toBeVisible();
+  await expect(page.getByText('Review and confirm each observation. Nothing has been saved.')).toBeVisible();
 });
 
 test('clarification requires an answer and retains the original update when interpretation is retried', async ({ page }) => {
@@ -346,29 +347,23 @@ test('clarification requires an answer and retains the original update when inte
 });
 
 test('LIVE: unclear date can be answered and the resulting interpretation edited', async ({ page }) => {
-  test.skip(!live, 'Requires the actual Sarvam backend.');
-  test.setTimeout(150000);
+  test.skip(!live, 'Requires the actual Sarvam backend.'); test.setTimeout(150000);
   await openCapture(page);
   const original = 'Mira Example felt tired last Monday or Tuesday; I am not sure which day.';
   await page.getByLabel('Or type your update').fill(original);
   await page.getByRole('button', { name: 'Continue with text' }).click();
-  await expect(page.getByLabel('Your answer')).toBeVisible({ timeout: 90000 });
-  await page.getByLabel('Your answer').fill('It happened last Monday.');
-  await page.getByRole('button', { name: 'Update interpretation' }).click();
-  await expect(page.getByRole('button', { name: 'Edit details' })).toBeVisible({ timeout: 90000 });
-  await expect(page.locator('dd').first()).toHaveText(original);
-  await expect(page.getByText('Original observation', { exact: true })).toBeVisible();
-  await expect(page.getByText('Clarified timing', { exact: true })).toBeVisible();
-  await page.getByText('Your clarification', { exact: true }).click();
-  await page.screenshot({ path: '.impeccable/review/review-clarification-mobile.png', fullPage: true });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.screenshot({ path: '.impeccable/review/review-clarification-desktop.png', fullPage: true });
-  await page.getByRole('button', { name: 'Edit details' }).click();
-  await page.getByLabel('What happened', { exact: true }).fill('Mira Example felt tired.');
-  await page.getByRole('button', { name: 'Apply changes' }).click();
-  await expect(page.getByText('Mira Example felt tired.', { exact: true })).toBeVisible();
-  await page.getByText('Your original update', { exact: true }).click();
-  await expect(page.locator('details').filter({ has: page.getByText('Your original update', { exact: true }) }).locator('.original-update')).toHaveText(original);
+  await expect(page.getByRole('button', {name:'Edit observation 1'})).toBeVisible({timeout:90000});
+  await expect(page.getByRole('button',{name:'Confirm observation 1'})).toBeDisabled();
+  await page.getByRole('button',{name:'Edit observation 1'}).click();
+  await page.getByLabel('What happened',{exact:true}).fill('Mira Example felt tired.');
+  await page.getByLabel('Event date').fill('2026-10-05');
+  await page.getByLabel('How certain is the timing?').selectOption('date');
+  await page.getByRole('button',{name:'Apply changes'}).click();
+  await expect(page.getByText('Mira Example felt tired.',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Confirm observation 1'}).click();
+  await page.getByText('Your original update',{exact:true}).click();
+  await expect(page.locator('.original-update')).toHaveText(original);
+  await page.screenshot({path:'.impeccable/review/review-clarification-mobile.png',fullPage:true});
 });
 
 test('unfinished review edits and clarification answers survive Back without saving', async ({ page }) => {
@@ -456,10 +451,11 @@ test('a manually reviewed update needs explicit confirmation, and changing patie
   await page.getByRole('button', { name: 'Edit manually' }).click();
   await expect(page.getByRole('button', { name: 'Confirm update' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Apply changes' }).click();
-  await expect(page.getByRole('heading', { name: 'Review your update' })).toBeVisible();
-  await page.getByRole('button', { name: 'Confirm update' }).click();
+  await expect(page.getByRole('heading', { name: /Here.s what I understood/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm observation 1' }).click();
+  await page.getByRole('button', { name: 'Save update', exact: true }).click();
   await expect(page.getByRole('definition').first()).toHaveText(update);
-  await expect(page.getByText('Not specified', { exact: true })).toHaveCount(2);
+  await expect(page.getByText('Unknown', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Back to review' }).click();
   await page.getByRole('link', { name: 'Back', exact: true }).click();
   await page.getByLabel('Their name').fill('Jamie Example');

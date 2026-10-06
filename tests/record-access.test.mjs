@@ -11,7 +11,7 @@ const source = stripTypeScriptTypes(readFileSync(new URL('../convex/records.ts',
   .replace('"@convex-dev/auth/server"', JSON.stringify(import.meta.resolve('@convex-dev/auth/server')))
   .replace('"convex/values"', JSON.stringify(import.meta.resolve('convex/values')))
   .replace('"./lib/healthEvent"', JSON.stringify(validatorsUrl));
-const { firstRecord, saveFirstRecord } = await import(dataUrl(source));
+const { firstRecord, saveFirstRecord, saveCapture } = await import(dataUrl(source));
 const { validateConfirmedEvent } = await import(validatorsUrl);
 const event = { confirmationId: '00000000-0000-4000-8000-000000000001', event: 'Mira Example reported tiredness.', when: 'Today', evidence: 'Patient-reported', source: 'text', originalText: 'Mira Example said she felt tired today.', edited: true, aiInterpretation: null, clarifications: [], capturedAt: Date.now(), timeZone: 'Asia/Kolkata' };
 function database() {
@@ -52,4 +52,26 @@ test('server rejects empty, oversized or invalid confirmed events', () => {
   for (const invalid of [{ event: '' }, { originalText: 'x'.repeat(5001) }, { capturedAt: Date.now() + 600_000 }, { timeZone: 'invalid-zone' }, { confirmationId: 'bad' }]) {
     assert.throws(() => validateConfirmedEvent({ ...event, ...invalid }));
   }
+});
+
+const observation = (id, words, polarity='present') => ({id,event:words,when:'Unknown',supportingWords:words,evidence:'Not specified',polarity,timing:{date:null,time:null,precision:'unknown',resolved:true},confirmed:true,edited:false});
+test('a capture saves several individually confirmed observations together, preserves explicit negatives and stays duplicate-safe', async () => {
+  const db=database(), owner=ctx(db,'users:owner');
+  const originalText='BP 142/88 this morning and she did not feel dizzy.';
+  const details={...event,event:originalText,originalText,observations:[observation('1','BP 142/88 this morning'),observation('2','she did not feel dizzy','absent')]};
+  const args={patient:{name:'Mira Example',relationship:'Daughter'},event:details};
+  const id=await saveCapture._handler(owner,args);
+  assert.equal(await saveCapture._handler(owner,args),id);
+  assert.equal(db.count('healthEvents'),1);
+  assert.deepEqual((await firstRecord._handler(owner,{})).event.observations,details.observations);
+  assert.equal(await firstRecord._handler(ctx(db,'users:other'),{}),null);
+});
+test('new capture API rejects unresolved, unconfirmed, unsupported or invalid observation timing without writing a partial capture', async () => {
+  for(const patch of [{confirmed:false},{timing:{date:null,time:null,precision:'unknown',resolved:false}},{supportingWords:'invented symptom'},{timing:{date:'2026-02-30',time:null,precision:'date',resolved:true}},{timing:{date:null,time:'25:00',precision:'exact',resolved:true}}]) {
+    const db=database();
+    const details={...event,observations:[{...observation('1',event.originalText),...patch}]};
+    await assert.rejects(saveCapture._handler(ctx(db,'users:owner'),{patient:{name:'Mira Example',relationship:'Daughter'},event:details}));
+    assert.equal(db.count('families'),0); assert.equal(db.count('healthEvents'),0);
+  }
+  await assert.rejects(saveCapture._handler(ctx(database(),'users:owner'),{patient:{name:'Mira Example',relationship:'Daughter'},event}),/Review each/);
 });

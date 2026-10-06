@@ -4,6 +4,16 @@ V1 AI provider: Sarvam AI, using existing Sarvam credits. Saaras transcribes voi
 
 V1 login-email delivery: Resend is approved only to deliver one-time sign-in codes. Convex Auth manages verification and sessions; Convex stores the health record and hosts the app. Login emails contain no health information.
 
+### Approved capture and observation rules
+
+One capture is one original text update or voice transcript, with one patient, source and device-local capture timestamp. It contains one or more observations. Each observation has its own supporting words, evidence, explicit presence/absence/uncertainty and symptom timing. An explicit “no dizziness” is data; silence or “no update” never becomes “no symptoms.” Absence of a report is not proof that the symptom was absent.
+
+The caregiver confirms observations separately and may correct or remove an observation from the pending update. Save the capture together only when every remaining observation is confirmed; never save an empty capture. Preserve original input, AI interpretation and corrections. Authentication remains required before permanent storage.
+
+“When it happened” belongs to each observation. Missing, vague or conflicting timing requires clarification; the caregiver may explicitly keep approximate timing or choose “I don’t remember.” A shared date applies to several observations only when the caregiver explicitly selects the named observations. Resolve clear relative dates against the original capture date and time zone, never against the later save date. “Morning” does not imply an exact clock time.
+
+“Captured on” is the exact moment recording stops or a text update is submitted, displayed with seconds in the device time zone captured at that moment. Retries, clarification, editing and login do not change this timestamp. Existing records remain readable without automatically splitting or reinterpreting them. Timeline work follows this capture correction.
+
 ## 1\. The job
 
 The product

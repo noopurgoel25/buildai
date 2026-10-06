@@ -15,6 +15,7 @@ import type * as interpretation from "../interpretation.js";
 import type * as lib_captureValidation from "../lib/captureValidation.js";
 import type * as lib_formatSpokenTime from "../lib/formatSpokenTime.js";
 import type * as lib_healthEvent from "../lib/healthEvent.js";
+import type * as lib_observationTiming from "../lib/observationTiming.js";
 import type * as login from "../login.js";
 import type * as records from "../records.js";
 
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   "lib/captureValidation": typeof lib_captureValidation;
   "lib/formatSpokenTime": typeof lib_formatSpokenTime;
   "lib/healthEvent": typeof lib_healthEvent;
+  "lib/observationTiming": typeof lib_observationTiming;
   login: typeof login;
   records: typeof records;
 }>;
