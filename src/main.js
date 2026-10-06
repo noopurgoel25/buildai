@@ -2,19 +2,41 @@ import '@fontsource/inter/400.css';
 import '@fontsource/inter/600.css';
 import './style.css';
 import { mountCapture } from './capture.js';
+import { startSession } from './session.js';
+import { mountSignIn, mountRecord } from './account.js';
 
 const app = document.querySelector('#app');
 // Draft identity stays in memory until authentication is added in milestone 6.
 const patient = { name: '', relationship: '' };
 const captureDraft = { text: '', source: 'text', audio: null, interpretation: null };
 let disposeCapture = () => {};
+let disposeAccount = () => {};
+let session = { isLoading: true, isAuthenticated: false };
+const loginDraft = { email: '', code: '', codeSent: false };
 const escapeHtml = (value) => value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 function render() {
   disposeCapture();
+  disposeAccount();
+  if (location.hash === '#signin') {
+    if (session.isAuthenticated) { location.replace('#record'); return; }
+    disposeAccount = mountSignIn(app, loginDraft, session, Boolean(captureDraft.confirmed));
+    return;
+  }
+  if (location.hash === '#record') {
+    if (session.isLoading) { app.innerHTML = '<section class="screen"><h1>Opening your health record…</h1><p role="status">Checking your sign-in.</p></section>'; return; }
+    if (!session.isAuthenticated) { location.replace('#signin'); return; }
+    disposeAccount = mountRecord(app, session,
+      captureDraft.confirmed && !captureDraft.persisted ? { patient: { ...patient }, event: captureDraft.confirmed } : null,
+      () => { captureDraft.persisted = true; }, () => { clearDraft(); location.hash = '#'; });
+    return;
+  }
   const setup = location.hash === '#patient-setup';
   const capture = location.hash === '#capture';
   const firstValue = location.hash === '#first-value';
+  if (session.isAuthenticated && captureDraft.persisted && (setup || capture || firstValue)) {
+    location.replace('#record'); return;
+  }
   if ((capture || firstValue) && (!patient.name.trim() || !patient.relationship.trim())) {
     location.replace('#patient-setup');
     return;
@@ -39,6 +61,7 @@ function render() {
       <div class="temporary-notice">
         <h2>Not saved for next time</h2>
         <p>This confirmed update stays in this open page. Refreshing or closing clears it.</p>
+        <a class="primary account-start" href="${session.isAuthenticated ? '#record' : '#signin'}">Keep this health record</a>
       </div>
     </section>` : capture ? `
     <section class="screen setup" aria-labelledby="title">
@@ -75,6 +98,7 @@ function render() {
         <span class="note note-third"><span></span><span></span></span>
       </div>
       <a class="primary" href="#patient-setup">Get started</a>
+      <a class="returning-signin" href="#signin">Already started? Sign in</a>
     </section>`;
   if (setup || capture || firstValue) document.querySelector('h1').focus();
   if (capture) disposeCapture = mountCapture(document.querySelector('#capture-controls'), patient, captureDraft, () => {
@@ -83,6 +107,10 @@ function render() {
     captureDraft.confirmed = structuredClone({
       event: result.event, when: result.when, evidence: result.evidence,
       edited: Boolean(result.edited), source: captureDraft.source,
+      confirmationId: captureDraft.confirmed?.confirmationId || crypto.randomUUID(),
+      aiInterpretation: captureDraft.aiInterpretation || null,
+      capturedAt: captureDraft.capturedAt || Date.now(),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       originalText: captureDraft.originalText || captureDraft.text,
       clarifications: captureDraft.clarifications || [],
     });
@@ -93,6 +121,7 @@ function render() {
     form.addEventListener('input', (event) => {
       if (patient[event.target.name] !== event.target.value) {
         captureDraft.interpretation = null;
+        captureDraft.aiInterpretation = null;
         captureDraft.confirmed = null;
         captureDraft.editDraft = null;
         captureDraft.clarificationAnswer = '';
@@ -124,3 +153,20 @@ function render() {
 
 window.addEventListener('hashchange', render);
 render();
+function clearDraft() {
+  patient.name = ''; patient.relationship = '';
+  for (const key of Object.keys(captureDraft)) delete captureDraft[key];
+  Object.assign(captureDraft, { text: '', source: 'text', audio: null, interpretation: null });
+  Object.assign(loginDraft, { email: '', code: '', codeSent: false, sentAt: 0 });
+}
+startSession(next => {
+  const becameSignedIn = !session.isAuthenticated && next.isAuthenticated;
+  const signedOut = session.isAuthenticated && !next.isAuthenticated;
+  session = next;
+  if (signedOut) { clearDraft(); location.hash = '#'; }
+  else if (becameSignedIn) {
+    if (location.hash === '#record') render();
+    else location.hash = '#record';
+  }
+  else if (['#signin', '#record'].includes(location.hash)) render();
+});

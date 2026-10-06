@@ -2,6 +2,8 @@
 
 V1 AI provider: Sarvam AI, using existing Sarvam credits. Saaras transcribes voice; `sarvam-105b` interprets health updates, asks clarifications, and will generate summaries and doctor briefs in their planned milestones. Calls run server-side in Convex, with no OpenAI API dependency or fallback. The user flow, confirmation requirement, deferred authentication, and prohibition on diagnosis or treatment advice remain unchanged.
 
+V1 login-email delivery: Resend is approved only to deliver one-time sign-in codes. Convex Auth manages verification and sessions; Convex stores the health record and hosts the app. Login emails contain no health information.
+
 ## 1\. The job
 
 The product

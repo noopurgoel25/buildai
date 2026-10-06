@@ -55,6 +55,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
       }));
       if (disposed) return;
       draft.interpretation = result;
+      draft.aiInterpretation = result.status === 'ready' ? { ...result } : null;
       state = 'ready';
       retryStep = '';
       draw();
@@ -75,6 +76,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
       draft.clarifications = [];
       draft.clarificationAnswer = '';
       draft.source = 'voice';
+      draft.capturedAt = Date.now();
       await interpret();
     } catch (cause) { fail(cause); }
   }
@@ -136,6 +138,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
     draft.text = root.querySelector('textarea').value;
     if (!draft.text.trim()) { fail(new Error('Type what happened before continuing.')); root.querySelector('textarea').focus(); return; }
     draft.source = 'text'; draft.interpretation = null;
+    draft.aiInterpretation = null; draft.capturedAt = Date.now();
     error = ''; retryStep = 'text'; state = 'submitting'; draw();
     try {
       const result = await request('capture-text', JSON.stringify({ text: draft.text }));
@@ -246,6 +249,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
       else submitText({ preventDefault() {} });
     });
     root.querySelector('#manual-edit')?.addEventListener('click', () => {
+      draft.aiInterpretation = null;
       editDraft = draft.editDraft = { status: 'ready', event: draft.text, when: 'Not specified', evidence: 'Not specified', question: '', message: '', edited: true, manual: true };
       state = 'editing'; error = ''; draw(); root.querySelector('textarea').focus();
     });

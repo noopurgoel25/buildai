@@ -8,11 +8,15 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as capture from "../capture.js";
 import type * as http from "../http.js";
 import type * as interpretation from "../interpretation.js";
 import type * as lib_captureValidation from "../lib/captureValidation.js";
 import type * as lib_formatSpokenTime from "../lib/formatSpokenTime.js";
+import type * as lib_healthEvent from "../lib/healthEvent.js";
+import type * as login from "../login.js";
+import type * as records from "../records.js";
 
 import type {
   ApiFromModules,
@@ -21,11 +25,15 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   capture: typeof capture;
   http: typeof http;
   interpretation: typeof interpretation;
   "lib/captureValidation": typeof lib_captureValidation;
   "lib/formatSpokenTime": typeof lib_formatSpokenTime;
+  "lib/healthEvent": typeof lib_healthEvent;
+  login: typeof login;
+  records: typeof records;
 }>;
 
 /**

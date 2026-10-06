@@ -1,9 +1,13 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { components } from "./_generated/api";
+import { registerStaticRoutes } from "@convex-dev/static-hosting";
+import { auth } from "./auth";
 import { EMPTY_AUDIO, MAX_AUDIO_BYTES, validateText, validateWav } from "./lib/captureValidation";
 
 const http = httpRouter();
+auth.addHttpRoutes(http);
 const BUSY = "Busy right now. Try again in a few minutes.";
 const origins = new Set(["https://aware-starfish-233.convex.site", "http://localhost:5173", "http://127.0.0.1:5173"]);
 
@@ -33,10 +37,10 @@ async function readBody(request: Request, maxBytes: number) {
 }
 
 for (const path of ["/capture-text", "/transcribe", "/interpret"]) {
-  http.route({ path, method: "OPTIONS", handler: httpAction(async (_ctx, request) => new Response(null, { status: 204, headers: headers(request) })) });
+  http.route({ path: `/api${path}`, method: "OPTIONS", handler: httpAction(async (_ctx, request) => new Response(null, { status: 204, headers: headers(request) })) });
 }
 
-http.route({ path: "/capture-text", method: "POST", handler: httpAction(async (_ctx, request) => {
+http.route({ path: "/api/capture-text", method: "POST", handler: httpAction(async (_ctx, request) => {
   try {
     const body = await readBody(request, 40_000);
     const { text } = JSON.parse(new TextDecoder().decode(body));
@@ -46,7 +50,7 @@ http.route({ path: "/capture-text", method: "POST", handler: httpAction(async (_
   }
 }) });
 
-http.route({ path: "/transcribe", method: "POST", handler: httpAction(async (ctx, request) => {
+http.route({ path: "/api/transcribe", method: "POST", handler: httpAction(async (ctx, request) => {
   let audio: ArrayBuffer;
   try {
     audio = await readBody(request, MAX_AUDIO_BYTES);
@@ -80,7 +84,7 @@ http.route({ path: "/transcribe", method: "POST", handler: httpAction(async (ctx
   }
 }) });
 
-http.route({ path: "/interpret", method: "POST", handler: httpAction(async (ctx, request) => {
+http.route({ path: "/api/interpret", method: "POST", handler: httpAction(async (ctx, request) => {
   let args;
   try {
     const body = JSON.parse(new TextDecoder().decode(await readBody(request, 40_000)));
@@ -101,4 +105,5 @@ http.route({ path: "/interpret", method: "POST", handler: httpAction(async (ctx,
   }
 }) });
 
+registerStaticRoutes(http, components.staticHosting);
 export default http;

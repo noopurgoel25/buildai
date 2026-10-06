@@ -100,6 +100,8 @@ Milestone 4 implementation: review remains a temporary draft. Edit details opens
 
 Milestone 5 implementation: a ready interpretation or manually reviewed update offers Confirm update as the primary action, with Edit details as secondary. Confirmation shows “[Name]’s health story starts here.” and the first confirmed update, including timing, evidence, user edits, original input and any clarification. “Not saved for next time” explains that refreshing or closing clears it. Back to review preserves the reviewed details; editing or changing the patient clears the previous confirmation. Unresolved and rejected interpretations cannot be confirmed. No anonymous event storage or sign-in screen is added here; email + OTP and persistent storage follow in milestone 6.
 
+Milestone 6 implementation (local, awaiting email setup and real sign-in verification): Keep this health record follows first value. Email → 8-digit code → save confirmed record. Sending/verifying states disable duplicate submits. Incorrect/expired code, delivery failure and save failure preserve the confirmed update in the open page. Retry never duplicates the first event. Returning sign-in restores the existing record rather than repeating patient setup; sign-out clears in-memory health details. The saved-record screen shows the persisted first event; the fuller timeline follows in milestone 7. Auth verification is rate limited server-side; email codes expire after 15 minutes. Resend receives the login code and recipient email only, never patient or event information.
+
 
 
 Patient timeline: patient → Add update → optional summary → chronological events. Main: Add update → Capture.
