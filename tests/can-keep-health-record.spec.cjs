@@ -22,7 +22,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
         async matchingPatient(patient) {const response=await fetch('/__test/match',{method:'POST',body:JSON.stringify(patient)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async saveMatchedUpdate(value) {return state.saveUpdate(value);},
         async saveUpdate(value) {const response=await fetch('/__test/append',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Unavailable');},
-      }; queueMicrotask(() => onChange({ ...state }));
+      }; window.__testSessionChange = next => { Object.assign(state,next);onChange({...state}); }; queueMicrotask(() => onChange({ ...state }));
     }` }));
   await page.route('**/__test/**', route => {
     const path = new URL(route.request().url()).pathname;
@@ -501,4 +501,16 @@ test('summary starts with supported overview and calm categories, sources disclo
 
 test('unrelated sparse notes use neutral overview rather than an unsupported better or worse claim (services mocked)',async({page})=>{
   await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture()});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.locator('.summary-narrative')).toContainText('Add more updates to build a fuller picture.');await expect(page.locator('.summary-narrative')).not.toContainText('looking better');await expect(page.locator('.summary-narrative')).not.toContainText('since last visit');
+});
+
+test('checking an existing sign-in never signs out or clears a typed update, and duplicate auth notifications keep the summary open (services mocked)',async({page})=>{
+  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture()});await page.goto('/#record');await expect(page.locator('.timeline-entry')).toHaveCount(1);
+  await page.getByRole('button',{name:'Add update'}).click();await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('Mira Example felt tired this morning.');
+  await page.evaluate(()=>window.__testSessionChange({isLoading:true,isAuthenticated:false}));
+  await expect(page.getByLabel('Or type your update')).toHaveValue('Mira Example felt tired this morning.');await expect(page).toHaveURL(/#capture$/);
+  await page.evaluate(()=>window.__testSessionChange({isLoading:false,isAuthenticated:true}));await expect(page.getByLabel('Or type your update')).toHaveValue('Mira Example felt tired this morning.');
+  await page.getByRole('link',{name:'Back to timeline'}).click();await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.locator('.period-result')).toBeVisible();
+  const reads=mock.state().timelineCalls;
+  await page.evaluate(()=>window.__testSessionChange({isLoading:false,isAuthenticated:true}));await expect(page.locator('.period-result')).toBeVisible();expect(mock.state().timelineCalls).toBe(reads);
+  await page.getByRole('button',{name:'Back to timeline'}).click();await page.getByRole('button',{name:'Sign out'}).click();await expect(page.getByRole('link',{name:'Already started? Sign in'})).toBeVisible();
 });

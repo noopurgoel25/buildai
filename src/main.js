@@ -15,6 +15,7 @@ const captureDraft = { text: '', source: 'text', audio: null, interpretation: nu
 let disposeCapture = () => {};
 let disposeAccount = () => {};
 let session = { isLoading: true, isAuthenticated: false };
+let authResolved = false;
 const loginDraft = { email: '', code: '', codeSent: false };
 const escapeHtml = (value) => value.replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
@@ -164,6 +165,14 @@ function clearDraft() {
   Object.assign(loginDraft, { email: '', code: '', codeSent: false, sentAt: 0 });
 }
 startSession(next => {
+  // A token being checked is not a logout. Keep the last settled identity and draft.
+  if (next.isLoading) {
+    session = { ...next, isAuthenticated: session.isAuthenticated };
+    return;
+  }
+  const firstResolved = !authResolved;
+  authResolved = true;
+  const authChanged = session.isAuthenticated !== next.isAuthenticated;
   const becameSignedIn = !session.isAuthenticated && next.isAuthenticated;
   const signedOut = session.isAuthenticated && !next.isAuthenticated;
   session = next;
@@ -172,5 +181,5 @@ startSession(next => {
     if (location.hash === '#record') render();
     else location.hash = '#record';
   }
-  else if (['#signin', '#record'].includes(location.hash)) render();
+  else if ((firstResolved || authChanged) && ['#signin', '#record'].includes(location.hash)) render();
 });

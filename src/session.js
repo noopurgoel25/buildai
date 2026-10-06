@@ -1,8 +1,9 @@
 import { createElement, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ConvexReactClient, useConvexAuth } from 'convex/react';
-import { ConvexAuthProvider, useAuthActions } from '@convex-dev/auth/react';
+import { ConvexAuthProvider, useAuthActions, useConvexAuth as useCredentials } from '@convex-dev/auth/react';
 import { api } from '../convex/_generated/api.js';
+import { sessionStatus } from './session-state.js';
 
 export function startSession(onChange) {
   const client = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
@@ -10,7 +11,9 @@ export function startSession(onChange) {
   host.hidden = true;
   document.body.append(host);
   function SessionBridge() {
-    const { isLoading, isAuthenticated } = useConvexAuth();
+    const verified = useConvexAuth();
+    const credentials = useCredentials();
+    const { isLoading, isAuthenticated } = sessionStatus(credentials, verified);
     const { signIn, signOut } = useAuthActions();
     useEffect(() => {
       onChange({ isLoading, isAuthenticated, signIn, signOut,
