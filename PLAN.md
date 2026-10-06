@@ -14,8 +14,7 @@ Landing page first, one hour. Then the milestones from PRODUCT.md, riskiest part
 10. I can get an evidence-grounded summary for a selected period.
 11. I can see meaningful changes and patterns without diagnosis or treatment advice.
 12. I can generate a concise doctor-ready brief.
-13. I can review and edit the doctor brief before sharing.
-14. I can share the doctor brief using the device's native sharing mechanism.
+13-14. I can review, edit and share the prepared Summary using the device's native sharing mechanism.
 15. I can return to the product and continue with the same patient and timeline.
 
 Last: I can close it, reopen it, and my data is still there.
@@ -50,3 +49,7 @@ Approved V1 simplification (2026-10-06): one Summary entry and one prepared resu
 Approved Summary correction (2026-10-06): an isolated reported better/worse entry is not a period overview. Only supported connections between multiple dated notes qualify; otherwise show neutral add-more-updates wording. Individual reported changes remain in their category. After preparation, show selected dates and Change dates in one compact row, with date inputs disclosed on demand and no repeated date heading.
 
 Current release status (2026-10-06): milestones 1-12 published, with doctor-brief preparation merged into Summary. Next milestone: 13, review/edit the prepared Summary before sharing; native sharing remains milestone 14.
+
+User-directed milestone merge (2026-10-06): combine milestones 13 and 14 into one review/edit/share journey within the existing Summary destination. No separate doctor-brief screen. Milestone 15 remains next after the combined milestone. Interaction approved: editable text preview, native share and Copy text fallback, with temporary draft edits only.
+
+Approved combined milestones 13-14 (2026-10-06): inside Summary, Review & share opens the exact editable plain-text draft, then Share invokes the device native sharing menu. Copy text is the fallback, with manual selection if clipboard access is blocked. Draft edits stay only in the open page and never rewrite saved health events; Back to summary retains edits, while date changes/regeneration/leaving warn before clearing modified drafts. Server checks ownership, current period source membership/revisions, complete references and the 40,000-character bound before preparing or handing off text. New/changed/deleted selected notes require Summary to be prepared again. No extra AI call, public link, saved sharing artifact or automatic delivery. Blank drafts cannot be shared. Unknown timing and sparse-note limits remain explicit; phone-width errors/cancellation retain draft text. Device sharing requires a secure page; HTTP phone preview uses copying/manual selection.

@@ -132,3 +132,27 @@ test('one reported change cannot replace the period overview, even alongside unr
   assert.deepEqual(overviewCandidates([change]),[]);
   assert.deepEqual(overviewCandidates([{...change,key:'2',event:'BP 142/88',evidence:'Measured'},{...change,key:'3',event:'Doctor visit recorded.'},change]),[]);
 });
+
+const sharingHelper=data(read('lib/summaryShare.ts'));
+const {formatSharingDraft}=await import(sharingHelper);
+const sharingSource=read('summarySharing.ts').replace("'./_generated/server'",JSON.stringify(server)).replace("'./_generated/api'",JSON.stringify(api)).replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))).replace("'convex/values'",values).replace("'./lib/healthEvent'",JSON.stringify(health)).replace("'./lib/summary'",JSON.stringify(helper)).replace("'./lib/summaryShare'",JSON.stringify(sharingHelper));
+const {prepare:prepareShare}=await import(data(sharingSource));
+const shareRequest=period=>({patientId:patient._id,start:'2026-10-01',end:'2026-10-06',records:[...new Map([...period.sources,...period.undated].map(source=>[source.recordId,{id:source.recordId,revision:source.revision}])).values()],datedCount:period.sources.length,undatedCount:period.undatedCount,groups:period.groups,overviewIds:(period.overview||[]).map(item=>item.id),text:null});
+
+test('sharing draft preserves every dated fact, negatives, evidence and local capture time, with unknown timing kept separate',async()=>{
+ const c=context();const period=await generate._handler(c.ctx,{patientId:patient._id,start:'2026-10-01',end:'2026-10-06'});const before=structuredClone(records);const prepared=await prepareShare._handler(c.ctx,shareRequest(period));
+ assert.equal(prepared.status,'ready');assert.equal(prepared.text,formatSharingDraft(period,'2026-10-01','2026-10-06'));assert.ok(prepared.text.includes('No dizziness.'));assert.ok(prepared.text.includes('Explicitly absent'));assert.ok(prepared.text.includes('Asia/Kolkata'));assert.ok(prepared.text.includes('11:30:00'));assert.ok(prepared.text.includes('Details with uncertain timing'));assert.equal(c.calls(),1);assert.deepEqual(records,before);
+ const revised=await prepareShare._handler(c.ctx,{...shareRequest(period),text:'My revised sharing draft: BP 142/88; doctor said 10 mg to 5 mg.'});assert.equal(revised.text,'My revised sharing draft: BP 142/88; doctor said 10 mg to 5 mg.');assert.deepEqual(records,before);
+});
+
+test('sharing checks account, fresh period sources, revisions, complete references and text limits on the server',async()=>{
+ const c=context();const period=await generate._handler(c.ctx,{patientId:patient._id,start:'2026-10-01',end:'2026-10-06'}),args=shareRequest(period);
+ for(const owner of [null,'users:other']){const denied=context(records,owner);await assert.rejects(prepareShare._handler(denied.ctx,args));assert.equal(denied.calls(),0);}
+ const changed=context(records.map(record=>({...record,revision:record.revision+1})));assert.equal((await prepareShare._handler(changed.ctx,args)).status,'stale');
+ const deleted=context([]);assert.equal((await prepareShare._handler(deleted.ctx,args)).status,'stale');
+ const added=context([...records,{id:'healthEvents:new',revision:0,details:capture([observation('new','A fictional headache.','2026-10-06')])}]);assert.equal((await prepareShare._handler(added.ctx,args)).status,'stale');
+ for(const text of ['','   ','x'.repeat(40001)])await assert.rejects(prepareShare._handler(c.ctx,{...args,text}),/characters/);
+ for(const patch of [{records:[]},{records:[...args.records,...args.records]},{datedCount:41},{datedCount:1.5},{undatedCount:-1}])await assert.rejects(prepareShare._handler(c.ctx,{...args,...patch}));
+ assert.equal((await prepareShare._handler(c.ctx,{...args,datedCount:1})).status,'stale');await assert.rejects(prepareShare._handler(c.ctx,{...args,overviewIds:['invented']}));
+ assert.equal(c.calls(),1);
+});

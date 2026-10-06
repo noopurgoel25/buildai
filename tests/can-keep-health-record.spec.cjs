@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false } = {}) {
-  let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0;
+async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0 } = {}) {
+  let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0, shareCheckCalls=0;
   const entries=initialEvents.map((details,index)=>({id:String(index+1),details}));
   const savedIds = [];
   await page.route('**/src/session.js*', route => route.fulfill({ contentType: 'application/javascript', body: `
@@ -18,6 +18,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
         async getTimeline(options) {const response=await fetch('/__test/timeline',{method:'POST',body:JSON.stringify(options)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async correctUpdate(value) {const response=await fetch('/__test/correct',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());return response.json();},
         async deleteUpdate(value) {const response=await fetch('/__test/delete',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());},
+        async prepareSummaryShare(value) {const response=await fetch('/__test/share-check',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async generateSummary(value) {const response=await fetch('/__test/summary',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Busy');return response.json();},
         async matchingPatient(patient) {const response=await fetch('/__test/match',{method:'POST',body:JSON.stringify(patient)});if(!response.ok)throw new Error('Unavailable');return response.json();},
         async saveMatchedUpdate(value) {return state.saveUpdate(value);},
@@ -37,6 +38,10 @@ async function mockSession(page, { failSave = false, interpretation = null, init
       timelineCalls++;if(timelineCalls===failTimelineAt)return route.fulfill({status:503,json:{}});
       const options=route.request().postDataJSON(),start=Number(options.cursor||0),ordered=[...entries].sort((a,b)=>b.details.capturedAt-a.details.capturedAt || Number(b.id)-Number(a.id)),page=ordered.slice(start,start+options.numItems);
       return route.fulfill({json:{patient:record?{id:'person-test',name:record.name,relationship:record.relationship}:null,page,isDone:start+page.length>=entries.length,continueCursor:String(start+page.length)}});
+    }
+    if(path.endsWith('share-check')) {
+      shareCheckCalls++;if(shareCheckCalls===failShareCheckAt)return route.fulfill({status:503,body:'Unavailable'});if(shareCheckCalls===staleShareAt)return route.fulfill({json:{status:'stale',title:'Mira Example health summary',text:'',message:'A saved note changed. Go back and prepare Summary again before sharing. Your draft is still here.'}});
+      const input=route.request().postDataJSON();return route.fulfill({json:{status:'ready',title:'Mira Example health summary',text:input.text===null?sharingFixtureText:input.text,message:''}});
     }
     if(path.endsWith('summary')) {
       summaryCalls++;if(failSummary && summaryCalls===1)return route.fulfill({status:503,body:'Busy'});
@@ -77,7 +82,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (route.request().url().endsWith('/capture-text')) return route.fulfill({ json: { text: route.request().postDataJSON().text, source: 'text' } });
     return route.fulfill({ json: interpretation || { status: 'ready', event: 'Mira Example said she felt tired today.', when: 'today', evidence: 'Patient-reported', question: '', message: '' } });
   });
-  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls, summaryCalls }) };
+  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls, summaryCalls, shareCheckCalls }) };
 }
 async function confirm(page) {
   await page.goto('/');
@@ -542,4 +547,57 @@ test('prepared summary keeps dates in a compact row, opens the form on demand an
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});const row=await page.locator('.summary-period-picker').boundingBox();expect(row.height).toBeLessThanOrEqual(52);await expect(page.locator('.selected-period')).toContainText('1 Oct');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/compact-summary-dates-${width}.png`,fullPage:true});}
  await page.locator('.summary-category > summary').first().click();await expect(page.locator('.summary-category .fact-text').first()).toHaveText(result.sources[0].event);await expect(page.getByText('Reported improvements',{exact:true})).toBeVisible();
  await page.getByText('Change dates',{exact:true}).click();await expect(page.getByLabel('From',{exact:true})).toHaveValue('2026-10-01');await page.getByLabel('From',{exact:true}).fill('2026-09-01');await expect(page.locator('.period-result')).toHaveCount(0);await expect(page.locator('.selected-period')).toContainText('1 Sept');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByLabel('From',{exact:true})).not.toBeVisible();
+});
+
+const sharingFixtureText="CareNama: Mira Example's health summary\nPeriod: 1 Oct 2026 to 6 Oct 2026\n\nThese saved notes do not establish an overall change in health for this period.\n\nSymptoms and observations\n- She did not feel dizzy.\n  Evidence: Patient-reported | Explicitly absent\n  Captured: 6 Oct 2026, 11:30:00 (Asia/Kolkata)\n\nDetails with uncertain timing\n- Her appetite seemed better sometime last week.";
+async function openSharing(page,options={},origin=''){
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture(),...options});await page.goto(`${origin}/#record`);await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();await page.getByRole('button',{name:'Review & share'}).click();return mock;
+}
+async function sharingDevice(page,{available=true,shareError=null,clipboardError=false,slowCheck=false}={}){
+ await page.addInitScript(({available,shareError,clipboardError,slowCheck})=>{
+  window.__deviceShares=[];window.__deviceCopies=[];window.__allowActivation=!slowCheck;
+  Object.defineProperty(navigator,'share',{configurable:true,value:available?async data=>{window.__deviceShares.push(data);if(shareError)throw new DOMException('Test error',shareError);}:undefined});
+  Object.defineProperty(navigator,'canShare',{configurable:true,value:()=>true});
+  Object.defineProperty(navigator,'userActivation',{configurable:true,value:{get isActive(){return window.__allowActivation;}}});
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{if(clipboardError)throw new DOMException('Test error','NotAllowedError');window.__deviceCopies.push(text);}}});
+ },{available,shareError,clipboardError,slowCheck});
+}
+
+test('summary sharing reviews exact text, keeps edits on Back, copies and shares only on request without saving notes (device and services mocked)',async({page})=>{
+ await sharingDevice(page);const mock=await openSharing(page);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);expect(await page.evaluate(()=>window.__deviceShares.length+window.__deviceCopies.length)).toBe(0);
+ const revised=sharingFixtureText+'\nQuestion for the doctor: what did the last reading mean?';await page.getByLabel('Text to share').fill(revised);await page.getByRole('button',{name:'Back to summary',exact:true}).click();await expect(page.locator('.summary-narrative')).toContainText('Add more updates');await page.getByRole('button',{name:'Review & share'}).click();await expect(page.getByLabel('Text to share')).toHaveValue(revised);
+ for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/summary-sharing-${width}.png`,fullPage:true});}
+ await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();expect(await page.evaluate(()=>window.__deviceCopies)).toEqual([revised]);
+ await page.getByRole('button',{name:'Share',exact:true}).click();await expect(page.getByText('Sharing completed on this device. Your draft is still here.',{exact:true})).toBeVisible();expect(await page.evaluate(()=>window.__deviceShares[0].text)).toBe(revised);
+ await page.evaluate(()=>window.__testSessionChange({isLoading:true,isAuthenticated:false}));await page.evaluate(()=>window.__testSessionChange({isLoading:false,isAuthenticated:true}));await expect(page.getByLabel('Text to share')).toHaveValue(revised);
+ expect(mock.state().summaryCalls).toBe(1);expect(mock.state().shareCheckCalls).toBe(3);expect(mock.state().savedCalls).toBe(0);expect(mock.state().correctionCalls).toBe(0);
+ await page.getByRole('button',{name:'Back to summary',exact:true}).click();await page.getByText('Change dates',{exact:true}).click();page.once('dialog',dialog=>dialog.dismiss());await page.getByLabel('From',{exact:true}).fill('2026-09-01');await expect(page.locator('.period-result')).toBeVisible();await page.getByRole('button',{name:'Review & share'}).click();await expect(page.getByLabel('Text to share')).toHaveValue(revised);
+ await page.getByLabel('Text to share').fill('   ');await expect(page.getByRole('button',{name:'Share',exact:true})).toBeDisabled();await expect(page.getByRole('button',{name:'Copy text',exact:true})).toBeDisabled();
+});
+
+for(const nativeError of ['AbortError','DataError'])test(`summary sharing ${nativeError} keeps draft for retry and copy (device and services mocked)`,async({page})=>{
+ await sharingDevice(page,{shareError:nativeError});await openSharing(page);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByRole('button',{name:'Share',exact:true}).click();
+ await expect(page.getByText(nativeError==='AbortError'?'Sharing cancelled. Your draft is still here.':'We couldn’t open sharing. Your draft is still here. Try again or use Copy text.',{exact:true})).toBeVisible();await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();
+});
+
+test('summary copy fallback selects text when device sharing or clipboard is unavailable (device and services mocked)',async({page})=>{
+ await sharingDevice(page,{available:false,clipboardError:true});await openSharing(page);await expect(page.getByRole('button',{name:'Share',exact:true})).toHaveCount(0);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText(/Automatic copying isn’t available/)).toBeVisible();expect(await page.getByLabel('Text to share').evaluate(element=>element.selectionEnd-element.selectionStart)).toBe(sharingFixtureText.length);await expect(page.getByLabel('Text to share')).toBeEnabled();
+});
+
+test('server checks prevent stale or failed sharing without discarding the edited draft (device and services mocked)',async({page})=>{
+ await sharingDevice(page);const mock=await openSharing(page,{failShareCheckAt:2,staleShareAt:4});await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByLabel('Text to share').fill(sharingFixtureText+'\nA caregiver edit.');await page.getByRole('button',{name:'Share',exact:true}).click();await expect(page.getByText('We couldn’t check the saved notes. Your draft is still here. Try again.',{exact:true})).toBeVisible();expect(await page.evaluate(()=>window.__deviceShares.length)).toBe(0);
+ await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Share',exact:true}).click();await expect(page.getByText(/A saved note changed/)).toBeVisible();await expect(page.getByLabel('Text to share')).toHaveValue(/A caregiver edit\./);await expect(page.getByRole('button',{name:'Share',exact:true})).toBeDisabled();await expect(page.getByRole('button',{name:'Copy text',exact:true})).toBeDisabled();expect(await page.evaluate(()=>window.__deviceShares.length)).toBe(0);expect(mock.state().savedCalls).toBe(0);
+});
+
+test('slow server check needs a fresh share tap and leaving before completion never opens sharing (device and services mocked)',async({page})=>{
+ await sharingDevice(page,{slowCheck:true});const mock=await openSharing(page);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByRole('button',{name:'Share',exact:true}).click();await expect(page.getByText('Your draft is checked. Tap Share to open your device’s menu.',{exact:true})).toBeVisible();expect(await page.evaluate(()=>window.__deviceShares.length)).toBe(0);await page.evaluate(()=>window.__allowActivation=true);await page.getByRole('button',{name:'Share',exact:true}).click();await expect(page.getByText('Sharing completed on this device. Your draft is still here.',{exact:true})).toBeVisible();expect(mock.state().shareCheckCalls).toBe(2);
+ let release;await page.route('**/__test/share-check',async route=>{await new Promise(resolve=>release=resolve);await route.fulfill({json:{status:'ready',title:'Mira Example summary',text:sharingFixtureText,message:''}});});await page.getByRole('button',{name:'Share',exact:true}).click();await expect(page.getByText('Checking your saved notes…',{exact:true})).toBeVisible();await expect.poll(()=>typeof release).toBe('function');await page.getByRole('button',{name:'Back to summary',exact:true}).click();release();await expect(page.locator('.summary-narrative')).toBeVisible();expect(await page.evaluate(()=>window.__deviceShares.length)).toBe(1);
+});
+
+test('phone HTTP preview offers manual copying while preserving the sharing draft (services mocked)',async({page,baseURL})=>{
+ const address=Object.values(require('node:os').networkInterfaces()).flat().find(item=>item.family==='IPv4'&&!item.internal)?.address;test.skip(!address,'Requires a local network address.');await sharingDevice(page);await openSharing(page,{},`http://${address}:${new URL(baseURL).port}`);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);expect(await page.evaluate(()=>isSecureContext)).toBe(false);await expect(page.getByRole('button',{name:'Share',exact:true})).toHaveCount(0);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.locator('#manual-copy')).toBeVisible();expect(await page.getByLabel('Text to share').evaluate(element=>element.selectionEnd-element.selectionStart)).toBe(sharingFixtureText.length);
+});
+
+test('Copy text writes the reviewed draft to the actual browser clipboard (account services mocked)',async({page,context})=>{
+ await context.grantPermissions(['clipboard-read','clipboard-write']);await openSharing(page);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();const copied=await page.evaluate(async expected=>{const text=await navigator.clipboard.readText();return{matches:text.replace(/\r\n/g,'\n')===expected,length:text.length,lineFeeds:(text.match(/\n/g)||[]).length,carriageReturns:(text.match(/\r/g)||[]).length};},sharingFixtureText);expect(copied.matches).toBe(true);
 });

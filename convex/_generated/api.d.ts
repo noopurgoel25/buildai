@@ -19,9 +19,11 @@ import type * as lib_formatSpokenTime from "../lib/formatSpokenTime.js";
 import type * as lib_healthEvent from "../lib/healthEvent.js";
 import type * as lib_observationTiming from "../lib/observationTiming.js";
 import type * as lib_summary from "../lib/summary.js";
+import type * as lib_summaryShare from "../lib/summaryShare.js";
 import type * as login from "../login.js";
 import type * as records from "../records.js";
 import type * as summaries from "../summaries.js";
+import type * as summarySharing from "../summarySharing.js";
 
 import type {
   ApiFromModules,
@@ -41,9 +43,11 @@ declare const fullApi: ApiFromModules<{
   "lib/healthEvent": typeof lib_healthEvent;
   "lib/observationTiming": typeof lib_observationTiming;
   "lib/summary": typeof lib_summary;
+  "lib/summaryShare": typeof lib_summaryShare;
   login: typeof login;
   records: typeof records;
   summaries: typeof summaries;
+  summarySharing: typeof summarySharing;
 }>;
 
 /**
