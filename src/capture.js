@@ -3,7 +3,7 @@ import { toWav } from './audio.js';
 const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const BUSY = 'Busy right now. Try again in a few minutes.';
 
-export function mountCapture(root, patient, draft) {
+export function mountCapture(root, patient, draft, onConfirm) {
   let state = draft.editDraft ? 'editing' : draft.interpretation ? 'ready' : 'idle';
   let error = '';
   let recorder, stream, timer, startedAt;
@@ -194,10 +194,11 @@ export function mountCapture(root, patient, draft) {
         ${result.edited ? '<p class="hint">Edited by you.</p>' : ''}
         <p class="hint">Nothing has been saved.</p>
         <details><summary>Your original update</summary><p class="original-update">${escape(draft.originalText || draft.text)}</p></details>
-        ${result.status === 'ready' ? '<button class="primary" id="edit" type="button">Edit details</button>' : result.status === 'clarification' ? `<form id="clarify" novalidate><label for="clarification-answer">Your answer</label><textarea id="clarification-answer" rows="2" maxlength="1000">${escape(draft.clarificationAnswer || '')}</textarea>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}<button class="primary" type="submit">Update interpretation</button></form>` : ''}
+        ${result.status === 'ready' ? '<button class="primary" id="confirm" type="button">Confirm update</button><button class="secondary" id="edit" type="button">Edit details</button>' : result.status === 'clarification' ? `<form id="clarify" novalidate><label for="clarification-answer">Your answer</label><textarea id="clarification-answer" rows="2" maxlength="1000">${escape(draft.clarificationAnswer || '')}</textarea>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}<button class="primary" type="submit">Update interpretation</button></form>` : ''}
         <button class="secondary" id="revise" type="button">Return to capture</button>
       </div>`;
-      root.querySelector('#edit')?.addEventListener('click', () => { editDraft = draft.editDraft = { ...result }; state = 'editing'; error = ''; draw(); root.querySelector('textarea').focus(); });
+      root.querySelector('#confirm')?.addEventListener('click', onConfirm);
+      root.querySelector('#edit')?.addEventListener('click', () => { draft.confirmed = null; editDraft = draft.editDraft = { ...result }; state = 'editing'; error = ''; draw(); root.querySelector('textarea').focus(); });
       root.querySelector('#clarification-answer')?.addEventListener('input', event => { draft.clarificationAnswer = event.target.value; });
       root.querySelector('#clarify')?.addEventListener('submit', event => {
         event.preventDefault();
@@ -209,7 +210,7 @@ export function mountCapture(root, patient, draft) {
         draft.clarificationAnswer = '';
         draft.interpretation = null; error = ''; interpret();
       });
-      root.querySelector('#revise').onclick = () => { draft.interpretation = null; state = 'idle'; draw(); };
+      root.querySelector('#revise').onclick = () => { draft.confirmed = null; draft.interpretation = null; state = 'idle'; draw(); };
       return;
     }
     const statuses = { permission: 'Waiting for microphone permission…', recording: 'Listening…', processing: 'Processing your recording…', transcribing: 'Transcribing…', submitting: 'Submitting your update…', understanding: 'Understanding what you told me…' };

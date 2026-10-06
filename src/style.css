@@ -68,5 +68,10 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .capture-result details { margin: 24px 0; }
 .capture-result summary { cursor: pointer; margin-bottom: 12px; }
 #recording-time { font-variant-numeric: tabular-nums; }
+.first-value h1 { overflow-wrap: anywhere; }
+.confirmed-event { margin-top: 32px; padding: 24px; border-radius: 14px; background: #fff; }
+.confirmed-event details:last-child { margin-bottom: 0; }
+.temporary-notice { margin-top: 28px; }
+.temporary-notice h2 { margin: 0 0 8px; font-size: 22px; line-height: 1.4; }
 @media (min-width: 700px) { .screen { padding-top: 64px; padding-bottom: 64px; } }
 @media (max-height: 600px) { .welcome { gap: 24px; } .memory { height: 160px; } }

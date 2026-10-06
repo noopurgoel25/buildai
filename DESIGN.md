@@ -98,6 +98,8 @@ States: Loading — “Understanding what you told me…” with no editable ass
 
 Milestone 4 implementation: review remains a temporary draft. Edit details opens fields for what happened, when and how the caregiver knows; Apply changes returns to review and marks the details as edited by the user. Clarification uses a specific question and answer field, with the original update and clarification available separately. AI failure offers retry or manual editing without discarding the input. Back preserves review and unfinished edits for the same patient; refreshing clears them. Explain on screen that nothing has been saved. Save, first value, authentication and the persistent timeline follow in later milestones.
 
+Milestone 5 implementation: a ready interpretation or manually reviewed update offers Confirm update as the primary action, with Edit details as secondary. Confirmation shows “[Name]’s health story starts here.” and the first confirmed update, including timing, evidence, user edits, original input and any clarification. “Not saved for next time” explains that refreshing or closing clears it. Back to review preserves the reviewed details; editing or changing the patient clears the previous confirmation. Unresolved and rejected interpretations cannot be confirmed. No anonymous event storage or sign-in screen is added here; email + OTP and persistent storage follow in milestone 6.
+
 
 
 Patient timeline: patient → Add update → optional summary → chronological events. Main: Add update → Capture.

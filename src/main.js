@@ -14,11 +14,33 @@ function render() {
   disposeCapture();
   const setup = location.hash === '#patient-setup';
   const capture = location.hash === '#capture';
-  if (capture && (!patient.name.trim() || !patient.relationship.trim())) {
+  const firstValue = location.hash === '#first-value';
+  if ((capture || firstValue) && (!patient.name.trim() || !patient.relationship.trim())) {
     location.replace('#patient-setup');
     return;
   }
-  app.innerHTML = capture ? `
+  if (firstValue && !captureDraft.confirmed) {
+    location.replace('#capture');
+    return;
+  }
+  const confirmed = captureDraft.confirmed;
+  app.innerHTML = firstValue ? `
+    <section class="screen setup first-value" aria-labelledby="title">
+      <a class="back" href="#capture">Back to review</a>
+      <h1 id="title" tabindex="-1">${escapeHtml(patient.name)}’s health story starts here.</h1>
+      <p>Here’s the first update you confirmed.</p>
+      <article class="capture-result confirmed-event" aria-labelledby="confirmed-title">
+        <h2 id="confirmed-title">Your confirmed update</h2>
+        <dl>${[['What happened', confirmed.event], ['When', confirmed.when], ['Evidence', confirmed.evidence]].map(([label, value]) => `<dt>${label}</dt><dd>${escapeHtml(value)}</dd>`).join('')}</dl>
+        ${confirmed.edited ? '<p class="hint">Edited by you.</p>' : ''}
+        ${confirmed.clarifications.length ? `<details><summary>Your clarification</summary>${confirmed.clarifications.map(item => `<p>${escapeHtml(item.question)}</p><p class="original-update">${escapeHtml(item.answer)}</p>`).join('')}</details>` : ''}
+        <details><summary>Your original update</summary><p class="original-update">${escapeHtml(confirmed.originalText)}</p></details>
+      </article>
+      <div class="temporary-notice">
+        <h2>Not saved for next time</h2>
+        <p>This confirmed update stays in this open page. Refreshing or closing clears it.</p>
+      </div>
+    </section>` : capture ? `
     <section class="screen setup" aria-labelledby="title">
       <a class="back" href="#patient-setup">Back</a>
       <div class="patient-context"><h2>${escapeHtml(patient.name)}</h2><p>${escapeHtml(patient.relationship)}</p></div>
@@ -54,13 +76,24 @@ function render() {
       </div>
       <a class="primary" href="#patient-setup">Get started</a>
     </section>`;
-  if (setup || capture) document.querySelector('h1').focus();
-  if (capture) disposeCapture = mountCapture(document.querySelector('#capture-controls'), patient, captureDraft);
+  if (setup || capture || firstValue) document.querySelector('h1').focus();
+  if (capture) disposeCapture = mountCapture(document.querySelector('#capture-controls'), patient, captureDraft, () => {
+    const result = captureDraft.interpretation;
+    if (result?.status !== 'ready' || !result.event.trim() || captureDraft.editDraft) return;
+    captureDraft.confirmed = structuredClone({
+      event: result.event, when: result.when, evidence: result.evidence,
+      edited: Boolean(result.edited), source: captureDraft.source,
+      originalText: captureDraft.originalText || captureDraft.text,
+      clarifications: captureDraft.clarifications || [],
+    });
+    location.hash = '#first-value';
+  });
   if (setup) {
     const form = document.querySelector('#patient-form');
     form.addEventListener('input', (event) => {
       if (patient[event.target.name] !== event.target.value) {
         captureDraft.interpretation = null;
+        captureDraft.confirmed = null;
         captureDraft.editDraft = null;
         captureDraft.clarificationAnswer = '';
         captureDraft.clarifications = [];

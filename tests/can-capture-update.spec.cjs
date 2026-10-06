@@ -53,7 +53,8 @@ test('typed update goes through capture validation into interpretation, without 
   expect(JSON.parse(calls[1].body.toString()).text).toBe(update);
   expect(JSON.parse(calls[1].body.toString()).patient.name).toBe('Mira Example');
   await expect(page.getByText('Nothing has been saved.')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Save|Confirm|Log in/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Confirm update' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Save|Log in/i })).toHaveCount(0);
   await page.getByRole('button', { name: 'Return to capture' }).click();
   await expect(page.getByLabel('Or type your update')).toHaveValue(update);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -301,7 +302,7 @@ test('review edits are applied, cancellation preserves previous details, and ori
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByText('Mira Example felt tired, not dizzy.', { exact: true })).toBeVisible();
   expect(calls.map(call => call.endpoint)).toEqual(['/api/capture-text', '/api/interpret']);
-  await expect(page.getByRole('button', { name: /Save|Confirm|Log in/i })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Confirm update' })).toBeVisible();
 });
 
 test('empty edits preserve entered timing, and failed AI offers manual editing', async ({ page }) => {
@@ -391,4 +392,79 @@ test('unfinished review edits and clarification answers survive Back without sav
   await page.getByRole('link', { name: 'Back' }).click();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByLabel('Your answer')).toHaveValue('Yesterday');
+});
+
+test('confirmation shows the corrected first event, preserves its evidence and original update, and makes no saving call', async ({ page }) => {
+  const calls = await mockCapture(page);
+  await openCapture(page);
+  await expect(page.getByRole('button', { name: 'Confirm update' })).toHaveCount(0);
+  await page.getByLabel('Or type your update').fill(update);
+  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByRole('button', { name: 'Edit details' }).click();
+  await page.getByLabel('What happened', { exact: true }).fill('Mira Example said she felt tired, not dizzy.');
+  await page.getByLabel('When', { exact: true }).fill('Yesterday after lunch');
+  await page.getByLabel('How do you know?').selectOption('Patient-reported');
+  await page.getByRole('button', { name: 'Apply changes' }).click();
+  await page.getByRole('button', { name: 'Confirm update' }).click();
+  await expect(page.getByRole('heading', { name: 'Mira Example’s health story starts here.' })).toBeVisible();
+  await expect(page.getByText('Mira Example said she felt tired, not dizzy.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Yesterday after lunch', { exact: true })).toBeVisible();
+  await expect(page.getByText('Patient-reported', { exact: true })).toBeVisible();
+  await expect(page.getByText('Not saved for next time')).toBeVisible();
+  await expect(page.getByText('This confirmed update stays in this open page. Refreshing or closing clears it.')).toBeVisible();
+  await page.getByText('Your original update', { exact: true }).click();
+  await expect(page.locator('.original-update')).toHaveText(update);
+  expect(calls.map(call => call.endpoint)).toEqual(['/api/capture-text', '/api/interpret']);
+  expect(await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length }))).toEqual({ local: 0, session: 0 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: '.impeccable/review/first-value-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.screenshot({ path: '.impeccable/review/first-value-desktop.png', fullPage: true });
+  await page.getByRole('link', { name: 'Back to review' }).click();
+  await expect(page.getByText('Mira Example said she felt tired, not dizzy.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm update' }).click();
+  await expect(page.getByRole('heading', { name: 'Your confirmed update' })).toHaveCount(1);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Who are you keeping track of?' })).toBeVisible();
+  await expect(page.getByLabel('Their name')).toHaveValue('');
+});
+
+test('unresolved or rejected interpretations cannot be confirmed, and a direct first-value link cannot invent an event', async ({ page }) => {
+  await mockCapture(page);
+  await page.goto('/#first-value');
+  await expect(page.getByRole('heading', { name: 'Who are you keeping track of?' })).toBeVisible();
+  await openCapture(page);
+  await page.evaluate(() => { location.hash = '#first-value'; });
+  await expect(page.getByRole('button', { name: 'Tell me' })).toBeVisible();
+  await page.route('**/api/interpret', route => route.fulfill({ json: { status: 'clarification', question: 'What day did this happen?', event: '', when: '', evidence: '', message: '' } }));
+  await page.getByLabel('Or type your update').fill(update);
+  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await expect(page.getByLabel('Your answer')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Confirm update' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Return to capture' }).click();
+  await page.route('**/api/interpret', route => route.fulfill({ json: { status: 'rejected', question: '', event: '', when: '', evidence: '', message: 'Tell me what happened to the person you care for.' } }));
+  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await expect(page.getByText('Tell me what happened to the person you care for.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Confirm update' })).toHaveCount(0);
+});
+
+test('a manually reviewed update needs explicit confirmation, and changing patient identity clears the confirmed event', async ({ page }) => {
+  await mockCapture(page, { interpretationFailure: true });
+  await openCapture(page);
+  await page.getByLabel('Or type your update').fill(update);
+  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByRole('button', { name: 'Edit manually' }).click();
+  await expect(page.getByRole('button', { name: 'Confirm update' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Apply changes' }).click();
+  await expect(page.getByRole('heading', { name: 'Review your update' })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm update' }).click();
+  await expect(page.getByRole('definition').first()).toHaveText(update);
+  await expect(page.getByText('Not specified', { exact: true })).toHaveCount(2);
+  await page.getByRole('link', { name: 'Back to review' }).click();
+  await page.getByRole('link', { name: 'Back', exact: true }).click();
+  await page.getByLabel('Their name').fill('Jamie Example');
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.evaluate(() => { location.hash = '#first-value'; });
+  await expect(page.getByRole('button', { name: 'Tell me' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your confirmed update' })).toHaveCount(0);
 });
