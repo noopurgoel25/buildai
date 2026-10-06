@@ -51,35 +51,32 @@ function render() {
   app.innerHTML = firstValue ? `
     <section class="screen setup first-value" aria-labelledby="title">
       <a class="back" href="#capture">Back to review</a>
-      <h1 id="title" tabindex="-1">${escapeHtml(patient.name)}’s health story starts here.</h1>
-      <p>Here’s the first update you confirmed.</p>
+      <h1 id="title" tabindex="-1">Your update is ready.</h1>
+      <p>You’ve checked the details for ${escapeHtml(patient.name)}.</p>
       <article class="capture-result confirmed-event" aria-labelledby="confirmed-title">
-        <h2 id="confirmed-title">Your confirmed update</h2>
+        <h2 id="confirmed-title">${escapeHtml(patient.name)}’s update</h2>
         ${savedObservationDetails(confirmed)}
-        ${confirmed.edited ? '<p class="hint">Edited by you.</p>' : ''}
-        ${confirmed.clarifications.length ? `<details><summary>Your clarification</summary>${confirmed.clarifications.map(item => `<p>${escapeHtml(item.question)}</p><p class="original-update">${escapeHtml(item.answer)}</p>`).join('')}</details>` : ''}
-        <details><summary>Your original update</summary><p class="original-update">${escapeHtml(confirmed.originalText)}</p></details>
       </article>
       <div class="temporary-notice">
-        <h2>Not saved for next time</h2>
-        <p>This confirmed update stays in this open page. Refreshing or closing clears it.</p>
-        <a class="primary account-start" href="${session.isAuthenticated ? '#record' : '#signin'}">Keep this health record</a>
+        <h2>Keep this for next time</h2>
+        <p>Sign in to save it to ${escapeHtml(patient.name)}’s record. Until then, it stays only in this open page; refreshing or closing clears it.</p>
+        <a class="primary account-start" href="${session.isAuthenticated ? '#record' : '#signin'}">Save this update</a>
       </div>
     </section>` : capture ? `
     <section class="screen setup" aria-labelledby="title">
       <a class="back" href="#patient-setup">Back</a>
       <div class="patient-context"><h2>${escapeHtml(patient.name)}</h2><p>${escapeHtml(patient.relationship)}</p></div>
-      <h1 id="title" tabindex="-1">What happened?</h1>
+      <div class="capture-intro"><h1 id="title" tabindex="-1">What would you like to note about ${escapeHtml(patient.name)}?</h1><p>Say it in your own words.</p></div>
       <div id="capture-controls"></div>
     </section>` : setup ? `
     <section class="screen setup" aria-labelledby="title">
       <a class="back" href="#">Back</a>
       <div class="intro">
-        <h1 id="title" tabindex="-1">Who are you keeping track of?</h1>
+        <h1 id="title" tabindex="-1">Who are you caring for?</h1>
         <form id="patient-form" novalidate>
           <div class="field"><label for="patient-name">Their name</label><input id="patient-name" name="name" autocomplete="off" value="${escapeHtml(patient.name)}" aria-describedby="name-error" required><p id="name-error" class="error" hidden></p></div>
           <div class="field"><label for="relationship">Your relationship to them</label><input id="relationship" name="relationship" autocomplete="off" value="${escapeHtml(patient.relationship)}" aria-describedby="relationship-hint relationship-error" required><p id="relationship-hint" class="hint">For example, daughter, son or partner.</p><p id="relationship-error" class="error" hidden></p></div>
-          <p class="reassurance">No medical profile to fill out. Just these two details.</p>
+          <p class="reassurance">A name and your relationship are enough to start.</p>
           <p class="hint temporary">These details are temporary until you sign up. Refreshing this page will clear them.</p>
           <button class="primary" type="submit">Continue</button>
         </form>
@@ -87,18 +84,10 @@ function render() {
     </section>` : `
     <section class="screen welcome" aria-labelledby="title">
       <div class="intro">
-        <h1 id="title" tabindex="-1">Remember what happens between doctor visits.</h1>
-        <p>Tell us what happened to someone you care for. We'll remember it for the next appointment.</p>
+        <h1 id="title" tabindex="-1">A place for the details you want to remember.</h1>
+        <p>Health notes for someone you care for, in your own words.</p>
       </div>
-      <div class="memory" aria-hidden="true">
-        <span class="memory-line"></span>
-        <span class="memory-dot first"></span>
-        <span class="memory-dot second"></span>
-        <span class="memory-dot third"></span>
-        <span class="note note-first"><span></span><span></span></span>
-        <span class="note note-second"><span></span><span></span></span>
-        <span class="note note-third"><span></span><span></span></span>
-      </div>
+      <div class="folded-note" aria-hidden="true"><span class="note-fold"></span><span class="note-stroke"></span><span class="note-stroke short"></span><span class="note-stroke last"></span></div>
       <a class="primary" href="#patient-setup">Get started</a>
       <a class="returning-signin" href="#signin">Already started? Sign in</a>
     </section>`;

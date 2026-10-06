@@ -1,12 +1,20 @@
 # DESIGN.md
 
-### Approved observation review and timing update
+### Approved CareNama flow and identity
 
-Keep the existing phone-first capture screen. A single update opens a list of observations, separated by quiet rules rather than nested cards. Each item shows What happened, When it happened, Evidence and whether the statement is explicitly present, absent or uncertain. Show one shared Captured on date/time with seconds and the original device time zone.
+CareNama is a calm place to leave health notes about someone you care for. Keep the warm background, deep green accent and Inter type. A visible CareNama wordmark and folded-note geometry supply a consistent identity; avoid cheerful celebration, clinical good/bad colour coding, or assumptions about how the caregiver feels.
 
-Ask one timing question at a time. Provide a date choice, explicit approximate timing and “I don’t remember”; conflicting timing directs the caregiver to choose a correction or explicitly retain uncertainty. An unchecked shared-date option names the observations it will affect. Never assign a shared date automatically. Per-item Confirm, Edit and Remove from this update controls precede the final Save update button. Editing requires reconfirming only that item. No permanent storage precedes login; first value continues to explain the temporary state.
+The current flow is tell → clarify only if needed → review once → save. Welcome says “A place for the details you want to remember.” Setup asks for the person's name and relationship. Capture asks “What would you like to note about [Name]?” with a prominent “Speak an update” action and an always-visible “Type instead” choice. Recording shows its state, elapsed time and Stop recording; transcription appears only after stopping.
 
-Loading and provider failures retain the original input and capture timestamp. Manual recovery uses the same observation review and permits adding another observation from the original update. Removing all items returns to capture without saving. Saved records display all confirmed observations and original input; old voice records explain that their older capture timestamp was recorded after transcription. This update supersedes the earlier single-description confirmation layout, while timeline layout remains a subsequent milestone.
+Missing/conflicting timing asks one specific question, quoting the relevant detail. Today, Yesterday, Choose a date and “I’m not sure” have no preselected answer; approximate wording can be retained explicitly. A shared-date checkbox names the affected facts and starts unchecked. Keep each observation's own time. Relative dates stay anchored to the original device-local capture timestamp.
+
+Review says “Does this look right?” and shows every extracted fact with its occurrence timing in one quiet surface. One “Yes, continue” approves all displayed observations together. Quiet Change links open an editor; removal lives inside the editor. Source and meaning controls are disclosed only when wanted. Changes return to whole-update review. Removing all facts returns to capture; an empty update cannot be saved. Manual recovery uses the same flow and supports adding details from the original update.
+
+Exact capture time/time zone, evidence, explicit presence/absence/uncertainty, supporting words, original input and clarifications remain available in Record details. Their storage is unchanged. Preserve negative statements and uncertainty; never infer clinical links. Grouping related observations into entries is parked.
+
+After confirmation, the preview says “Your update is ready.” It explains that the update is temporary and that refreshing/closing clears it before sign-in. Save this update leads to email and code verification; successful verification saves automatically. Returning users go to their existing record. Saved state says “Saved to [Name]’s record.” Failures retain the current draft and offer retry/manual recovery without implying permanent storage.
+
+This current layout supersedes the historical milestone-specific review/confirmation layouts below. Timeline remains a subsequent milestone.
 
 Read this before building or changing any screen. If a choice isn't covered here, ask me instead of guessing.
 

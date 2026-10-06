@@ -46,17 +46,18 @@ async function confirm(page) {
   await page.getByLabel('Their name').fill('Mira Example');
   await page.getByLabel('Your relationship to them').fill('Daughter');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Type instead', exact: true }).click();
   await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');
   await page.getByRole('button', { name: 'Continue with text' }).click();
-  await page.getByRole('button', { name: 'Confirm update' }).click();
-  await expect(page.getByText('Not saved for next time')).toBeVisible();
+  await page.getByRole('button', { name: 'Yes, continue' }).click();
+  await expect(page.getByText('Keep this for next time')).toBeVisible();
 }
 
 test('sign-in follows first value, incorrect code preserves the update, and saved record returns after refresh and sign-in (provider mocked)', async ({ page }) => {
   const mock = await mockSession(page);
   await confirm(page);
   expect(mock.state().savedCalls).toBe(0);
-  await page.getByRole('link', { name: 'Keep this health record', exact: true }).click();
+  await page.getByRole('link', { name: 'Save this update', exact: true }).click();
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('Enter a valid email address.');
   await page.getByLabel('Your email').fill('caregiver@example.test');
@@ -66,11 +67,11 @@ test('sign-in follows first value, incorrect code preserves the update, and save
   await expect(page.getByRole('alert')).toContainText('incorrect or expired');
   expect(mock.state().savedCalls).toBe(0);
   await page.getByRole('link', { name: 'Back to your update' }).click();
-  await expect(page.getByRole('definition').first()).toHaveText('Mira Example said she felt tired today.');
-  await page.getByRole('link', { name: 'Keep this health record', exact: true }).click();
+  await expect(page.locator('.fact-text').first()).toHaveText('Mira Example said she felt tired today.');
+  await page.getByRole('link', { name: 'Save this update', exact: true }).click();
   await page.getByLabel('Email code').fill('12345678');
   await page.getByRole('button', { name: 'Verify code' }).click();
-  await expect(page.getByText('Your confirmed update is saved for next time.')).toBeVisible();
+  await expect(page.getByText('Saved to Mira Example’s record.')).toBeVisible();
   expect(mock.state().savedCalls).toBe(1);
   await page.screenshot({ path: '.impeccable/review/saved-record-mobile.png', fullPage: true });
   await page.reload();
@@ -83,22 +84,22 @@ test('sign-in follows first value, incorrect code preserves the update, and save
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.getByLabel('Email code').fill('12345678');
   await page.getByRole('button', { name: 'Verify code' }).click();
-  await expect(page.getByRole('definition').first()).toHaveText('Mira Example said she felt tired today.');
+  await expect(page.locator('.fact-text').first()).toHaveText('Mira Example said she felt tired today.');
   expect(mock.state().savedCalls).toBe(1);
 });
 
 test('a save failure keeps the confirmed update and retry saves it without another sign-in (provider mocked)', async ({ page }) => {
   const mock = await mockSession(page, { failSave: true });
   await confirm(page);
-  await page.getByRole('link', { name: 'Keep this health record', exact: true }).click();
+  await page.getByRole('link', { name: 'Save this update', exact: true }).click();
   await page.getByLabel('Your email').fill('caregiver@example.test');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.screenshot({ path: '.impeccable/review/email-code-mobile.png', fullPage: true });
   await page.getByLabel('Email code').fill('12345678');
   await page.getByRole('button', { name: 'Verify code' }).click();
-  await expect(page.getByRole('alert')).toContainText('We couldn’t save your update.');
+  await expect(page.getByRole('alert')).toContainText('Your update hasn’t been saved yet.');
   await page.getByRole('button', { name: 'Try again' }).click();
-  await expect(page.getByText('Your confirmed update is saved for next time.')).toBeVisible();
+  await expect(page.getByText('Saved to Mira Example’s record.')).toBeVisible();
   expect(mock.state().codeRequests).toBe(1);
   expect(mock.state().record.event.originalText).toBe('Mira Example said she felt tired today.');
   expect(mock.state().record.event.aiInterpretation.status).toBe('ready');
@@ -114,106 +115,119 @@ function multiInterpretation() {
 async function openMulti(page, text=multiText, url='/') {
   await page.goto(url); await page.getByRole('link',{name:'Get started',exact:true}).click();
   await page.getByLabel('Their name').fill('Mira Example'); await page.getByLabel('Your relationship to them').fill('Daughter');
-  await page.getByRole('button',{name:'Continue',exact:true}).click(); await page.getByLabel('Or type your update').fill(text);
-  await page.getByRole('button',{name:'Continue with text'}).click();
-  await expect(page.getByRole('region',{name:'Observation 1',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Continue',exact:true}).click(); await page.getByRole('button',{name:'Type instead',exact:true}).click();
+  await page.getByLabel('Or type your update').fill(text);await page.getByRole('button',{name:'Continue with text'}).click();
 }
-test('one capture holds measured and explicitly absent observations; each needs confirmation before atomic save and refresh (services mocked)',async({page})=>{
-  const mock=await mockSession(page,{interpretation:multiInterpretation()}); await openMulti(page);
+async function resolveMulti(page) {
+  await page.getByRole('button',{name:'Keep the timing as written'}).click();
+  await page.getByRole('button',{name:'I’m not sure',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Does this look right?'})).toBeVisible();
+}
+async function login(page) {
+  await page.getByRole('link',{name:'Save this update',exact:true}).click();
+  await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.getByLabel('Email code').fill('12345678');await page.getByRole('button',{name:'Verify code'}).click();
+}
+
+test('one confirmation approves all visible facts, preserves explicit negatives and capture time, then saves atomically (services mocked)',async({page})=>{
+  const mock=await mockSession(page,{interpretation:multiInterpretation()});await openMulti(page);
   const captured=await page.getByText(/^Captured on /).textContent();
-  await expect(page.getByRole('button',{name:'Save update',exact:true})).toBeDisabled();
-  await expect(page.getByRole('button',{name:'Confirm observation 1'})).toBeDisabled();
-  await expect(page.getByLabel('Date for observation 2')).toHaveCount(0); // One timing question at a time.
-  await page.getByLabel('Date for observation 1').fill('2026-10-06'); await page.getByRole('button',{name:'Use this date'}).click();
-  await page.getByRole('button',{name:'Confirm observation 1'}).click();
-  await expect(page.getByRole('button',{name:'Save update',exact:true})).toBeDisabled();
-  await page.getByRole('button',{name:'I don’t remember'}).click(); await page.getByRole('button',{name:'Confirm observation 2'}).click();
-  await page.screenshot({path:'.impeccable/review/separate-observations-mobile.png',fullPage:true});
-  await page.setViewportSize({width:1440,height:900}); expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await page.screenshot({path:'.impeccable/review/separate-observations-desktop.png',fullPage:true});
-  await page.getByRole('button',{name:'Save update',exact:true}).click(); expect(mock.state().savedCalls).toBe(0);
-  await page.getByRole('link',{name:'Keep this health record',exact:true}).click(); await page.getByLabel('Your email').fill('caregiver@example.test');
-  await page.getByRole('button',{name:'Continue',exact:true}).click(); await page.getByLabel('Email code').fill('12345678'); await page.getByRole('button',{name:'Verify code'}).click();
-  await expect(page.getByText('Your confirmed update is saved for next time.')).toBeVisible();
+  await expect(page.getByRole('button',{name:'Yes, continue'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'I’m not sure',exact:true})).toHaveCount(1);
+  await page.getByRole('button',{name:'Today',exact:true}).click();
+  await page.getByRole('button',{name:'I’m not sure',exact:true}).click();
+  await expect(page.locator('.fact-text')).toHaveText(['BP 142/88 this morning','she did not feel dizzy']);
+  await expect(page.getByRole('button',{name:/Confirm observation/})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Yes, continue'})).toHaveCount(1);
+  await expect(page.getByText('Explicitly absent',{exact:true})).not.toBeVisible();
+  await page.screenshot({path:'.impeccable/review/carenama-review-mobile.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:'.impeccable/review/carenama-review-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'Yes, continue'}).click();expect(mock.state().savedCalls).toBe(0);await login(page);
+  await expect(page.getByText('Saved to Mira Example’s record.')).toBeVisible();
   const stored=mock.state().record.event;
-  expect(stored.observations).toHaveLength(2); expect(stored.observations[1].polarity).toBe('absent'); expect(stored.observations[1].timing.precision).toBe('unknown');
-  expect(stored.originalText).toBe(multiText); expect(stored.aiInterpretation.observations[0].confirmed).toBe(false); expect(mock.state().savedCalls).toBe(1);
-  await page.reload(); await expect(page.getByText(/^Captured on /)).toHaveText(captured); expect(mock.state().savedCalls).toBe(1);
+  expect(stored.observations).toHaveLength(2);expect(stored.observations.every(item=>item.confirmed)).toBe(true);
+  expect(stored.observations[1].polarity).toBe('absent');expect(stored.observations[1].timing.precision).toBe('unknown');
+  expect(stored.originalText).toBe(multiText);expect(stored.aiInterpretation.observations.every(item=>!item.confirmed)).toBe(true);
+  await page.reload();await expect(page.getByText(/^Captured on /)).toHaveText(captured);expect(mock.state().savedCalls).toBe(1);
 });
-test('editing reconfirms only the affected observation, removal retains original words, and removing all never saves (services mocked)',async({page})=>{
-  const mock=await mockSession(page,{interpretation:multiInterpretation()}); await openMulti(page);
-  await page.getByRole('button',{name:'Keep approximate timing'}).click(); await page.getByRole('button',{name:'Confirm observation 1'}).click();
-  await page.getByRole('button',{name:'I don’t remember'}).click(); await page.getByRole('button',{name:'Confirm observation 2'}).click();
-  await page.getByRole('button',{name:'Edit observation 1'}).click(); await page.getByLabel('What happened',{exact:true}).fill('BP 140/88 this morning');
-  await page.getByRole('button',{name:'Apply changes'}).click(); await expect(page.getByRole('button',{name:'Confirm observation 1'})).toBeEnabled();
-  await expect(page.getByRole('button',{name:'Confirm observation 2'})).toBeDisabled(); await expect(page.getByRole('button',{name:'Save update',exact:true})).toBeDisabled();
-  await page.getByRole('button',{name:'Confirm observation 1'}).click(); await page.getByRole('button',{name:'Remove from this update'}).nth(1).click();
-  await page.getByRole('button',{name:'Save update',exact:true}).click(); await page.getByText('Your original update',{exact:true}).click();
+
+test('changes return to whole-update review; removal is inside the editor and removing every fact never saves (services mocked)',async({page})=>{
+  const mock=await mockSession(page,{interpretation:multiInterpretation()});await openMulti(page);
+  await page.getByRole('checkbox',{name:/Use this date for these details/}).check();
+  await page.getByRole('button',{name:'Choose a date'}).click();await resolveMulti(page);
+  await page.getByRole('button',{name:'Yes, continue'}).click();await page.getByRole('link',{name:'Back to review'}).click();
+  await page.getByRole('button',{name:'Change detail 1'}).click();await page.getByLabel('What happened',{exact:true}).fill('BP 140/88 this morning');
+  await page.getByRole('button',{name:'Apply changes'}).click();await expect(page.getByRole('heading',{name:'Does this look right?'})).toBeVisible();
+  await expect(page.locator('.fact-text')).toHaveText(['BP 140/88 this morning','she did not feel dizzy']);
+  await page.getByRole('button',{name:'Change detail 2'}).click();await page.getByRole('button',{name:'Remove this detail'}).click();
+  await page.getByRole('button',{name:'Yes, continue'}).click();
+  await page.getByText('Record details',{exact:true}).click();await page.getByText('Your original update',{exact:true}).click();
   await expect(page.getByText(multiText,{exact:true})).toBeVisible();
-  await page.getByRole('link',{name:'Back to review'}).click(); await page.getByRole('button',{name:'Remove from this update'}).click();
-  await expect(page.getByLabel('Or type your update')).toHaveValue(multiText); expect(mock.state().savedCalls).toBe(0);
+  await page.getByRole('link',{name:'Back to review'}).click();await page.getByRole('button',{name:'Change detail 1'}).click();
+  await page.getByRole('button',{name:'Remove this detail'}).click();
+  await expect(page.getByLabel('Or type your update')).toHaveValue(multiText);expect(mock.state().savedCalls).toBe(0);
 });
 
-test('a shared date applies to both observations only when explicitly selected, preserving their different clock times (services mocked)',async({page})=>{
+test('a shared date requires an explicit choice, names both facts and preserves their different times (services mocked)',async({page})=>{
   const text='Experienced mild headache this morning and noticed an allergy flare up at 5 in the evening.';
-  const result=multiInterpretation(); result.event=text; result.observations[0].event=result.observations[0].supportingWords='mild headache';
-  result.observations[1].event=result.observations[1].supportingWords='noticed an allergy flare up'; result.observations[1].polarity='present'; result.observations[1].evidence='Caregiver-observed'; result.observations[1].when='at 5 in the evening'; result.observations[1].timing.time='17:00'; result.observations[1].timing.precision='approximate';
-  await mockSession(page,{interpretation:result}); await openMulti(page,text);
-  await expect(page.getByRole('checkbox',{name:'Use this date for observations 1 and 2'})).not.toBeChecked();
-  await page.getByLabel('Date for observation 1').fill('2026-10-06'); await page.getByRole('checkbox',{name:'Use this date for observations 1 and 2'}).check();
-  await page.getByRole('button',{name:'Use this date'}).click(); await expect(page.getByRole('button',{name:'Confirm observation 1'})).toBeEnabled();
-  await expect(page.getByRole('button',{name:'Confirm observation 2'})).toBeEnabled(); await expect(page.getByText('2026-10-06 at 17:00',{exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Save update',exact:true})).toBeDisabled();
+  const result=multiInterpretation();result.event=text;result.observations[0].event=result.observations[0].supportingWords='mild headache';
+  result.observations[1].event=result.observations[1].supportingWords='noticed an allergy flare up';result.observations[1].polarity='present';result.observations[1].evidence='Caregiver-observed';result.observations[1].when='at 5 in the evening';result.observations[1].timing.time='17:00';result.observations[1].timing.precision='approximate';
+  await mockSession(page,{interpretation:result});await openMulti(page,text);
+  const shared=page.getByRole('checkbox',{name:/Use this date for these details/});await expect(shared).not.toBeChecked();
+  await expect(shared).toHaveAccessibleName(/mild headache.*noticed an allergy flare up/);
+  await shared.check();await page.getByRole('button',{name:'Choose a date'}).click();
+  // Opening the date picker must preserve the explicit shared-date choice.
+  await expect(page.getByRole('checkbox',{name:/Use this date for these details/})).toBeChecked();
+  await page.getByLabel('Date for this detail').fill('2026-10-06');await page.getByRole('button',{name:'Use this date'}).click();
+  await expect(page.getByRole('heading',{name:'Does this look right?'})).toBeVisible();
+  await expect(page.locator('.fact-time').nth(1)).toHaveText('6 Oct 2026 at 17:00');
+  await expect(page.getByRole('button',{name:'Yes, continue'})).toBeEnabled();
 });
 
-test('LIVE: real interpretation splits observations, preserves local capture time and requires separate confirmation',async({page})=>{
-  test.skip(process.env.CAPTURE_LIVE!=='1','Opt in to real Sarvam calls.'); test.setTimeout(100000);
-  await page.goto('/'); await page.getByRole('link',{name:'Get started',exact:true}).click();
-  await page.getByLabel('Their name').fill('Mira Example'); await page.getByLabel('Your relationship to them').fill('Daughter');
-  await page.getByRole('button',{name:'Continue',exact:true}).click();
-  await page.getByLabel('Or type your update').fill('Mira Example had a mild headache today morning and I noticed an allergy flare up today at 5 p.m.');
-  const responsePromise=page.waitForResponse(r=>r.url().endsWith('/api/interpret'),{timeout:90000});
-  await page.getByRole('button',{name:'Continue with text'}).click();
-  const response=await responsePromise; expect(response.status()).toBe(200);
-  const result=await response.json(); expect(result.observations).toHaveLength(2); expect(result.observations[1].evidence).toBe('Caregiver-observed'); expect(result.observations[1].timing.time).toBe('17:00');
-  await expect(page.getByRole('button',{name:'Confirm observation 1'})).toBeEnabled();
-  const captured=await page.getByText(/^Captured on /).textContent();
-  await page.getByRole('button',{name:'Confirm observation 1'}).click(); await expect(page.getByRole('button',{name:'Save update',exact:true})).toBeDisabled();
-  await page.getByRole('button',{name:'Confirm observation 2'}).click();
-  await page.screenshot({path:'.impeccable/review/observations-live-mobile.png',fullPage:true});
-  await page.getByRole('button',{name:'Save update',exact:true}).click();
-  await expect(page.getByText('Not saved for next time')).toBeVisible(); await expect(page.getByText(/^Captured on /)).toHaveText(captured);
+test('manual recovery can add an explicitly negative detail and approve the whole update once (services mocked)',async({page})=>{
+  const mock=await mockSession(page);
+  await page.route('**/api/interpret',route=>route.fulfill({status:503,json:{error:'Busy right now. Try again in a few minutes.'}}));
+  await openMulti(page);await page.getByRole('button',{name:'Edit manually'}).click();
+  await page.getByLabel('What happened',{exact:true}).fill('BP 142/88 this morning');
+  await page.getByRole('button',{name:'Apply changes'}).click();
+  await page.getByRole('button',{name:'Add a detail from your update'}).click();
+  await page.getByLabel('What happened',{exact:true}).fill('she did not feel dizzy');
+  await page.getByText('Source and meaning',{exact:true}).click();
+  await page.getByLabel('What was explicitly stated?').selectOption('absent');
+  await page.getByRole('button',{name:'Apply changes'}).click();
+  await expect(page.locator('.fact-text')).toHaveText(['BP 142/88 this morning','she did not feel dizzy']);
+  await page.getByRole('button',{name:'Yes, continue'}).click();await login(page);
+  await expect(page.getByText('Saved to Mira Example’s record.')).toBeVisible();
+  expect(mock.state().record.event.observations).toHaveLength(2);
+  expect(mock.state().record.event.observations[1].polarity).toBe('absent');
+  expect(mock.state().record.event.aiInterpretation).toBe(null);
 });
 
-for (const preview of ['desktop', 'phone HTTP']) {
-  test(`${preview}: confirmed observations survive a failed save, retry and refresh without changing record ID (services mocked)`, async ({page, baseURL}) => {
-    const address = Object.values(require('node:os').networkInterfaces()).flat().find(item => item.family === 'IPv4' && !item.internal)?.address;
-    test.skip(preview === 'phone HTTP' && !address, 'Requires a local network address.');
-    const origin = preview === 'desktop' ? baseURL : `http://${address}:${new URL(baseURL).port}`;
-    const errors=[]; page.on('pageerror', error=>errors.push(error.message));
-    const mock=await mockSession(page,{failSave:true,interpretation:multiInterpretation()});
-    await openMulti(page,multiText,origin);
-    expect(await page.evaluate(()=>isSecureContext)).toBe(preview === 'desktop');
-    if(preview === 'phone HTTP') expect(await page.evaluate(()=>typeof crypto.randomUUID)).toBe('undefined');
-    await page.getByRole('button',{name:'Keep approximate timing'}).click();
-    await page.getByRole('button',{name:'Confirm observation 1'}).click();
-    await page.getByRole('button',{name:/I don.t remember/}).click();
-    await page.getByRole('button',{name:'Confirm observation 2'}).click();
-    await page.getByRole('button',{name:'Save update',exact:true}).click();
-    await page.getByRole('link',{name:'Keep this health record',exact:true}).click();
-    await page.getByLabel('Your email').fill('caregiver@example.test');
-    await page.getByRole('button',{name:'Continue',exact:true}).click();
-    await page.getByLabel('Email code').fill('12345678');
-    await page.getByRole('button',{name:'Verify code'}).click();
-    await expect(page.getByRole('alert')).toContainText('Try again without closing this page.');
-    await page.getByRole('button',{name:'Try again',exact:true}).click();
-    await expect(page.getByText('Your confirmed update is saved for next time.')).toBeVisible();
-    const {savedIds,record}=mock.state();
-    expect(savedIds).toHaveLength(2); expect(savedIds[0]).toBe(savedIds[1]);
+test('LIVE: real interpretation reaches a single review and preserves both facts and capture time',async({page})=>{
+  test.skip(process.env.CAPTURE_LIVE!=='1','Opt in to real Sarvam calls.');test.setTimeout(100000);
+  await openMulti(page,'Mira Example had a mild headache today morning and I noticed an allergy flare up today at 5 p.m.');
+  await expect(page.getByRole('heading',{name:'Does this look right?'})).toBeVisible({timeout:90000});
+  await expect(page.locator('.fact-text')).toHaveCount(2);const captured=await page.getByText(/^Captured on /).textContent();
+  await page.screenshot({path:'.impeccable/review/carenama-live-mobile.png',fullPage:true});
+  await page.getByRole('button',{name:'Yes, continue'}).click();await expect(page.getByRole('heading',{name:'Your update is ready.'})).toBeVisible();
+  await expect(page.getByText(/^Captured on /)).toHaveText(captured);
+});
+
+for(const preview of ['desktop','phone HTTP']) {
+  test(`${preview}: a failed save retries with the same record ID and saved facts return after refresh (services mocked)`,async({page,baseURL})=>{
+    const address=Object.values(require('node:os').networkInterfaces()).flat().find(item=>item.family==='IPv4'&&!item.internal)?.address;
+    test.skip(preview==='phone HTTP'&&!address,'Requires a local network address.');
+    const origin=preview==='desktop'?baseURL:`http://${address}:${new URL(baseURL).port}`;
+    const errors=[];page.on('pageerror',error=>errors.push(error.message));
+    const mock=await mockSession(page,{failSave:true,interpretation:multiInterpretation()});await openMulti(page,multiText,origin);await resolveMulti(page);
+    expect(await page.evaluate(()=>isSecureContext)).toBe(preview==='desktop');
+    await page.getByRole('button',{name:'Yes, continue'}).click();await login(page);
+    await expect(page.getByRole('alert')).toContainText('Try again without closing this page.');await page.getByRole('button',{name:'Try again',exact:true}).click();
+    await expect(page.getByText('Saved to Mira Example’s record.')).toBeVisible();
+    const {savedIds,record}=mock.state();expect(savedIds).toHaveLength(2);expect(savedIds[0]).toBe(savedIds[1]);
     expect(savedIds[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
-    expect(record.event.observations).toHaveLength(2);
-    await page.reload();
-    await expect(page.getByText('Your confirmed update is saved for next time.')).toBeVisible();
-    expect(mock.state().savedCalls).toBe(2); expect(errors).toEqual([]);
+    expect(record.event.observations.every(item=>item.confirmed)).toBe(true);
+    await page.reload();await expect(page.getByText('Saved to Mira Example’s record.')).toBeVisible();expect(mock.state().savedCalls).toBe(2);expect(errors).toEqual([]);
   });
 }

@@ -7,8 +7,8 @@ export function mountSignIn(root, draft, session, hasUpdate) {
     if (disposed) return;
     root.innerHTML = `<section class="screen setup" aria-labelledby="title">
       <a class="back" href="${hasUpdate ? '#first-value' : '#'}">${hasUpdate ? 'Back to your update' : 'Back'}</a>
-      <h1 id="title" tabindex="-1">${draft.codeSent ? 'Check your email' : hasUpdate ? 'Keep this health record for next time.' : 'Welcome back.'}</h1>
-      <p>${draft.codeSent ? `Enter the 8-digit code sent to ${escape(draft.email)}. It expires in 15 minutes.` : 'Sign in with your email. No password needed.'}</p>
+      <h1 id="title" tabindex="-1">${draft.codeSent ? 'Check your email' : hasUpdate ? 'Save your update for next time.' : 'Welcome back.'}</h1>
+      <p>${draft.codeSent ? `Enter the 8-digit code sent to ${escape(draft.email)}. It expires in 15 minutes.` : 'Use your email to keep these notes safe. No password needed.'}</p>
       <form id="signin-form" novalidate>
         ${draft.codeSent ? `<div class="field"><label for="signin-code">Email code</label><input id="signin-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" value="${escape(draft.code || '')}" ${busy ? 'disabled' : ''}></div>` : `<div class="field"><label for="signin-email">Your email</label><input id="signin-email" name="email" type="email" autocomplete="email" maxlength="254" value="${escape(draft.email || '')}" ${busy ? 'disabled' : ''}></div>`}
         ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
@@ -65,11 +65,9 @@ export function mountRecord(root, session, pending, onSaved, onSignOut) {
       if (disposed || request !== generation) return;
       if (pending && trySave) onSaved();
       shell(record ? `<h1 id="title" tabindex="-1">${escape(record.name)}’s health story</h1>
-        <p>Your confirmed update is saved for next time.</p>
+        <p class="saved-message">Saved to ${escape(record.name)}’s record.</p>
         <article class="capture-result confirmed-event"><h2>Your saved update</h2>${savedObservationDetails(record.event)}
-        ${record.event.edited ? '<p class="hint">Edited by you.</p>' : ''}
-        ${record.event.clarifications.length ? `<details><summary>Your clarification</summary>${record.event.clarifications.map(item => `<p>${escape(item.question)}</p><p class="original-update">${escape(item.answer)}</p>`).join('')}</details>` : ''}
-        <details><summary>Your original update</summary><p class="original-update">${escape(record.event.originalText)}</p></details></article>
+        </article>
         <button class="secondary" id="signout" type="button">Sign out</button>` : `<h1 id="title" tabindex="-1">Your health story starts with an update.</h1><p>There’s no saved health record in this account yet.</p><a class="primary account-start" href="#patient-setup">Get started</a><button class="secondary" id="signout" type="button">Sign out</button>`);
       root.querySelector('h1').focus();
       root.querySelector('#signout').onclick = async () => {
@@ -79,7 +77,7 @@ export function mountRecord(root, session, pending, onSaved, onSignOut) {
     } catch (cause) {
       if (disposed || request !== generation) return;
       const conflict = /already has a health record/.test(cause.message || '');
-      shell(`<h1 id="title" tabindex="-1">${pending ? 'Your update is still here.' : 'We couldn’t open your record.'}</h1><p class="error" role="alert">${conflict ? 'This account already has a health record. Your new update has not been saved.' : pending ? 'We couldn’t save your update. Try again without closing this page.' : 'Try again in a moment.'}</p><button class="primary account-start" id="retry" type="button">Try again</button>${pending ? '<a class="secondary account-link" href="#first-value">Back to your update</a>' : ''}${conflict ? '<button class="secondary" id="existing" type="button">View existing record</button>' : ''}`);
+      shell(`<h1 id="title" tabindex="-1">${pending ? 'Your update is still here.' : 'We couldn’t open your record.'}</h1><p class="error" role="alert">${conflict ? 'This account already has a health record. Your new update has not been saved.' : pending ? 'Your update hasn’t been saved yet. Try again without closing this page.' : 'Try again in a moment.'}</p><button class="primary account-start" id="retry" type="button">Try again</button>${pending ? '<a class="secondary account-link" href="#first-value">Back to your update</a>' : ''}${conflict ? '<button class="secondary" id="existing" type="button">View existing record</button>' : ''}`);
       root.querySelector('#retry').onclick = () => load(trySave);
       root.querySelector('#existing')?.addEventListener('click', () => load(false));
     }
