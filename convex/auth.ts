@@ -7,7 +7,7 @@ import type { ActionCtx } from "./_generated/server";
 const emailOTP = Email({
   id: "email-otp", maxAge: 15 * 60,
   async generateVerificationToken() {
-    return generateRandomString({ read: bytes => { const random = new Uint8Array(bytes.length); crypto.getRandomValues(random); bytes.set(random); } }, "0123456789", 8);
+    return generateRandomString({ read: bytes => { const random = new Uint8Array(bytes.length); crypto.getRandomValues(random); bytes.set(random); } }, "0123456789", 6);
   },
   async sendVerificationRequest({ identifier: email, token }, ctx?: ActionCtx) {
     const key = process.env.AUTH_RESEND_KEY;

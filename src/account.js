@@ -7,9 +7,9 @@ export function mountSignIn(root, draft, session, hasUpdate) {
     root.innerHTML = `<section class="screen setup" aria-labelledby="title">
       <a class="back" href="${hasUpdate ? '#first-value' : '#'}">${hasUpdate ? 'Back to your update' : 'Back'}</a>
       <h1 id="title" tabindex="-1">${draft.codeSent ? 'Check your email' : hasUpdate ? 'Save your update for next time.' : 'Welcome back.'}</h1>
-      <p>${draft.codeSent ? `Enter the 8-digit code sent to ${escape(draft.email)}. It expires in 15 minutes.` : 'Use your email to keep these notes safe. No password needed.'}</p>
+      <p>${draft.codeSent ? `Enter the 6-digit code sent to ${escape(draft.email)}. It expires in 15 minutes.` : 'Use your email to keep these notes safe. No password needed.'}</p>
       <form id="signin-form" novalidate>
-        ${draft.codeSent ? `<div class="field"><label for="signin-code">Email code</label><input id="signin-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" value="${escape(draft.code || '')}" ${busy ? 'disabled' : ''}></div>` : `<div class="field"><label for="signin-email">Your email</label><input id="signin-email" name="email" type="email" autocomplete="email" maxlength="254" value="${escape(draft.email || '')}" ${busy ? 'disabled' : ''}></div>`}
+        ${draft.codeSent ? `<div class="field"><label for="signin-code">Email code</label><input id="signin-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="${escape(draft.code || '')}" ${busy ? 'disabled' : ''}></div>` : `<div class="field"><label for="signin-email">Your email</label><input id="signin-email" name="email" type="email" autocomplete="email" maxlength="254" value="${escape(draft.email || '')}" ${busy ? 'disabled' : ''}></div>`}
         ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
         <button class="primary" type="submit" ${busy || session.isLoading ? 'disabled' : ''}>${busy ? draft.codeSent ? 'Verifying code…' : 'Sending code…' : draft.codeSent ? 'Verify code' : 'Continue'}</button>
       </form>
@@ -23,7 +23,7 @@ export function mountSignIn(root, draft, session, hasUpdate) {
       event.preventDefault();
       if (busy) return;
       if (draft.codeSent) {
-        if (!/^\d{8}$/.test(draft.code || '')) { error = 'Enter the 8-digit code from your email.'; draw(); root.querySelector('input').focus(); return; }
+        if (!/^\d{6}$/.test(draft.code || '')) { error = 'Enter the 6-digit code from your email.'; draw(); root.querySelector('input').focus(); return; }
         busy = true; error = ''; draw();
         try { await session.signIn('email-otp', { email: draft.email, code: draft.code }); }
         catch { error = 'That code is incorrect or expired. Try again or request another code.'; }

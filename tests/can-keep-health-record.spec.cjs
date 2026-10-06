@@ -30,7 +30,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (path.endsWith('signin')) {
       const params = route.request().postDataJSON();
       if (!params.code) { codeRequests++; return route.fulfill({ json: {} }); }
-      if (params.code !== '12345678') return route.fulfill({ status: 400, json: {} });
+      if (params.code !== '123456') return route.fulfill({ status: 400, json: {} });
       signed = true; return route.fulfill({ json: {} });
     }
     if (path.endsWith('signout')) { signed = false; return route.fulfill({ json: {} }); }
@@ -106,14 +106,16 @@ test('sign-in follows first value, incorrect code preserves the update, and save
   await expect(page.getByRole('alert')).toHaveText('Enter a valid email address.');
   await page.getByLabel('Your email').fill('caregiver@example.test');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await page.getByLabel('Email code').fill('00000000');
+  await expect(page.getByLabel('Email code')).toHaveAttribute('maxlength','6');
+  await page.getByLabel('Email code').fill('12345');await page.getByRole('button',{name:'Verify code'}).click();await expect(page.getByRole('alert')).toHaveText('Enter the 6-digit code from your email.');
+  await page.getByLabel('Email code').fill('000000');
   await page.getByRole('button', { name: 'Verify code' }).click();
   await expect(page.getByRole('alert')).toContainText('incorrect or expired');
   expect(mock.state().savedCalls).toBe(0);
   await page.getByRole('link', { name: 'Back to your update' }).click();
   await expect(page.locator('.fact-text').first()).toHaveText('Mira Example said she felt tired today.');
   await page.getByRole('link', { name: 'Save this update', exact: true }).click();
-  await page.getByLabel('Email code').fill('12345678');
+  await page.getByLabel('Email code').fill('123456');
   await page.getByRole('button', { name: 'Verify code' }).click();
   await expect(page.getByText('Saved to Mira Example’s record.')).toBeVisible();
   expect(mock.state().savedCalls).toBe(1);
@@ -126,7 +128,7 @@ test('sign-in follows first value, incorrect code preserves the update, and save
   await page.getByRole('link', { name: 'Already started? Sign in' }).click();
   await page.getByLabel('Your email').fill('caregiver@example.test');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
-  await page.getByLabel('Email code').fill('12345678');
+  await page.getByLabel('Email code').fill('123456');
   await page.getByRole('button', { name: 'Verify code' }).click();
   await expect(page.locator('.fact-text').first()).toHaveText('Mira Example said she felt tired today.');
   expect(mock.state().savedCalls).toBe(1);
@@ -139,7 +141,7 @@ test('a save failure keeps the confirmed update and retry saves it without anoth
   await page.getByLabel('Your email').fill('caregiver@example.test');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.screenshot({ path: '.impeccable/review/email-code-mobile.png', fullPage: true });
-  await page.getByLabel('Email code').fill('12345678');
+  await page.getByLabel('Email code').fill('123456');
   await page.getByRole('button', { name: 'Verify code' }).click();
   await expect(page.getByRole('alert')).toContainText('Your update hasn’t been saved yet.');
   await page.getByRole('button', { name: 'Try again' }).click();
@@ -170,7 +172,7 @@ async function resolveMulti(page) {
 async function login(page) {
   await page.getByRole('link',{name:'Save this update',exact:true}).click();
   await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();
-  await page.getByLabel('Email code').fill('12345678');await page.getByRole('button',{name:'Verify code'}).click();
+  await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code'}).click();
 }
 
 test('one confirmation approves all visible facts, preserves explicit negatives and capture time, then saves atomically (services mocked)',async({page})=>{
@@ -326,7 +328,7 @@ test('an initial timeline failure retries, while leaving an unconfirmed new capt
 test('a signed-in account with no notes sees an honest empty timeline and can start patient setup (services mocked)',async({page})=>{
   await mockSession(page);await page.goto('/');await page.getByRole('link',{name:'Already started? Sign in'}).click();
   await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();
-  await page.getByLabel('Email code').fill('12345678');await page.getByRole('button',{name:'Verify code'}).click();
+  await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code'}).click();
   await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Add update'}).click();await expect(page.getByRole('heading',{name:'Who are you caring for?'})).toBeVisible();
 });
@@ -631,7 +633,7 @@ test('returning caregiver reopens an unfinished capture at the saved timeline wi
 test('expired returning session reopens at sign-in and returns to the same notes (services mocked)',async({page})=>{
  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],signedOutInitially:true});await page.addInitScript(()=>localStorage.setItem('carenama.returning','1'));await page.goto('/');
  await expect(page.getByRole('heading',{name:'Welcome back.',exact:true})).toBeVisible();expect(mock.state().timelineCalls).toBe(0);
- await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('12345678');await page.getByRole('button',{name:'Verify code'}).click();
+ await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code'}).click();
  await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();
 });
 
