@@ -72,8 +72,8 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut)
     } catch(cause) {
       if(disposed)return;
       const conflict=/already has a health record/.test(cause.message || '');
-      shell(`<h1 id="title" tabindex="-1">Your update is still here.</h1><p class="error" role="alert">${conflict?'This account already has a health record. Your new update has not been saved.':'Your update hasn’t been saved yet. Try again without closing this page.'}</p><button class="primary account-start" id="retry-save">Try again</button><a class="text-action account-link" href="${pending.existingPatient?'#capture':'#first-value'}">Back to your update</a>${conflict?'<button class="secondary" id="existing-record">View existing record</button>':''}`);
-      root.querySelector('#retry-save').onclick=savePending;
+      shell(`<h1 id="title" tabindex="-1">Your update is still here.</h1><p class="error" role="alert">${conflict?'For now, each account keeps notes for one person. This account already has a record, so we haven’t saved this new update.':'Your update hasn’t been saved yet. Try again without closing this page.'}</p>${conflict?'<p class="hint">You can open the existing timeline. Your new update stays only in this open page; refreshing or closing clears it.</p><button class="primary account-start" id="existing-record">Open existing timeline</button>':'<button class="primary account-start" id="retry-save">Try again</button>'}<a class="text-action account-link" href="${pending.existingPatient?'#capture':'#first-value'}">Back to your update</a>`);
+      root.querySelector('#retry-save')?.addEventListener('click',savePending);
       root.querySelector('#existing-record')?.addEventListener('click',()=>loadPage(true));
     }
   }

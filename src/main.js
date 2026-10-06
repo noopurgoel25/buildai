@@ -78,6 +78,8 @@ function render() {
       <a class="back" href="#">Back</a>
       <div class="intro">
         <h1 id="title" tabindex="-1">Who are you caring for?</h1>
+        <p class="hint">For now, each account keeps notes for one person. If you already have a record, sign in to continue their timeline.</p>
+        <a class="text-action" href="#signin">Already have a record? Sign in</a>
         <form id="patient-form" novalidate>
           <div class="field"><label for="patient-name">Their name</label><input id="patient-name" name="name" autocomplete="off" value="${escapeHtml(patient.name)}" aria-describedby="name-error" required><p id="name-error" class="error" hidden></p></div>
           <div class="field"><label for="relationship">Your relationship to them</label><input id="relationship" name="relationship" autocomplete="off" value="${escapeHtml(patient.relationship)}" aria-describedby="relationship-hint relationship-error" required><p id="relationship-hint" class="hint">For example, daughter, son or partner.</p><p id="relationship-error" class="error" hidden></p></div>
