@@ -60,3 +60,28 @@ test('reported speech with pronouns is not mistaken for a different named patien
   const result=await run({status:'ready',question:'',observations:[{event:'felt tired',when:'today',evidence:'Patient-reported',polarity:'present'}]},'stop',{...args,text:'She told me she felt tired today.'});
   assert.equal(result.status,'ready');assert.equal(result.observations[0].evidence,'Patient-reported');
 });
+
+
+test('doctor speech and medication changes retain attribution and dose without becoming advice, another patient or a measured vital',async()=>{
+  const text='Doctor said to reduce her medicine from 10 mg to 5 mg today.';
+  const result=await run({status:'ready',question:'',observations:[{event:'reduce her medicine from 10 mg to 5 mg',when:'today',evidence:'Measured',polarity:'present'}]},'stop',{...args,text});
+  assert.equal(result.status,'ready');assert.equal(result.observations[0].event,text);assert.equal(result.observations[0].evidence,'Not specified');assert.equal(result.observations[0].timing.resolved,true);
+});
+
+test('doctor visits and qualitative appetite sleep and energy changes retain their individual words and times',async()=>{
+  for(const text of ['We visited the doctor yesterday.','She said her appetite is better today.','I noticed she slept poorly last night.','She said her energy is better today.','She started her medicine today.','She stopped her medicine yesterday.']) {
+    const when=text.includes('yesterday')?'yesterday':text.includes('last night')?'last night':'today';
+    const result=await run({status:'ready',question:'',observations:[{event:text,when,evidence:'Not specified',polarity:'present'}]},'stop',{...args,text});
+    assert.equal(result.status,'ready');assert.equal(result.observations[0].event,text);assert.equal(result.observations[0].when,when);assert.ok(!result.observations[0].confirmed);
+    if(text.startsWith('She said'))assert.equal(result.observations[0].evidence,'Patient-reported');
+    if(text.startsWith('I noticed'))assert.equal(result.observations[0].evidence,'Caregiver-observed');
+  }
+});
+
+test('a medication report with missing name or dose stays incomplete in meaning instead of inventing details',async()=>{
+  const text='Her medicine was changed yesterday.';
+  const result=await run({status:'ready',question:'',observations:[{event:'medicine was changed',when:'yesterday',evidence:'Measured',polarity:'present'}]},'stop',{...args,text});
+  assert.equal(result.observations[0].event,text);assert.equal(result.observations[0].evidence,'Not specified');
+  await assert.rejects(run({status:'ready',question:'',observations:[{event:'medicine was changed to 5 mg',when:'yesterday',evidence:'Not specified',polarity:'present'}]},'stop',{...args,text}),/ungrounded-output/);
+  const bp=await run({status:'ready',question:'',observations:[{event:'BP 142/88',when:'today',evidence:'Measured',polarity:'present'}]},'stop',{...args,text:'BP 142/88 today.'});assert.equal(bp.observations[0].evidence,'Measured');
+});

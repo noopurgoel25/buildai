@@ -229,6 +229,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
     const statuses = { permission: 'Waiting for microphone permission…', recording: 'Recording your update…', processing: 'Preparing your recording…', transcribing: 'Turning your recording into text…', submitting: 'Preparing your update…', understanding: 'Preparing your update…' };
     root.innerHTML = `<div class="capture-actions">
       <p class="capture-status" role="status">${statuses[state] || 'A short note is enough. Voice updates can be up to 30 seconds.'}</p>
+      ${!busy && !recording && !permission ? '<p class="hint">You can note a symptom, a reading, a doctor visit, a reported medicine change, or a change in appetite, sleep or energy.</p>' : ''}
       ${recording ? '<p id="recording-time" class="hint">0 / 30 seconds</p>' : ''}
       <button class="${draft.textMode && !recording ? 'secondary' : 'primary voice-button'}" id="voice" type="button" ${busy || permission ? 'disabled' : ''}>${recording ? 'Stop recording' : 'Speak an update'}</button>
       ${recording || permission ? '<button class="text-action" id="switch-text" type="button">Switch to text</button>' : `<button class="text-action" id="type-instead" type="button" aria-expanded="${Boolean(draft.textMode)}" aria-controls="capture-text-form">Type instead</button>`}

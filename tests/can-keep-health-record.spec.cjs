@@ -369,3 +369,30 @@ test('a correction can remove one fact while preserving the linked negative and 
   await expect(page.locator('.fact-text')).toHaveText('she did not feel dizzy');await page.getByRole('button',{name:'Save changes'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);
   await page.reload();await expect(page.locator('.fact-text')).toHaveText('she did not feel dizzy');expect(mock.state().entries[0].details.observations[0].polarity).toBe('absent');expect(mock.state().entries[0].details.removedObservations).toHaveLength(1);expect(mock.state().entries[0].details.originalText).toBe(original.originalText);
 });
+
+
+test('care updates share capture, whole review, saved timeline and refresh without category forms (services mocked)',async({page})=>{
+  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)]});
+  await page.route('**/api/interpret',route=>{const text=route.request().postDataJSON().text;return route.fulfill({json:{status:'ready',event:text,when:'today',evidence:'Not specified',question:'',message:'',observations:[{id:'1',event:text,when:'today',supportingWords:text,evidence:text.startsWith('She said')?'Patient-reported':'Not specified',polarity:'present',timing:{date:'2026-10-06',time:null,precision:'date',resolved:true},confirmed:false,edited:false}]}});});
+  await page.goto('/#record');
+  const texts=['Doctor said to reduce her medicine from 10 mg to 5 mg today.','We visited the doctor today.','She said her appetite is better today.','She said she slept poorly today.','She said her energy is better today.'];
+  for(const [index,text] of texts.entries()){
+    await page.getByRole('button',{name:'Add update'}).click();await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill(text);await page.getByRole('button',{name:'Continue with text'}).click();
+    await expect(page.getByRole('heading',{name:'Does this look right?'})).toBeVisible();await expect(page.locator('.fact-text')).toHaveText(text);
+    if(index===0){await page.screenshot({path:'.impeccable/review/care-context-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:900});await page.screenshot({path:'.impeccable/review/care-context-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:844});}
+    await page.getByRole('button',{name:'Save update',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(index+2);
+  }
+  await page.reload();await expect(page.locator('.timeline-entry')).toHaveCount(6);for(const text of texts)await expect(page.getByText(text,{exact:true}).first()).toBeVisible();expect(mock.state().codeRequests).toBe(0);expect(mock.state().appendCalls).toBe(5);
+});
+
+for(const sample of [
+  {name:'reported medicine change',text:'Doctor said to reduce her medicine from 10 mg to 5 mg today.',count:1},
+  {name:'doctor visit and appetite',text:'We visited the doctor yesterday and she said her appetite is better today.',count:2},
+  {name:'sleep and energy',text:'I noticed she slept poorly yesterday and she said her energy is better today.',count:2},
+])test(`LIVE: ${sample.name} reaches whole review without advice or invented details`,async({page})=>{
+  test.skip(process.env.CAPTURE_LIVE!=='1','Opt in to real Sarvam calls.');test.setTimeout(100000);
+  await openMulti(page,sample.text);await expect(page.getByRole('heading',{name:'Does this look right?'})).toBeVisible({timeout:90000});
+  await expect(page.locator('.fact-text')).toHaveCount(sample.count);const facts=await page.locator('.fact-text').allTextContents();for(const fact of facts)expect(sample.text).toContain(fact);
+  if(sample.count===1){expect(facts[0]).toContain('Doctor said');expect(facts[0]).toContain('10 mg to 5 mg');}
+  const captured=await page.getByText(/^Captured on /).textContent();await page.getByRole('button',{name:'Yes, continue'}).click();await expect(page.getByRole('heading',{name:'Your update is ready.'})).toBeVisible();await expect(page.getByText(/^Captured on /)).toHaveText(captured);
+});
