@@ -171,7 +171,7 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .period-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .period-dates > div { min-width: 0; }
 .period-dates input { min-width: 0; width: 100%; }
-.period-result { margin-top: 36px; }
+.period-result { margin-top: 16px; }
 .summary-section { margin-top: 28px; }
 .summary-source { margin-top: 12px; font-size: 13px; }
 .summary-source p { font-size: 13px; }
@@ -183,9 +183,8 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .period-summary form { margin-top: 24px; }
 .period-summary .period-dates input { min-height: 48px; padding: 10px; }
 .period-summary .period-dates label { font-size: 13px; margin-bottom: 6px; }
-.period-result > h2 { font-size: 18px; line-height: 1.5; }
-.summary-overview { margin: 24px 0; }
-.summary-overview h3 { font-size: 20px; line-height: 1.4; margin: 0 0 12px; }
+.summary-overview { margin: 16px 0 24px; }
+.summary-overview h2 { font-size: 20px; line-height: 1.4; margin: 0 0 12px; }
 .summary-narrative { color: #24302d; overflow-wrap: anywhere; }
 .summary-overview .summary-limited { background: none; padding: 0; font-size: 13px; line-height: 1.5; margin-top: 8px; }
 .summary-categories { display: grid; gap: 12px; }
@@ -209,7 +208,11 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .undated-summary > summary { min-height: 44px; cursor: pointer; }
 @media (max-width: 350px) { .period-summary { padding-inline: 18px; } .summary-category > summary { gap: 8px; padding: 12px; } }
 
-.summary-period-picker { margin-top: 20px; font-size: 13px; }
-.summary-period-picker > summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: #32695f; }
+.summary-period-picker { margin-top: 12px; font-size: 13px; }
+.summary-period-picker > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; min-height: 44px; padding: 4px 0; list-style: none; }
+.summary-period-picker > summary::-webkit-details-marker { display: none; }
+.selected-period { min-width: 0; color: #24302d; line-height: 1.4; }
+.change-dates { flex-shrink: 0; color: #32695f; text-decoration: underline; }
+.period-summary .summary-period-picker form { margin-top: 12px; }
 .summary-discussion { margin-top: 16px; }
 .summary-discussion > .hint { padding: 0 16px; }

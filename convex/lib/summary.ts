@@ -71,11 +71,7 @@ export function overviewCandidates(sources:Pick<SummarySource,'key'|'event'|'dat
   const topics=[['Dizziness',/\b(dizzy|dizziness)\b/i],['Headache',/\bheadaches?\b/i],['Fever',/\bfever\b/i],['Nausea',/\bnausea\b/i],['Tiredness',/\b(tired|tiredness|fatigue)\b/i]] as const;
   const topic=(event:string)=>{const matches=topics.filter(([,pattern])=>pattern.test(event));return matches.length===1?matches[0][0]:null;};
   const usable=sources.filter(s=>s.date && s.event.length<=240);
-  for(const s of usable){
-    // Preserve who said it and uncertainty verbatim; a negated/conditional change is not a change.
-    if(s.polarity==='present' && /\b(better|improved|improving|worse|worsened|worsening|fewer)\b/i.test(s.event) && !/\b(not|no|never|didn't|isn't|wasn't|hasn't|if|unless|might|could|would|should)\b/i.test(s.event))
-      candidates.push({id:'',text:`A change was recorded on ${day(s.date!)}: “${s.event}”`,keys:[s.key]});
-  }
+  // A single reported change belongs in its category, not the period overview.
   for(const [name] of topics){
     const notes=usable.filter(s=>topic(s.event)===name && s.evidence!=='Measured').sort((a,b)=>a.date!.localeCompare(b.date!));
     const first=notes.find(s=>s.polarity==='present');
