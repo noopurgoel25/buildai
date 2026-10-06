@@ -140,3 +140,7 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .timeline-entry .record-details { margin-bottom: 0; }
 .timeline-signout { margin: 24px auto 0; }.timeline-empty { margin: 32px 0; }
 .timeline-skeleton { margin-top: 28px; }.timeline-skeleton span { display: block; height: 96px; margin-bottom: 20px; border-radius: 16px; background: #e2e5df; }
+.note-actions { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 16px; }
+.destructive { background: #B54747; }
+.destructive:hover { background: #963b3b; }
+.delete-preview { margin: 24px 0; }

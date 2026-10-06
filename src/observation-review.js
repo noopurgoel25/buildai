@@ -23,12 +23,12 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
       <button class="text-action" id="unknown-time" type="button">I’m not sure</button>
       ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
       ${details}<button class="text-action" id="return-capture" type="button">Return to capture</button></div>` : `<div class="capture-result review-update">
-      <h2 tabindex="-1">Does this look right?</h2><p class="review-intro">Check the details before you continue.</p>
+      <h2 tabindex="-1">Does this look right?</h2><p class="review-intro">${draft.savedEdit ? 'Review your corrections before saving.' : 'Check the details before you continue.'}</p>
       <div class="review-surface">${updateFacts({observations:items},true)}</div>
       ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
       ${details}
       ${draft.interpretation.manual ? `<button class="text-action" id="add-observation" type="button" ${items.length >= 20 ? 'disabled' : ''}>Add a detail from your update</button>` : ''}
-      <div class="flow-actions"><button class="primary" id="confirm-update" type="button" ${!items.length ? 'disabled' : ''}>${draft.existingPatient ? 'Save update' : 'Yes, continue'}</button><p class="hint">Nothing has been saved yet.</p><button class="text-action" id="return-capture" type="button">Return to capture</button></div></div>`;
+      <div class="flow-actions"><button class="primary" id="confirm-update" type="button" ${!items.length ? 'disabled' : ''}>${draft.savedEdit ? 'Save changes' : draft.existingPatient ? 'Save update' : 'Yes, continue'}</button><p class="hint">${draft.savedEdit ? 'Your saved update stays as it is until you save changes.' : 'Nothing has been saved yet.'}</p><button class="text-action" id="return-capture" type="button">${draft.savedEdit ? 'Cancel changes' : 'Return to capture'}</button></div></div>`;
     if (first) {
       root.querySelector('#shared-date')?.addEventListener('change', event => { draft.sharedDateForId=first.id; draft.sharedDateSelected=event.target.checked; });
       function setDate(date) {
@@ -81,6 +81,7 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
       if(t.precision==='unknown') {t.date=null;t.time=null;} if(t.precision==='date') t.time=null;
       Object.assign(item,saved,{confirmed:false,edited:true}); draft.confirmed=null; draft.observationEdit=null; error=''; draw(); };
     root.querySelector('#remove-detail').onclick=()=>{
+      if(draft.savedEdit && items.length===1){error='Keep one detail here. To remove the whole update, return to the timeline and choose Delete update.';edit(item);return;}
       const removed=structuredClone(item);delete removed.choosingDate;delete removed.dayDraft;
       (draft.removedObservations ||= []).push(removed);items.splice(items.indexOf(item),1);draft.confirmed=null;draft.observationEdit=null;
       if(!items.length){draft.interpretation=null;onReturn();}else{error='';draw();}

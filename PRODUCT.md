@@ -1028,3 +1028,5 @@ The product needs to demonstrate **behavioural adoption**, not conceptual approv
 The core V1 loop works end-to-end:
 
 Something happens → I tell the product → AI understands → I confirm → it becomes part of the patient's health story → I return later → I understand what changed → AI prepares my doctor brief → I review → I share → I continue the same health story after the appointment.
+
+Milestone 8 approved: caregivers can correct a saved capture through whole-update review or explicitly delete the entire capture. Corrections preserve the original input, source, AI interpretation, initial saved details and device-local capture timestamp; occurrence timing remains editable. Deletion removes the whole capture including its preserved initial details, while keeping the patient's record and timeline. Server ownership and version checks protect both actions; retries must not duplicate corrections or recreate deleted notes.

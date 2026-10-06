@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false } = {}) {
-  let signed = initialEvents.length>0, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0;
+async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false } = {}) {
+  let signed = initialEvents.length>0, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0;
   const entries=initialEvents.map((details,index)=>({id:String(index+1),details}));
   const savedIds = [];
   await page.route('**/src/session.js*', route => route.fulfill({ contentType: 'application/javascript', body: `
@@ -16,6 +16,8 @@ async function mockSession(page, { failSave = false, interpretation = null, init
         async saveRecord(value) { const response = await fetch('/__test/save', { method: 'POST', body: JSON.stringify(value) }); if (!response.ok) throw new Error('Unavailable'); },
         async getRecord() { return (await fetch('/__test/record')).json(); },
         async getTimeline(options) {const response=await fetch('/__test/timeline',{method:'POST',body:JSON.stringify(options)});if(!response.ok)throw new Error('Unavailable');return response.json();},
+        async correctUpdate(value) {const response=await fetch('/__test/correct',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());return response.json();},
+        async deleteUpdate(value) {const response=await fetch('/__test/delete',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());},
         async saveUpdate(value) {const response=await fetch('/__test/append',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Unavailable');},
       }; queueMicrotask(() => onChange({ ...state }));
     }` }));
@@ -32,6 +34,16 @@ async function mockSession(page, { failSave = false, interpretation = null, init
       timelineCalls++;if(timelineCalls===failTimelineAt)return route.fulfill({status:503,json:{}});
       const options=route.request().postDataJSON(),start=Number(options.cursor||0),ordered=[...entries].sort((a,b)=>b.details.capturedAt-a.details.capturedAt || Number(b.id)-Number(a.id)),page=ordered.slice(start,start+options.numItems);
       return route.fulfill({json:{patient:record?{id:'person-test',name:record.name,relationship:record.relationship}:null,page,isDone:start+page.length>=entries.length,continueCursor:String(start+page.length)}});
+    }
+    if(path.endsWith('correct')) {
+      correctionCalls++;const input=route.request().postDataJSON();
+      if(staleCorrection)return route.fulfill({status:409,body:'This update changed elsewhere.'});
+      if(failCorrection && correctionCalls===1)return route.fulfill({status:503,body:'Unavailable'});
+      const entry=entries.find(entry=>entry.id===input.id);entry.details=input.event;entry.revision=(entry.revision||0)+1;return route.fulfill({json:entry.revision});
+    }
+    if(path.endsWith('delete')) {
+      deleteCalls++;if(failDelete && deleteCalls===1)return route.fulfill({status:503,body:'Unavailable'});
+      const input=route.request().postDataJSON(),index=entries.findIndex(entry=>entry.id===input.id);if(index>=0)entries.splice(index,1);return route.fulfill({json:null});
     }
     if(path.endsWith('append')) {
       savedCalls++;appendCalls++;const input=route.request().postDataJSON();savedIds.push(input.event.confirmationId);
@@ -52,7 +64,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (route.request().url().endsWith('/capture-text')) return route.fulfill({ json: { text: route.request().postDataJSON().text, source: 'text' } });
     return route.fulfill({ json: interpretation || { status: 'ready', event: 'Mira Example said she felt tired today.', when: 'today', evidence: 'Patient-reported', question: '', message: '' } });
   });
-  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls }) };
+  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls }) };
 }
 async function confirm(page) {
   await page.goto('/');
@@ -309,4 +321,51 @@ test('back from a failed confirmed save does not silently retry saving when open
   await page.getByRole('button',{name:'Save update',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Your update hasn’t been saved yet.');
   await page.getByRole('link',{name:'Back to your update'}).click();await page.getByRole('link',{name:'Back to timeline'}).click();
   await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().appendCalls).toBe(1);
+});
+
+
+test('saved updates use whole review for corrections; cancel is safe, retry and refresh retain original capture (services mocked)',async({page})=>{
+  const original=legacyEvent(1),mock=await mockSession(page,{initialEvents:[original],failCorrection:true});
+  await page.goto('/#record');await page.getByRole('button',{name:'Change update',exact:true}).click();
+  await page.getByRole('button',{name:'Change detail 1'}).click();await page.getByLabel('What happened',{exact:true}).fill('Mira Example reported mild tiredness.');
+  await page.getByRole('button',{name:'Apply changes'}).click();await page.getByRole('button',{name:'Cancel changes'}).click();
+  await expect(page.locator('.fact-text')).toHaveText(original.event);expect(mock.state().correctionCalls).toBe(0);
+  await page.getByRole('button',{name:'Change update',exact:true}).click();await page.getByRole('button',{name:'Change detail 1'}).click();
+  await page.getByLabel('What happened',{exact:true}).fill('Mira Example reported mild tiredness.');
+  await page.getByRole('button',{name:'Remove this detail'}).click();await expect(page.getByRole('alert')).toContainText('Keep one detail');
+  await page.getByRole('button',{name:'Apply changes'}).click();
+  await page.screenshot({path:'.impeccable/review/saved-edit-mobile.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:900});await page.screenshot({path:'.impeccable/review/saved-edit-desktop.png',fullPage:true});await page.setViewportSize({width:390,height:844});
+  await page.getByRole('button',{name:'Save changes'}).click();await expect(page.getByRole('alert')).toContainText('save your changes');
+  await page.getByRole('button',{name:'Try again'}).click();await expect(page.locator('.fact-text')).toHaveText('Mira Example reported mild tiredness.');
+  expect(mock.state().entries[0].details.originalText).toBe(original.originalText);expect(mock.state().entries[0].details.capturedAt).toBe(original.capturedAt);
+  await page.reload();await expect(page.locator('.fact-text')).toHaveText('Mira Example reported mild tiredness.');expect(mock.state().correctionCalls).toBe(2);
+});
+
+test('deleting needs explicit confirmation, failures retain the note and deleting the last note retains the patient (services mocked)',async({page})=>{
+  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],failDelete:true});
+  await page.goto('/#record');await page.getByRole('button',{name:'Delete update',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Delete this update?'})).toBeVisible();await page.getByRole('button',{name:'Keep update'}).click();expect(mock.state().deleteCalls).toBe(0);
+  await page.getByRole('button',{name:'Delete update',exact:true}).click();await page.screenshot({path:'.impeccable/review/delete-mobile.png',fullPage:true});
+  await page.getByRole('button',{name:'Delete update',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Your saved note is still there');
+  await page.getByRole('button',{name:'Delete update',exact:true}).click();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();
+  await page.reload();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:/Mira Example.*health story/})).toBeVisible();
+  await page.getByRole('button',{name:'Add update'}).click();await expect(page.getByLabel('Their name')).toHaveCount(0);expect(mock.state().deleteCalls).toBe(2);
+});
+
+test('a stale saved correction offers reopening instead of overwriting another change (services mocked)',async({page})=>{
+  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],staleCorrection:true});await page.goto('/#record');
+  await page.getByRole('button',{name:'Change update',exact:true}).click();await page.getByRole('button',{name:'Save changes'}).click();
+  await expect(page.getByRole('alert')).toContainText('changed or was removed elsewhere');await expect(page.getByRole('button',{name:'Try again'})).toHaveCount(0);
+  await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().correctionCalls).toBe(1);
+});
+
+
+test('a correction can remove one fact while preserving the linked negative and original capture (services mocked)',async({page})=>{
+  const original=legacyEvent(1);original.originalText='BP 142/88 this morning and she did not feel dizzy';original.event=original.originalText;
+  original.observations=[{id:'1',event:'BP 142/88',when:'this morning',supportingWords:'BP 142/88 this morning',evidence:'Measured',polarity:'present',timing:{date:null,time:null,precision:'approximate',resolved:true},confirmed:true,edited:false},{id:'2',event:'she did not feel dizzy',when:'Unknown',supportingWords:'she did not feel dizzy',evidence:'Patient-reported',polarity:'absent',timing:{date:null,time:null,precision:'unknown',resolved:true},confirmed:true,edited:false}];
+  const mock=await mockSession(page,{initialEvents:[original]});await page.goto('/#record');await page.getByRole('button',{name:'Change update',exact:true}).click();
+  await page.getByRole('button',{name:'Change detail 1'}).click();await page.getByRole('button',{name:'Remove this detail'}).click();
+  await expect(page.locator('.fact-text')).toHaveText('she did not feel dizzy');await page.getByRole('button',{name:'Save changes'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);
+  await page.reload();await expect(page.locator('.fact-text')).toHaveText('she did not feel dizzy');expect(mock.state().entries[0].details.observations[0].polarity).toBe('absent');expect(mock.state().entries[0].details.removedObservations).toHaveLength(1);expect(mock.state().entries[0].details.originalText).toBe(original.originalText);
 });

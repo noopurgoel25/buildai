@@ -55,7 +55,7 @@ export const timelinePage = query({
   args: { paginationOpts: paginationOptsValidator },
   returns: v.object({
     patient: v.union(v.null(), v.object({ id: v.id('people'), name: v.string(), relationship: v.string() })),
-    page: v.array(v.object({ id: v.id('healthEvents'), details: confirmedEvent })),
+    page: v.array(v.object({ id: v.id('healthEvents'), details: confirmedEvent, revision: v.number() })),
     isDone: v.boolean(), continueCursor: v.string(),
   }),
   handler: async (ctx, args) => {
@@ -74,7 +74,50 @@ export const timelinePage = query({
     if (!timeline) return { ...empty, patient };
     const result = await ctx.db.query('healthEvents').withIndex('by_timeline_capture', q => q.eq('timelineId', timeline._id))
       .order('desc').paginate({ ...args.paginationOpts, maximumBytesRead: 400_000 });
-    return { patient, page: result.page.map(event => ({ id: event._id, details: event.details })), isDone: result.isDone, continueCursor: result.continueCursor };
+    return { patient, page: result.page.map(event => ({ id: event._id, details: event.details, revision: event.revision ?? 0 })), isDone: result.isDone, continueCursor: result.continueCursor };
+  },
+});
+
+export const correctUpdate = mutation({
+  args: { id: v.id('healthEvents'), event: confirmedEvent, expectedRevision: v.number(), changeId: v.string() },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const caregiverId = await getAuthUserId(ctx);
+    if (!caregiverId) throw new Error('Sign in before changing this update.');
+    const saved = await ctx.db.get(args.id);
+    if (!saved || saved.caregiverId !== caregiverId) throw new Error('This update is not available in your account.');
+    if (!/^[a-f0-9-]{36}$/i.test(args.changeId)) throw new Error('Check the change before saving.');
+    if (saved.lastChangeId === args.changeId) return saved.revision ?? 0;
+    if ((saved.revision ?? 0) !== args.expectedRevision) throw new Error('This update changed elsewhere. Return to the timeline and open it again.');
+    validateConfirmedEvent(args.event);
+    const before = saved.details;
+    for (const key of ['confirmationId', 'capturedAt', 'timeZone', 'source', 'originalText', 'aiInterpretation', 'clarifications'] as const) {
+      if (JSON.stringify(before[key]) !== JSON.stringify(args.event[key])) throw new Error('The original capture cannot be changed.');
+    }
+    const allowed = [...(before.observations ?? []), ...(before.removedObservations ?? [])];
+    for (const item of [...(args.event.observations ?? []), ...(args.event.removedObservations ?? [])]) {
+      const original = allowed.find(old => old.id === item.id);
+      if (before.observations ? !original || original.supportingWords !== item.supportingWords : item.supportingWords !== before.originalText) throw new Error('Keep the original supporting words.');
+    }
+    if (!args.event.observations?.length) throw new Error('Keep at least one detail, or delete the whole update.');
+    const revision = (saved.revision ?? 0) + 1;
+    await ctx.db.patch(saved._id, { details: { ...args.event, edited: true }, originalDetails: saved.originalDetails ?? before,
+      revision, updatedAt: Date.now(), lastChangeId: args.changeId });
+    return revision;
+  },
+});
+
+export const deleteUpdate = mutation({
+  args: { id: v.id('healthEvents'), expectedRevision: v.number() }, returns: v.null(),
+  handler: async (ctx, args) => {
+    const caregiverId = await getAuthUserId(ctx);
+    if (!caregiverId) throw new Error('Sign in before deleting this update.');
+    const saved = await ctx.db.get(args.id);
+    if (!saved) return null; // A retry after successful deletion is safe.
+    if (saved.caregiverId !== caregiverId) throw new Error('This update is not available in your account.');
+    if ((saved.revision ?? 0) !== args.expectedRevision) throw new Error('This update changed elsewhere. Return to the timeline and open it again.');
+    await ctx.db.delete(saved._id);
+    return null;
   },
 });
 
