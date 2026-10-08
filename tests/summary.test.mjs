@@ -11,7 +11,7 @@ const api=data(read('_generated/api.js').replace('"convex/server"',JSON.stringif
 const health=data(read('lib/healthEvent.ts').replace('"convex/values"',values));
 const timing=data(read('lib/observationTiming.ts'));
 const helper=data(read('lib/summary.ts').replace("'@oslojs/crypto/sha2'",JSON.stringify(import.meta.resolve('@oslojs/crypto/sha2'))).replace("'convex/values'",values).replace("'./healthEvent'",JSON.stringify(health)).replace("'./observationTiming'",JSON.stringify(timing)));
-const source=read('summaries.ts').replace("'./_generated/server'",JSON.stringify(server)).replace("'./_generated/api'",JSON.stringify(api)).replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))).replace("'convex/server'",JSON.stringify(import.meta.resolve('convex/server'))).replace("'convex/values'",values).replace("'./lib/healthEvent'",JSON.stringify(health)).replace("'./lib/summary'",JSON.stringify(helper));
+const source=read('summaries.ts').replace("'./lib/summaryShare'",JSON.stringify(data(read('lib/summaryShare.ts')))).replace("'./_generated/server'",JSON.stringify(server)).replace("'./_generated/api'",JSON.stringify(api)).replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))).replace("'convex/server'",JSON.stringify(import.meta.resolve('convex/server'))).replace("'convex/values'",values).replace("'./lib/healthEvent'",JSON.stringify(health)).replace("'./lib/summary'",JSON.stringify(helper));
 const {sourcePage,unchanged,organize,generate}=await import(data(source));
 const {checkPeriod,selectSources,validateGroups,groupSources,overviewCandidates,selectOverview,validateOverview,wordingOptions}=await import(helper);
 test('pending facts stay in Other and cannot become an overview claim',()=>{
@@ -153,9 +153,9 @@ const sharingSource=read('summarySharing.ts').replace("'./_generated/server'",JS
 const {prepare:prepareShare}=await import(data(sharingSource));
 const shareRequest=period=>({patientId:patient._id,start:'2026-10-01',end:'2026-10-06',records:[...new Map([...period.sources,...period.undated].map(source=>[source.recordId,{id:source.recordId,revision:source.revision}])).values()],snapshotHash:period.snapshotHash,overview:period.overview||[],datedCount:period.sources.length,undatedCount:period.undatedCount,groups:period.groups,overviewIds:(period.overview||[]).map(item=>item.id),text:null});
 
-test('sharing draft preserves every dated fact, negatives, evidence and local capture time, with unknown timing kept separate',async()=>{
+test('concise sharing discloses full details while preserving exact facts and unknown timing',async()=>{
  const c=context();const period=await generate._handler(c.ctx,{patientId:patient._id,start:'2026-10-01',end:'2026-10-06'});const before=structuredClone(records);const prepared=await prepareShare._handler(c.ctx,shareRequest(period));
- assert.equal(prepared.status,'ready');assert.equal(prepared.text,formatSharingDraft(period,'2026-10-01','2026-10-06'));assert.ok(prepared.text.includes('No dizziness.'));assert.ok(prepared.text.includes('Explicitly absent'));assert.ok(prepared.text.includes('Asia/Kolkata'));assert.ok(prepared.text.includes('11:30:00'));assert.ok(prepared.text.includes('Details with uncertain timing'));assert.equal(c.calls(),0);assert.deepEqual(records,before);
+ assert.equal(prepared.status,'ready');assert.equal(prepared.text,formatSharingDraft(period,'2026-10-01','2026-10-06'));assert.ok(prepared.text.length<=1500);assert.match(prepared.text,/View all details/);assert.ok(period.sources.some(source=>source.event==='No dizziness.' && source.polarity==='absent' && source.timeZone==='Asia/Kolkata'));assert.equal(period.undated.length,period.undatedCount);assert.equal(c.calls(),0);assert.deepEqual(records,before);
  const revised=await prepareShare._handler(c.ctx,{...shareRequest(period),text:'My revised sharing draft: BP 142/88; doctor said 10 mg to 5 mg.'});assert.equal(revised.text,'My revised sharing draft: BP 142/88; doctor said 10 mg to 5 mg.');assert.deepEqual(records,before);
 });
 
@@ -165,7 +165,7 @@ test('sharing checks account, fresh period sources, revisions, complete referenc
  const changed=context(records.map(record=>({...record,revision:record.revision+1})));assert.equal((await prepareShare._handler(changed.ctx,args)).status,'stale');
  const deleted=context([]);assert.equal((await prepareShare._handler(deleted.ctx,args)).status,'stale');
  const added=context([...records,{id:'healthEvents:new',revision:0,details:capture([observation('new','A fictional headache.','2026-10-06')])}]);assert.equal((await prepareShare._handler(added.ctx,args)).status,'stale');
- for(const text of ['','   ','x'.repeat(40001)])await assert.rejects(prepareShare._handler(c.ctx,{...args,text}),/characters/);
+ for(const text of ['','   ','x'.repeat(1501)])await assert.rejects(prepareShare._handler(c.ctx,{...args,text}),/characters/);
  for(const patch of [{records:[]},{records:[...args.records,...args.records]},{datedCount:0},{datedCount:1.5},{undatedCount:-1}])await assert.rejects(prepareShare._handler(c.ctx,{...args,...patch}));
  assert.equal((await prepareShare._handler(c.ctx,{...args,datedCount:1})).status,'stale');await assert.rejects(prepareShare._handler(c.ctx,{...args,overviewIds:['invented']}));
  assert.equal(c.calls(),0);
@@ -179,12 +179,12 @@ const largePeriod=()=>Array.from({length:126},(_,index)=>{
 test('six weeks with 126 facts prepares and shares completely, using any saved symptom name',async()=>{
  const rows=largePeriod(),c=context(rows),args={patientId:patient._id,start:'2026-08-26',end:'2026-10-06'};
  const period=await generate._handler(c.ctx,args);
- assert.equal(period.status,'ready');assert.equal(period.sources.length,126);assert.equal(period.recordCount,126);
+ assert.equal(period.status,'ready');assert.ok(period.conciseOverview.length<=1500);assert.match(period.conciseOverview,/Swelling/);assert.equal(period.sources.length,126);assert.equal(period.recordCount,126);
  assert.ok(period.sources.reduce((count,source)=>count+source.event.length+source.when.length,0)>8000);
  assert.equal(period.groups[0].title,'Symptoms');assert.equal(period.groups[0].keys.length,126);
  assert.equal(period.overview[0].id,'repeat:swelling');assert.match(period.overview[0].text,/42 different days/);assert.equal(period.overview[0].keys.length,126);assert.equal(c.calls(),1);
  const shared=await prepareShare._handler(c.ctx,{...shareRequest(period),start:args.start,end:args.end});
- assert.equal(shared.status,'ready');assert.match(shared.text,/Fictional swelling note 126/);assert.equal(c.calls(),1);
+ assert.equal(shared.status,'ready');assert.ok(shared.text.length<=1500);assert.match(shared.text,/126 dated details/);assert.match(shared.text,/View all details/);assert.match(period.sources.at(-1).event,/Fictional swelling note 126/);assert.equal(c.calls(),1);
 });
 test('only a 90-day inclusive period limits selection; older timeline pages do not block it',async()=>{
  checkPeriod('2026-07-01','2026-09-28');assert.throws(()=>checkPeriod('2026-07-01','2026-09-29'),/90 days/);
@@ -210,10 +210,10 @@ test('a new dated note during phrasing invalidates the snapshot rather than bein
  c.ctx.runAction=async(_ref,{candidates})=>{rows.push({id:'healthEvents:added',revision:0,details:capture([observation('1','New fictional swelling.','2026-10-06')])});return candidates;};
  await assert.rejects(generate._handler(c.ctx,{patientId:patient._id,start:'2026-08-26',end:'2026-10-06'}),/saved note changed/);
 });
-test('sharing rejects changed labels and unseen undated corrections using the complete period hash',async()=>{
+test('sharing rejects changed labels and later undated corrections using the complete period hash',async()=>{
  const rows=[...largePeriod(),...Array.from({length:21},(_,index)=>({id:`healthEvents:undated${index}`,revision:0,details:capture([observation('1',`Undated fictional note ${index}.`,null)])}))];
  const c=context(rows),period=await generate._handler(c.ctx,{patientId:patient._id,start:'2026-08-26',end:'2026-10-06'}),request={...shareRequest(period),start:'2026-08-26',end:'2026-10-06'};
- assert.equal(period.undated.length,20);assert.equal(period.undatedCount,21);
+ assert.equal(period.undated.length,21);assert.equal(period.undatedCount,21);
  rows.at(-1).details.observations[0].event='Corrected undated fictional note';rows.at(-1).revision++;
  assert.equal((await prepareShare._handler(c.ctx,request)).status,'stale');
  rows.at(-1).details.observations[0].event='Undated fictional note 20.';rows.at(-1).revision--;
@@ -221,4 +221,16 @@ test('sharing rejects changed labels and unseen undated corrections using the co
  // Label changes also matter without changing a health revision.
  rows[0].details.observations[0].type='other';
  assert.equal((await prepareShare._handler(c.ctx,request)).status,'stale');
+});
+
+
+test('exactly 1500 edited characters are accepted; longer drafts are rejected without changing facts',async()=>{
+ const c=context(),period=await generate._handler(c.ctx,{patientId:patient._id,start:'2026-10-01',end:'2026-10-06'}),before=structuredClone(records);
+ const text='a'.repeat(1500);assert.equal((await prepareShare._handler(c.ctx,{...shareRequest(period),text})).text,text);
+ await assert.rejects(prepareShare._handler(c.ctx,{...shareRequest(period),text:text+'b'}),/1,500/);assert.deepEqual(records,before);
+});
+
+test('long names and overview wording never cause a cut-off fact or hide the details disclosure',()=>{
+ const period={status:'ready',name:'N'.repeat(500),recordCount:126,sources:Array.from({length:126},()=>({})),groups:[],undated:[],undatedCount:25,overview:[{text:'A complete overview sentence. '+ 'word '.repeat(400),keys:[]}]};
+ const text=formatSharingDraft(period,'2026-08-26','2026-10-06');assert.ok(text.length<=1500);assert.match(text,/View all details/);assert.match(text,/25 details with uncertain timing/);assert.ok(!text.includes('word word'));
 });

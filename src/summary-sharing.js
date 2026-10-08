@@ -1,22 +1,24 @@
+import { SHARE_TEXT_LIMIT } from '../convex/lib/summaryShare.ts';
 import { escape } from './observation-display.js';
 
-export function mountSummarySharing(root,session,patient,period,result,draft) {
+export function mountSummarySharing(root,session,patient,period,result,draft,onDetails) {
   let disposed=false,busy=false,error='',notice='',blocked=false,manualCopy=false,pendingHandoff=null;
   const records=[...new Map([...result.sources,...result.undated].map(source=>[source.recordId,{id:source.recordId,revision:source.revision}])).values()];
   const request=()=>({...result.snapshotHash?{snapshotHash:result.snapshotHash,overview:result.overview??[]}:{},patientId:patient.id,...period,records,datedCount:result.sources.length,undatedCount:result.undatedCount,groups:result.groups,overviewIds:(result.overview||[]).map(item=>item.id),text:draft.text});
   const canShare=()=>window.isSecureContext && typeof navigator.share==='function';
   function controls(){
     const editor=root.querySelector('#sharing-text');if(editor)editor.disabled=busy;
-    root.querySelectorAll('[data-send]').forEach(button=>button.disabled=busy||blocked||draft.text===null||!draft.text.trim()||draft.text.length>40000);
+    root.querySelectorAll('[data-send]').forEach(button=>button.disabled=busy||blocked||draft.text===null||!draft.text.trim()||draft.text.length>SHARE_TEXT_LIMIT);
     const status=root.querySelector('#sharing-status');if(status){status.textContent=busy?'Checking your saved notes…':notice;status.hidden=!status.textContent;}
     const alert=root.querySelector('#sharing-error');if(alert){alert.textContent=error;alert.hidden=!error;}
-    const count=root.querySelector('#sharing-count');if(count)count.textContent=`${(draft.text||'').length.toLocaleString()} / 40,000 characters`;
+    const count=root.querySelector('#sharing-count');if(count)count.textContent=`${(draft.text||'').length.toLocaleString()} / 1,500 characters`;
     root.querySelector('#manual-copy')?.toggleAttribute('hidden',!manualCopy);
   }
   function draw(){if(disposed)return;
-    root.innerHTML=`<section class="sharing-review" aria-labelledby="sharing-title"><h2 id="sharing-title" tabindex="-1">Make it yours before sharing</h2><p>Read through and change anything you’d like. Your saved health notes stay as they are.</p>${draft.text===null?'<p role="status">Opening your sharing draft…</p>':`<label for="sharing-text">Text to share</label><textarea id="sharing-text" rows="12" maxlength="40000" aria-describedby="sharing-help sharing-count">${escape(draft.text)}</textarea><p class="hint" id="sharing-count"></p><p class="hint" id="sharing-help">This draft stays only in this open page. Changes won’t be saved to the health record.</p>${canShare()?'': '<p class="hint">Use Copy text to paste this into the app you choose.</p>'}<div class="sharing-actions">${canShare()?'<button class="primary" type="button" data-send="share">Share</button>':''}<button class="${canShare()?'secondary':'primary'}" type="button" data-send="copy">Copy text</button></div><p class="hint" id="manual-copy" hidden>Automatic copying isn’t available here. Touch and hold the text, choose Select all, then Copy.</p>`}<p class="hint" id="sharing-status" role="status" hidden></p><p class="error" id="sharing-error" role="alert" hidden></p>${draft.text===null?'<button class="secondary" id="sharing-retry" type="button" hidden>Try again</button>':''}</section>`;
+    root.innerHTML=`<section class="sharing-review" aria-labelledby="sharing-title"><h2 id="sharing-title" tabindex="-1">Make it yours before sharing</h2><p>Read through and change anything you’d like. Your saved health notes stay as they are.</p>${draft.text===null?'<p role="status">Opening your sharing draft…</p>':`<label for="sharing-text">Text to share</label><textarea id="sharing-text" rows="12" maxlength="1500" aria-describedby="sharing-help sharing-count">${escape(draft.text)}</textarea><p class="hint" id="sharing-count"></p><button class="secondary" id="sharing-details" type="button">View all details</button><p class="hint" id="sharing-help">Full measurements and notes stay one click away. This draft stays only in this open page. Changes won’t be saved to the health record.</p>${canShare()?'': '<p class="hint">Use Copy text to paste this into the app you choose.</p>'}<div class="sharing-actions">${canShare()?'<button class="primary" type="button" data-send="share">Share</button>':''}<button class="${canShare()?'secondary':'primary'}" type="button" data-send="copy">Copy text</button></div><p class="hint" id="manual-copy" hidden>Automatic copying isn’t available here. Touch and hold the text, choose Select all, then Copy.</p>`}<p class="hint" id="sharing-status" role="status" hidden></p><p class="error" id="sharing-error" role="alert" hidden></p>${draft.text===null?'<button class="secondary" id="sharing-retry" type="button" hidden>Try again</button>':''}</section>`;
     root.querySelector('#sharing-retry')?.addEventListener('click',open);
-    root.querySelector('#sharing-text')?.addEventListener('input',event=>{draft.text=event.target.value;pendingHandoff=null;error='';notice='';manualCopy=false;controls();});
+    root.querySelector('#sharing-details')?.addEventListener('click',onDetails);
+    root.querySelector('#sharing-text')?.addEventListener('input',event=>{draft.text=event.target.value;pendingHandoff=null;error=draft.text.length>SHARE_TEXT_LIMIT?'Keep your draft within 1,500 characters.':'';notice='';manualCopy=false;controls();});
     root.querySelectorAll('[data-send]').forEach(button=>button.onclick=()=>send(button.dataset.send));
     controls();
   }

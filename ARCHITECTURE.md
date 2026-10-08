@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification and stored-type Summary (Milestones 16-17) are built and awaiting builder testing; later milestones remain pending. Future-proofing work is listed in ROADMAP.md.
+Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification, stored-type Summary and concise sharing (Milestones 16-18) are built and awaiting builder testing; later milestones remain pending. Future-proofing work is listed in ROADMAP.md.
 
 ## 1. Stack
 
@@ -49,9 +49,9 @@ Every read and write is checked against the signed-in account's ownership of the
 2. Group all dated facts by their stored type in code: Symptoms, Measurements, Medication changes, Doctor visits, Daily wellbeing, Appetite and Other. Pending, missing or uncertain labels remain Other; never guess from words or ask AI to group them.
 3. Compute overview candidates from any stored symptom name across multiple dated captures. Deduplicate recorded days; explicit absence describes its dated note only. Explicit reported better/worse wording may be linked to an earlier dated note on the same topic and evidence source. An isolated change never becomes an overview.
 4. At most one Sarvam call chooses cautious wording for up to two precomputed candidates from exact, source-grounded alternatives. The server checks each candidate ID and every wording choice. No candidates means no AI call. Missing key, shared allowance reached, provider failure, truncation or invalid wording returns the deterministic template and all grouped facts.
-5. A SHA-256 fingerprint covers the selected period and all selected sources, including revisions, labels and undisplayed undated facts. Re-read after phrasing and before sharing: additions, removals, corrections or changed labels require preparing again. Summaries are never saved as health events.
+5. A SHA-256 fingerprint covers the selected period and all selected sources, including revisions, labels and all undated facts. Re-read after phrasing and before sharing: additions, removals, corrections or changed labels require preparing again. Summaries are never saved as health events.
 
-**Sharing:** server re-checks ownership, the complete period fingerprint, source membership/revisions and references before preparing text. It accepts the same number of facts as Summary; the current draft remains bounded to 40,000 characters until Milestone 18. **[V1.1]** concise summary and editable sharing text (hard maximum 1,500 characters). Full measurements and recorded details are available one click deeper through "View all details"; opening details does not append them to the sharing draft. No AI call, public link or stored share.
+**Sharing:** server re-checks ownership, the complete period fingerprint, source membership/revisions and references before preparing text. It accepts the same number of facts as Summary; concise summary and editable sharing text have a hard maximum of 1,500 characters, checked in the server before handoff. The server also returns a bounded concise overview for Summary. Whole supported overview statements are fitted within the budget; the concise text states the full detail count and how to access it. Full measurements and recorded details are available one click deeper through "View all details"; opening details does not append them to the sharing draft. All selected undated facts are returned for the complete detail view. No AI call, public link or stored share.
 
 **One-time [V1.1] migration:** all existing records are live data, including those entered during testing. Classify metadata only in batches of up to 20 captures, with one AI call per capture for its unlabelled facts, within the shared limit. Older single-fact records receive labels without being split. Preserve wording, evidence, timing, capture timestamps, corrections and first-saved snapshots. The classification version makes repeated migration calls safe.
 
@@ -69,7 +69,7 @@ Every read and write is checked against the signed-in account's ownership of the
 - **Shared AI allowance:** max 100 AI calls per rolling hour across the app, counting transcription, interpretation, summary overview and migration calls. Checked in Convex before each call.
 - On limit or provider failure: "Busy right now. Try again in a few minutes." Never save an unverified interpretation; never discard the user's input.
 - Voice: 30 s per recording (Sarvam REST limit); longer recordings are refused with a request to shorten, never truncated.
-- Timeline pages of 50. Summary period ≤90 days **[V1.1]**. Share text ≤40,000 characters.
+- Timeline pages of 50. Summary period ≤90 days **[V1.1]**. Share text ≤1,500 characters.
 - Per-account and per-anonymous-session limits: ROADMAP V2.
 
 ## 7. Privacy rules

@@ -1,24 +1,26 @@
 import type { Infer } from 'convex/values';
 import type { periodResult } from './summary';
 
-export const SHARE_TEXT_LIMIT = 40_000;
+export const SHARE_TEXT_LIMIT = 1_500;
+const NEUTRAL_OVERVIEW = 'There is not enough information to describe an overall change in health yet. Add more updates to build a fuller picture.';
+
+// Keep whole supported statements. Full facts are retained in the detail view,
+// never shortened or pasted into the concise draft to make them fit.
+export function summaryNarrative(period:Pick<Infer<typeof periodResult>,'overview'>,budget=SHARE_TEXT_LIMIT) {
+  const statements:string[]=[];
+  for(const item of period.overview??[]) {
+    if([...statements,item.text].join(' ').length<=budget)statements.push(item.text);
+  }
+  return statements.join(' ') || NEUTRAL_OVERVIEW;
+}
 
 export function formatSharingDraft(period:Infer<typeof periodResult>,start:string,end:string) {
   const day=(value:string)=>new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
-  const lines=[`CareNama: ${period.name}'s health summary`,`Period: ${day(start)} to ${day(end)}`,'',
-    'What the updates tell us',...(period.overview?.length?period.overview.map(item=>item.text):['These saved notes do not establish an overall change in health for this period.']),
-    `Based on ${period.recordCount} saved ${period.recordCount===1?'update':'updates'}.`];
-  if(period.recordCount<=2)lines.push('Only a few updates are available, so this gives a limited picture.');
-  const fact=(source:Infer<typeof periodResult>['sources'][number])=>{
-    const capture=new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'medium',timeZone:source.timeZone}).format(source.capturedAt);
-    const polarity={present:'Explicitly present',absent:'Explicitly absent',uncertain:'Uncertain'}[source.polarity] || 'Uncertain';
-    return [`- ${source.event}`,`  When: ${source.date?day(source.date):'Timing not known'}${source.when?` | ${source.when}`:''}`,
-      `  Evidence: ${source.evidence} | ${polarity}${source.edited?' | Corrected by caregiver':''}`,
-      `  Captured: ${capture} (${source.timeZone})`];
-  };
-  for(const group of period.groups){lines.push('',group.title);for(const key of group.keys)lines.push(...fact(period.sources.find(source=>source.key===key)!));}
-  if(period.undatedCount){lines.push('','Details with uncertain timing','Recorded in this period; when they happened is not known.');for(const source of period.undated)lines.push(...fact(source));
-    if(period.undatedCount>period.undated.length)lines.push(`Showing ${period.undated.length} of ${period.undatedCount} details with uncertain timing; other details remain in the timeline.`);}
-  lines.push('','Based on saved caregiver notes. Days without notes tell us nothing about symptoms.');
-  return lines.join('\n');
+  const header=`CareNama: ${period.name}'s health summary\nPeriod: ${day(start)} to ${day(end)}`;
+  const details=`${period.sources.length} dated ${period.sources.length===1?'detail':'details'}${period.undatedCount?` and ${period.undatedCount} details with uncertain timing`:''}. Full measurements and notes are available in CareNama through View all details.`;
+  const context=`Based on ${period.recordCount} saved ${period.recordCount===1?'update':'updates'}.${period.recordCount<=2?' Only a few updates are available, so this gives a limited picture.':''}`;
+  const footer='Based on saved caregiver notes. Days without notes tell us nothing about symptoms.';
+  const fixed=[header,context,details,footer].join('\n\n');
+  const narrative=summaryNarrative(period,SHARE_TEXT_LIMIT-fixed.length-2);
+  return [header,narrative,context,details,footer].join('\n\n');
 }

@@ -233,3 +233,10 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 [hidden] { display: none !important; }
 
 .timeline-marker.marker-wellbeing { color: #58657a; background: #e7edf3; }
+
+.summary-details-action { margin: 0 0 12px; }
+.summary-full-details h2 { font-size: 22px; line-height: 1.3; margin: 0 0 12px; }
+.summary-full-details > .hint { margin-bottom: 24px; }
+.summary-full-details .fact-text { overflow-wrap: anywhere; }
+
+.summary-details-hint { margin-bottom: 20px; }

@@ -1,6 +1,6 @@
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-17 labels, timeline icons and stored-type Summary are built and awaiting builder testing; later milestones remain pending.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-18 labels, timeline icons, stored-type Summary and concise sharing are built and awaiting builder testing; later milestones remain pending.
 
 ## 1. Feeling
 
@@ -125,9 +125,9 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 ### Summary
 - Heading: **"[Name]'s health summary"**. From/To (default last 14 days; max 90 days, including both dates), **Prepare summary**, **Back to timeline**. Note that undated details appear separately.
 - After preparing: one compact 44 px row with the selected dates and **Change dates**; inputs disclosed on demand; no repeated date heading.
-- **"What the updates tell us"**: short source-linked overview, or neutral add-more-updates wording. If AI is unavailable, the same supported overview appears in template wording; it does not block Summary. Sources behind it in a disclosure.
-- One row per stored fact type with data (Symptoms, Measurements, Medication changes, Doctor visits, Daily wellbeing, Appetite, Other), with its icon and count; tap to see facts with date and **View source**. Explicit reported changes stay inside their row. Visit discussion notes in an optional disclosure.
-- Separate disclosures: unknown-timing details (up to 20 shown, full count stated), preparation details.
+- **"What the updates tell us"**: short source-linked overview, or neutral add-more-updates wording. If AI is unavailable, the same supported overview appears in template wording; it does not block Summary. The overview stays concise; its sources are available within View all details.
+- **View all details** opens a dedicated detail view in one click, with complete facts visible under their stored type. One row per stored fact type with data (Symptoms, Measurements, Medication changes, Doctor visits, Daily wellbeing, Appetite, Other), with its icon and count, expanded initially; tap to collapse. Facts retain exact words, measurements, dates and **View source**. Explicit reported changes stay inside their row. Visit discussion notes in an optional disclosure.
+- Unknown-timing details are separate and fully shown within View all details, without the previous 20-detail cutoff. Preparation information stays in About this summary. Back returns to Summary or the sharing draft, keeping draft edits.
 - States: Loading "Preparing your health summary…" (repeat taps disabled). Broken: couldn't prepare, retry, dates kept. Empty: "There's nothing to summarise for this period yet." 1–2 updates: say the picture is limited. Period too long: ask for a shorter period. Changing dates clears the old result; late responses can't replace a newer view.
 - Primary: **Review & share**.
 

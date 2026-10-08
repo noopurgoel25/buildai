@@ -4,6 +4,10 @@ Why things are the way they are. Newest first. Each entry: what was decided, why
 
 ---
 
+### 2026-10-09 - Concise Summary with complete details one click deeper
+Milestone 18 limits generated and edited sharing text to 1,500 characters. Summary uses the same bounded, supported overview wording. Complete recorded facts and readings move into View all details, grouped with the existing calm icons and source information. Opening details from sharing keeps the edited draft unchanged; sharing sends only that draft. All selected unknown-timing facts are accessible, replacing the previous 20-detail display cutoff.
+*Why:* a caregiver needs a readable overview before looking at individual notes. Whole supported statements fit the concise text without cutting a fact mid-sentence, and an explicit count and View all details notice disclose the complete record. Saved facts remain unchanged. This implements the earlier concise-summary decision and replaces the 40,000-character sharing limit.
+
 ### 2026-10-08 - Summary uses stored facts and stays available when AI is busy
 Milestone 17 groups all dated facts using saved types, separates appetite and doctor/medicine categories, and replaces the 40-fact limit with an inclusive 90-day period. Older timeline pages do not impose an additional cutoff. Overview candidates use any stored symptom name, count recorded days rather than episodes, and connect only supported dated notes. One short Sarvam call chooses among source-checked wording alternatives; on failure or invalid wording, a template preserves the same candidates and source links.
 *Why:* normal six-week histories exceed 40 facts. AI should add wording, not decide which facts exist or prevent access to them. Exact wording checks reject invented clinical claims. Complete-period fingerprints catch changes even to notes outside the first 20 undated details, and prevent stale sharing. The 1,500-character concise summary remains Milestone 18.

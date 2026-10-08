@@ -5,6 +5,7 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import { paginationOptsValidator } from 'convex/server';
 import { v, type Infer } from 'convex/values';
 import type { Id } from './_generated/dataModel';
+import { summaryNarrative } from './lib/summaryShare';
 import { confirmedEvent } from './lib/healthEvent';
 import { checkPeriod, selectSources, summarySource, summaryGroup, summaryInsight, periodResult, groupSources, overviewCandidates, validateOverview, wordingOptions, numberSources, periodHash } from './lib/summary';
 
@@ -77,12 +78,12 @@ export async function preparePeriod(ctx:ActionCtx,args:{patientId:Id<'people'>;s
   const caregiverId=await getAuthUserId(ctx);if(!caregiverId)throw new Error('Sign in to prepare a summary.');
   const selected=await loadPeriod(ctx,{...args,caregiverId});
   const {name,dated,undated,snapshotHash}=selected;
-  const base={name,snapshotHash,groups:groupSources(dated),overview:[],sources:dated,undated:undated.slice(0,20),undatedCount:undated.length,recordCount:new Set(dated.map(source=>source.recordId)).size,message:'',generatedAt:Date.now()};
+  const base={name,snapshotHash,groups:groupSources(dated),overview:[],sources:dated,undated,undatedCount:undated.length,recordCount:new Set(dated.map(source=>source.recordId)).size,message:'',generatedAt:Date.now()};
   if(!dated.length)return {...base,status:'empty'};
   const candidates=overviewCandidates(dated).slice(0,2);
   let overview=candidates;
   if(candidates.length){try{overview=await ctx.runAction(internal.summaries.organize,{candidates});}catch{/* A provider failure must not discard the prepared facts. */}}
   const current=await loadPeriod(ctx,{...args,caregiverId});
   if(current.snapshotHash!==snapshotHash)throw new Error('A saved note changed. Prepare Summary again.');
-  return {...base,status:'ready',overview,generatedAt:Date.now()};
+  return {...base,status:'ready',overview,conciseOverview:summaryNarrative({overview}),generatedAt:Date.now()};
 }
