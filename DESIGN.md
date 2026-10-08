@@ -1,6 +1,6 @@
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** are agreed but not yet built.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestone 16 labels and timeline icons are built and awaiting builder testing; later milestones remain pending.
 
 ## 1. Feeling
 

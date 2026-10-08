@@ -260,6 +260,9 @@ test('LIVE: real interpretation reaches a single review and preserves both facts
   test.skip(process.env.CAPTURE_LIVE!=='1','Opt in to real Sarvam calls.');test.setTimeout(100000);
   await openMulti(page,'Mira Example had a mild headache today morning and I noticed an allergy flare up today at 5 p.m.');
   await expect(page.getByRole('heading',{name:'Does this look right?'})).toBeVisible({timeout:90000});
+  await page.getByText('Record details',{exact:true}).click();
+  await expect(page.getByText('Symptom · headache',{exact:true})).toBeVisible();
+  await expect(page.getByText('Recorded as',{exact:true})).toHaveCount(2);
   await expect(page.locator('.fact-text')).toHaveCount(2);const captured=await page.getByText(/^Captured on /).textContent();
   await page.screenshot({path:'.impeccable/review/carenama-live-mobile.png',fullPage:true});
   await page.getByRole('button',{name:'Yes, continue'}).click();await expect(page.getByRole('heading',{name:'Your update is ready.'})).toBeVisible();
