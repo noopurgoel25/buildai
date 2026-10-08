@@ -483,6 +483,28 @@ test('different identity after login stays unsaved and can return to its prepare
 
 const summaryFixture=()=>({status:'ready',name:'Mira Example',groups:[{title:'Symptoms and observations',keys:['1']}],sources:[{key:'1',recordId:'1',revision:0,edited:true,event:'She did not feel dizzy.',when:'today',evidence:'Patient-reported',polarity:'absent',date:'2026-10-06',capturedAt:Date.now(),timeZone:'Asia/Kolkata',supportingWords:'She did not feel dizzy.'}],undated:[{key:'u1',recordId:'1',revision:0,event:'Her appetite seemed better sometime last week.',when:'sometime last week',evidence:'Caregiver-observed',polarity:'uncertain',date:null,capturedAt:Date.now(),timeZone:'Asia/Kolkata',supportingWords:'Her appetite seemed better sometime last week.'}],undatedCount:1,recordCount:1,message:'',generatedAt:Date.now()});
 
+test('six-week summary shows all stored categories and 126 facts, with source details and a 90-day boundary',async({page})=>{
+  const categories=['Symptoms','Measurements','Medication changes','Doctor visits','Daily wellbeing','Appetite','Other'];
+  const sources=Array.from({length:126},(_,index)=>({...summaryFixture().sources[0],key:String(index+1),recordId:String(index+1),event:`Fictional saved fact ${index+1}`,supportingWords:`Fictional saved fact ${index+1}`,date:new Date(Date.parse('2026-08-26T12:00:00Z')+Math.floor(index/3)*86400000).toISOString().slice(0,10)}));
+  const result={...summaryFixture(),sources,groups:categories.map((title,index)=>({title,keys:sources.filter((_,sourceIndex)=>sourceIndex%7===index).map(source=>source.key)})),recordCount:126,undated:[],undatedCount:0,overview:[{id:'repeat:swelling',text:'Swelling appears in recorded notes on 42 different days. This counts recorded days, not separate episodes.',keys:['1','4']}],snapshotHash:'a'.repeat(64)};
+  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:result});
+  await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();
+  await page.getByLabel('From',{exact:true}).fill('2026-07-01');await page.getByLabel('To',{exact:true}).fill('2026-09-29');await page.getByRole('button',{name:'Prepare summary'}).click();
+  await expect(page.getByRole('alert')).toHaveText('Choose a period of up to 90 days.');expect(mock.state().summaryCalls).toBe(0);
+  await page.getByLabel('From',{exact:true}).fill('2026-08-26');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare summary'}).click();
+  await expect(page.locator('.summary-narrative')).toContainText('42 different days');await expect(page.locator('.summary-categories .summary-category')).toHaveCount(7);
+  await expect(page.locator('.summary-category .marker-wellbeing')).toHaveCount(2);await expect(page.locator('.summary-category .marker-care')).toHaveCount(2);
+  for(const width of [320,390,768,1440]){
+    await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.screenshot({path:`.impeccable/review/stored-type-summary-${width}.png`,fullPage:true});
+  }
+  await page.locator('.summary-categories details > summary').first().focus();await page.keyboard.press('Enter');
+  await expect(page.locator('.summary-categories .update-facts li:visible')).toHaveCount(18);
+  await page.locator('.summary-categories .summary-source > summary').first().click();await expect(page.locator('.summary-categories').getByText('Explicitly absent',{exact:true}).first()).toBeVisible();
+  await page.getByRole('button',{name:'Review & share'}).click();await expect(page.getByLabel('Text to share',{exact:true})).toBeVisible();
+  expect(mock.state().shareCheckCalls).toBe(1);expect(mock.state().savedCalls).toBe(0);
+});
+
 test('period summary validates dates, retains period on failure, shows source evidence and undated details, then returns to timeline (services mocked)',async({page})=>{
   const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture(),failSummary:true});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();
   await page.getByLabel('From',{exact:true}).fill('2026-10-07');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('start before the end');expect(mock.state().summaryCalls).toBe(0);

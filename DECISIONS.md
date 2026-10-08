@@ -4,7 +4,11 @@ Why things are the way they are. Newest first. Each entry: what was decided, why
 
 ---
 
-### 2026-10-08 ? Preserve live data and keep summaries concise
+### 2026-10-08 - Summary uses stored facts and stays available when AI is busy
+Milestone 17 groups all dated facts using saved types, separates appetite and doctor/medicine categories, and replaces the 40-fact limit with an inclusive 90-day period. Older timeline pages do not impose an additional cutoff. Overview candidates use any stored symptom name, count recorded days rather than episodes, and connect only supported dated notes. One short Sarvam call chooses among source-checked wording alternatives; on failure or invalid wording, a template preserves the same candidates and source links.
+*Why:* normal six-week histories exceed 40 facts. AI should add wording, not decide which facts exist or prevent access to them. Exact wording checks reject invented clinical claims. Complete-period fingerprints catch changes even to notes outside the first 20 undated details, and prevent stale sharing. The 1,500-character concise summary remains Milestone 18.
+
+### 2026-10-08 - Preserve live data and keep summaries concise
 All existing records are live data, including records entered during testing. Milestone 16 adds classification metadata only, preserving facts, timing, corrections and first-saved snapshots. Labelling batches facts from one capture into one call and uses the shared allowance, bounded retries and checks against changed words.
 *Why:* testing did not make these records disposable; labels must never rewrite health history. This supersedes the earlier test-data migration wording.
 Summary and editable sharing text have a hard maximum of 1,500 characters. Full measurements and recorded details belong one click deeper in View all details; opening them does not expand the sharing draft.

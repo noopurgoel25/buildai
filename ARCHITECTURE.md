@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification (Milestone 16) is built and awaiting builder testing; later milestones remain pending. Future-proofing work is listed in ROADMAP.md.
+Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification and stored-type Summary (Milestones 16-17) are built and awaiting builder testing; later milestones remain pending. Future-proofing work is listed in ROADMAP.md.
 
 ## 1. Stack
 
@@ -44,16 +44,14 @@ Every read and write is checked against the signed-in account's ownership of the
 
 ## 4. Summary and sharing
 
-**Current (V1):** owner-checked period snapshot (≤40 dated observations, ≤8,000 characters, ≤20 pages × 50 timeline records); one Sarvam call groups source keys into categories and picks ≤2 overview candidates from a fixed list (dizziness, headache, fever, nausea, tiredness, explicit better/worse); server validates complete coverage and renders saved wording only.
+**Current implementation (Milestone 17; frontend awaiting builder confirmation):**
+1. Owner-checked, indexed timeline reads in pages of 50 records, up to 200 KB per page. Only the selected occurrence dates are retained; undated facts captured in the period stay separate. The inclusive period is at most 90 days. There is no 40-observation, 8,000-character or 20-page cutoff.
+2. Group all dated facts by their stored type in code: Symptoms, Measurements, Medication changes, Doctor visits, Daily wellbeing, Appetite and Other. Pending, missing or uncertain labels remain Other; never guess from words or ask AI to group them.
+3. Compute overview candidates from any stored symptom name across multiple dated captures. Deduplicate recorded days; explicit absence describes its dated note only. Explicit reported better/worse wording may be linked to an earlier dated note on the same topic and evidence source. An isolated change never becomes an overview.
+4. At most one Sarvam call chooses cautious wording for up to two precomputed candidates from exact, source-grounded alternatives. The server checks each candidate ID and every wording choice. No candidates means no AI call. Missing key, shared allowance reached, provider failure, truncation or invalid wording returns the deterministic template and all grouped facts.
+5. A SHA-256 fingerprint covers the selected period and all selected sources, including revisions, labels and undisplayed undated facts. Re-read after phrasing and before sharing: additions, removals, corrections or changed labels require preparing again. Summaries are never saved as health events.
 
-**[V1.1] replaces it with:**
-1. Owner-checked query of observations with occurrence dates in the period (max 90 days); undated facts captured in the period listed separately.
-2. **Grouping by stored type in code** — no AI, no observation cap.
-3. **Overview candidates computed in code:** any `symptomName` on ≥2 distinct recorded days (counted as days, never episodes); explicit reported better/worse across multiple dated notes; explicit absence confined to its own dated note.
-4. **One short AI call** phrases up to two candidates in cautious wording; the server checks every sentence maps to a candidate and its sources. On failure, busy, or invalid output → template wording ("Dizziness recorded on 4 days: 3, 7, 12, 20 Sep").
-5. Result keyed by period + hash of source revisions; any change invalidates it. Never stored as a health event.
-
-**Sharing:** server re-checks ownership, source membership/revisions and references before preparing text. **[V1.1]** concise summary and editable sharing text (hard maximum 1,500 characters). Full measurements and recorded details are available one click deeper through "View all details"; opening details does not append them to the sharing draft. No AI call, public link or stored share.
+**Sharing:** server re-checks ownership, the complete period fingerprint, source membership/revisions and references before preparing text. It accepts the same number of facts as Summary; the current draft remains bounded to 40,000 characters until Milestone 18. **[V1.1]** concise summary and editable sharing text (hard maximum 1,500 characters). Full measurements and recorded details are available one click deeper through "View all details"; opening details does not append them to the sharing draft. No AI call, public link or stored share.
 
 **One-time [V1.1] migration:** all existing records are live data, including those entered during testing. Classify metadata only in batches of up to 20 captures, with one AI call per capture for its unlabelled facts, within the shared limit. Older single-fact records receive labels without being split. Preserve wording, evidence, timing, capture timestamps, corrections and first-saved snapshots. The classification version makes repeated migration calls safe.
 

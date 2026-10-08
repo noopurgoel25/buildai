@@ -3,7 +3,7 @@ import { escape } from './observation-display.js';
 export function mountSummarySharing(root,session,patient,period,result,draft) {
   let disposed=false,busy=false,error='',notice='',blocked=false,manualCopy=false,pendingHandoff=null;
   const records=[...new Map([...result.sources,...result.undated].map(source=>[source.recordId,{id:source.recordId,revision:source.revision}])).values()];
-  const request=()=>({patientId:patient.id,...period,records,datedCount:result.sources.length,undatedCount:result.undatedCount,groups:result.groups,overviewIds:(result.overview||[]).map(item=>item.id),text:draft.text});
+  const request=()=>({...result.snapshotHash?{snapshotHash:result.snapshotHash,overview:result.overview??[]}:{},patientId:patient.id,...period,records,datedCount:result.sources.length,undatedCount:result.undatedCount,groups:result.groups,overviewIds:(result.overview||[]).map(item=>item.id),text:draft.text});
   const canShare=()=>window.isSecureContext && typeof navigator.share==='function';
   function controls(){
     const editor=root.querySelector('#sharing-text');if(editor)editor.disabled=busy;
