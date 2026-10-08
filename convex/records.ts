@@ -1,8 +1,9 @@
+import { internal } from "./_generated/api";
 import { query, mutation } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v, type Infer } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
-import { confirmedEvent, validateConfirmedEvent } from "./lib/healthEvent";
+import { confirmedEvent, validateConfirmedEvent, labelsForSave } from "./lib/healthEvent";
 import { paginationOptsValidator } from "convex/server";
 
 export const firstRecord = query({
@@ -25,6 +26,11 @@ export const firstRecord = query({
   },
 });
 
+async function prepareLabels(ctx: MutationCtx, id: import('./_generated/dataModel').Id<'healthEvents'>, event: Infer<typeof confirmedEvent>, before?: Infer<typeof confirmedEvent>) {
+  const details = event.observations ? {...event, observations:event.observations.map(item=>labelsForSave(item,(before?.observations ?? event.aiInterpretation?.observations)?.find(old=>old.id===item.id)))} : labelsForSave(event,before);
+  await ctx.db.patch(id,{details,classificationVersion:1});
+  if ((details.observations ?? [details]).some(item=>item.type==='pending')) await ctx.scheduler.runAfter(0,internal.classification.labelUpdate,{id,attempt:0});
+}
 const saveArgs = { patient: v.object({ name: v.string(), relationship: v.string() }), event: confirmedEvent };
 async function persistFirstRecord(ctx: MutationCtx, args: { patient: {name:string;relationship:string}; event: Infer<typeof confirmedEvent> }) {
     const caregiverId = await getAuthUserId(ctx);
@@ -41,7 +47,9 @@ async function persistFirstRecord(ctx: MutationCtx, args: { patient: {name:strin
     const personId = await ctx.db.insert("people", { familyId, name, relationship });
     const recordId = await ctx.db.insert("healthRecords", { personId });
     const timelineId = await ctx.db.insert("healthTimelines", { recordId });
-    return await ctx.db.insert("healthEvents", { caregiverId, timelineId, details: args.event, confirmedAt: Date.now() });
+    const id = await ctx.db.insert("healthEvents", { caregiverId, timelineId, details: args.event, confirmedAt: Date.now() });
+    await prepareLabels(ctx,id,args.event);
+    return id;
 }
 
 // Legacy API remains available while the new frontend is reviewed and deployed.
@@ -103,6 +111,7 @@ export const correctUpdate = mutation({
     const revision = (saved.revision ?? 0) + 1;
     await ctx.db.patch(saved._id, { details: { ...args.event, edited: true }, originalDetails: saved.originalDetails ?? before,
       revision, updatedAt: Date.now(), lastChangeId: args.changeId });
+    await prepareLabels(ctx,saved._id,{...args.event,edited:true},before);
     return revision;
   },
 });
@@ -137,7 +146,9 @@ async function persistUpdate(ctx: MutationCtx, args: { patientId: import('./_gen
       if (saved.timelineId !== timeline._id) throw new Error('This update belongs to a different timeline.');
       return saved._id;
     }
-    return await ctx.db.insert('healthEvents', { caregiverId, timelineId: timeline._id, details: args.event, confirmedAt: Date.now() });
+    const id = await ctx.db.insert('healthEvents', { caregiverId, timelineId: timeline._id, details: args.event, confirmedAt: Date.now() });
+    await prepareLabels(ctx,id,args.event);
+    return id;
 }
 export const addUpdate = mutation({
   args: { patientId: v.id('people'), event: confirmedEvent }, returns: v.id('healthEvents'), handler: persistUpdate,

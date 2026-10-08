@@ -1,3 +1,5 @@
+> **Frozen record (idea lock, Oct 2026).** Kept unchanged for history. Some examples here are superseded; PRODUCT.md is the source of truth.
+
 IDEA LOCK · Build Sprint
 
 The idea, in one line: The product is a Family Health Record: a continuously updated health record for every member of a family, designed to capture, organise and make sense of what happens across their healthcare journey.

@@ -231,3 +231,5 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .sharing-actions .secondary { margin: 0; }
 .sharing-review button:disabled, .sharing-review textarea:disabled { opacity: .65; cursor: default; }
 [hidden] { display: none !important; }
+
+.timeline-marker.marker-wellbeing { color: #58657a; background: #e7edf3; }

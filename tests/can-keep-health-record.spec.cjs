@@ -309,6 +309,37 @@ test('Add update reuses the patient and whole-update review, retries a failed ap
 
 const legacyEvent=index=>({confirmationId:`00000000-0000-4000-8000-${String(index).padStart(12,'0')}`,event:`Fictional note ${index}: Mira Example reported tiredness.`,when:'Not specified',evidence:'Patient-reported',source:'text',originalText:`Fictional note ${index}: Mira Example reported tiredness.`,edited:false,aiInterpretation:null,clarifications:[],capturedAt:Date.now()-index*86400000,timeZone:'Asia/Kolkata'});
 
+test('stored labels stay inside Record details, determine icons and refresh after word edits without new controls',async({page})=>{
+  const observations=multiInterpretation().observations.map(item=>({...item,confirmed:true,timing:{date:null,time:null,precision:'unknown',resolved:true}}));
+  Object.assign(observations[0],{type:'measurement',measurement:{kind:'blood_pressure',value:'142/88',unit:''}});
+  Object.assign(observations[1],{type:'symptom',symptomName:'dizziness'});
+  const mixed={...legacyEvent(1),event:multiText,originalText:multiText,observations};
+  const appetite={...legacyEvent(2),type:'appetite',event:'Appetite improved today'};
+  const mock=await mockSession(page,{initialEvents:[mixed,appetite]});
+  await page.goto('/#record');
+  await expect(page.locator('.timeline-marker').nth(0)).toHaveClass(/marker-note/);
+  await expect(page.locator('.timeline-marker').nth(1)).toHaveClass(/marker-wellbeing/);
+  await expect(page.locator('.timeline-entry').first().getByText('Recorded as',{exact:true}).first()).not.toBeVisible();
+  await page.locator('.timeline-disclosure > summary').first().click();
+  await expect(page.getByText('Measurement · blood pressure 142/88',{exact:true})).toBeVisible();
+  await expect(page.getByText('Symptom · dizziness',{exact:true})).toBeVisible();
+  await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();
+  for(const width of [320,390,768,1440]){
+    await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.screenshot({path:`.impeccable/review/fact-labels-${width}.png`,fullPage:true});
+  }
+  await page.getByRole('button',{name:'Change update',exact:true}).first().click();
+  await expect(page.getByLabel('Recorded as')).toHaveCount(0);
+  await page.getByRole('button',{name:'Change detail 2'}).click();
+  await page.getByLabel('What happened',{exact:true}).fill('She did not have a headache');
+  await page.getByRole('button',{name:'Apply changes'}).click();
+  await page.getByRole('button',{name:'Save changes'}).click();
+  await expect(page.getByText(/being sorted/)).toBeVisible();
+  const stored=mock.state().entries[0].details;
+  expect(stored.observations[1].type).toBe('pending');expect(stored.observations[1].symptomName).toBeUndefined();
+  expect(stored.observations[0].measurement.value).toBe('142/88');expect(stored.originalText).toBe(mixed.originalText);expect(stored.capturedAt).toBe(mixed.capturedAt);
+});
+
 test('timeline loads older legacy notes in pages; a loading failure retains visible notes and retries without duplicates (services mocked)',async({page})=>{
   const mock=await mockSession(page,{initialEvents:Array.from({length:12},(_,index)=>legacyEvent(index+1)),failTimelineAt:2});
   await page.goto('/#record');await expect(page.locator('.timeline-entry')).toHaveCount(10);
@@ -476,7 +507,7 @@ test('compact timeline reveals complete notes in one tap, keeps negatives and wo
     {id:'b',event:'She did not feel dizzy',when:'this morning',evidence:'Patient-reported',polarity:'absent',supportingWords:'she did not feel dizzy',timing:{date:'2026-10-06',time:null,precision:'approximate',resolved:true}},
     {id:'c',event:'Long fictional detail '.repeat(40),when:'Timing not known',evidence:'Caregiver-observed',polarity:'uncertain',supportingWords:'x'.repeat(600),timing:{date:null,time:null,precision:'unknown',resolved:true}}
   ];
-  const measured={...legacyEvent(2),event:'BP 120/80',evidence:'Measured'},care={...legacyEvent(3),event:'We visited the doctor.'};
+  const measured={...legacyEvent(2),event:'BP 120/80',evidence:'Measured',type:'measurement'},care={...legacyEvent(3),event:'We visited the doctor.',type:'doctor_visit'};
   const mock=await mockSession(page,{initialEvents:[original,measured,care]});await page.goto('/#record');
   await expect(page.locator('.timeline-entry')).toHaveCount(3);
   await expect(page.getByRole('button',{name:'Change update'})).toHaveCount(0);

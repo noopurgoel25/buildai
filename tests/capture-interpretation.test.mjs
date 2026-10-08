@@ -15,6 +15,10 @@ let source=read('interpretation.ts').replace('"./_generated/server"',JSON.string
 const {interpretCapture}=await import(data(source));
 const args={text:'I noticed a headache today and she did not feel dizzy.',source:'text',patient:{name:'Mira Example',relationship:'Daughter'},timeZone:'Asia/Kolkata',capturedAt:Date.now()};
 const items=[{event:'a headache',when:'today',evidence:'Not specified',polarity:'present'},{event:'did not feel dizzy',when:'Not specified',evidence:'Not specified',polarity:'absent'}];
+test('initial interpretation carries grounded labels without a second provider call',async()=>{
+  const result=await run({status:'ready',question:'',observations:items.map((item,index)=>({...item,type:'symptom',symptomName:index?'dizziness':'headache'}))});
+  assert.equal(result.observations[0].symptomName,'headache');assert.equal(result.observations[1].symptomName,'dizziness');assert.equal(result.observations[1].polarity,'absent');
+});
 async function run(result,finish='stop',input=args) {
   const previousFetch=globalThis.fetch, previousKey=process.env.SARVAM_API_KEY;
   process.env.SARVAM_API_KEY='test-only-placeholder';

@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { validateText } from "./lib/captureValidation";
 import { formatSpokenTime } from "./lib/formatSpokenTime";
-import { observation } from './lib/healthEvent';
+import { observation, classifyMetadata } from './lib/healthEvent';
 import { resolveTiming } from './lib/observationTiming';
 
 export const interpretCapture = internalAction({
@@ -26,7 +26,7 @@ export const interpretCapture = internalAction({
     }
     const key = process.env.SARVAM_API_KEY;
     if (!key || !await ctx.runMutation(internal.capture.reserveInterpretation, {})) throw new Error('unavailable');
-    const fields = { event: {type:'string'}, when: {type:'string'}, evidence: {type:'string',enum:['Measured','Patient-reported','Caregiver-observed','Not specified']}, polarity: {type:'string',enum:['present','absent','uncertain']} };
+    const fields = { type:{type:'string',enum:['symptom','measurement','medication_change','doctor_visit','daily_wellbeing','appetite','other']}, symptomName:{type:'string'}, measurement:{type:'object',properties:{kind:{type:'string'},value:{type:'string'},unit:{type:'string'}},required:['kind','value','unit'],additionalProperties:false}, event: {type:'string'}, when: {type:'string'}, evidence: {type:'string',enum:['Measured','Patient-reported','Caregiver-observed','Not specified']}, polarity: {type:'string',enum:['present','absent','uncertain']} };
     const response = await fetch('https://api.sarvam.ai/v1/chat/completions', {
       method:'POST', headers:{'api-subscription-key':key,'Content-Type':'application/json'}, signal:AbortSignal.timeout(55000),
       body:JSON.stringify({model:'sarvam-105b',reasoning_effort:null,max_tokens:500,temperature:0,
@@ -37,7 +37,7 @@ Only unrelated questions, requests for medical advice, or text containing no hea
 Clarification is ONLY for an explicitly different named person or two possible people. The selected patient is already known; do not ask the user to reconfirm that same name. Names may come only from the supplied patient and update. An update naming another person is still a health update, so ask which person instead of rejecting it. Use explicit patient clarification answers when supplied.
 For ready, extract ALL independent observations, including explicit negatives. BP 142/88 is one measurement. Each event is an EXACT contiguous quote preserving qualifiers, severity and negation. when is an EXACT contiguous timing quote that applies to that observation, or "Not specified". Never give a clause another clause's time without explicit shared wording; never invent dates or clock times.
 Evidence is Measured for numeric measurements; Patient-reported only with explicit said/told/reported wording; Caregiver-observed only with explicit noticed/saw/seems wording; otherwise Not specified. Polarity is absent for explicit symptom denial, uncertain for uncertain statements or absence of reporting, otherwise present. Silence or "no update" never becomes "no symptoms".
-Leave question empty for ready/rejected. For patient clarification, ask one specific question and leave observations empty. Return the required JSON only.`},
+Label each fact with type symptom, measurement, medication_change, doctor_visit, daily_wellbeing, appetite or other. Symptom names are standard lowercase names (chakkar means dizziness), not diagnoses. Measurement kinds: blood_pressure, temperature, blood_glucose, pulse, oxygen_saturation, weight; value and unit must be literal supplied words, empty unit if absent. Use empty symptomName for non-symptoms and empty measurement fields for non-measurements. Use other when uncertain. Leave question empty for ready/rejected. For patient clarification, ask one specific question and leave observations empty. Return the required JSON only.`},
           {role:'user',content:JSON.stringify({update:text,patient:args.patient,source:args.source})}],
         response_format:{type:'json_schema',json_schema:{name:'capture',strict:true,schema:{type:'object',properties:{status:{type:'string',enum:['ready','clarification','rejected']},question:{type:'string'},observations:{type:'array',items:{type:'object',properties:fields,required:Object.keys(fields),additionalProperties:false}}},required:['status','question','observations'],additionalProperties:false}}}}),
     });
@@ -46,7 +46,7 @@ Leave question empty for ready/rejected. For patient clarification, ask one spec
     if (choice?.finish_reason !== 'stop') throw new Error('incomplete');
     const result = JSON.parse(choice.message?.content || '');
     if (!['ready','clarification','rejected'].includes(result.status) || typeof result.question !== 'string' || result.question.length > 1000 || !Array.isArray(result.observations) || result.observations.length > 20 || (result.status === 'ready' && !result.observations.length) || (result.status === 'clarification' && !result.question.trim())) throw new Error('invalid-output');
-    const observations = result.observations.map((item: {event:string;when:string;evidence:string;polarity:string}, index:number) => {
+    const observations = result.observations.map((item: {event:string;when:string;evidence:string;polarity:string;type?:string;symptomName?:string;measurement?:unknown}, index:number) => {
       if (typeof item.event !== 'string' || !item.event.trim() || !text.includes(item.event) || typeof item.when !== 'string' || !item.when.trim() || !(item.when === 'Not specified' || text.includes(item.when)) || !['Measured','Patient-reported','Caregiver-observed','Not specified'].includes(item.evidence) || !['present','absent','uncertain'].includes(item.polarity)) throw new Error('ungrounded-output');
       const clauses=original.split(/\s+\b(?:and|but)\b\s+|[;\n]/i).map(part=>part.trim()).filter(Boolean);
       const clause=clauses.find(part=>part.includes(item.event) && (item.when==='Not specified' || part.includes(item.when))) || clauses.find(part=>part.includes(item.event)) || item.event;
@@ -74,7 +74,7 @@ Leave question empty for ready/rejected. For patient clarification, ask one spec
         timing.date=null;timing.time=null;timing.precision='approximate';timing.resolved=false;
         when=args.source==='voice'?formatSpokenTime(clause):clause;
       }
-      return {id:String(index+1),event:args.source==='voice'?formatSpokenTime(supportingWords):supportingWords,when,supportingWords,evidence:evidence as 'Measured'|'Patient-reported'|'Caregiver-observed'|'Not specified',polarity:polarity as 'present'|'absent'|'uncertain',timing,confirmed:false,edited:false};
+      return {...classifyMetadata(item,supportingWords),id:String(index+1),event:args.source==='voice'?formatSpokenTime(supportingWords):supportingWords,when,supportingWords,evidence:evidence as 'Measured'|'Patient-reported'|'Caregiver-observed'|'Not specified',polarity:polarity as 'present'|'absent'|'uncertain',timing,confirmed:false,edited:false};
     });
     // A bounded reply must not quietly omit a separate clause from the capture.
     if (result.status === 'ready') {

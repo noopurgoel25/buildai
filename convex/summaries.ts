@@ -32,7 +32,7 @@ export const unchanged=internalQuery({
 });
 // Internal so the provider sees only already-selected, owner-checked facts.
 export const organize=internalAction({
-  args:{sources:v.array(v.object({key:v.string(),event:v.string(),when:v.string(),evidence:v.string(),polarity:v.string(),date:v.union(v.string(),v.null())}))},returns:v.object({groups:v.array(summaryGroup),overview:v.array(summaryInsight)}),
+  args:{sources:v.array(v.object({type:v.optional(v.string()),key:v.string(),event:v.string(),when:v.string(),evidence:v.string(),polarity:v.string(),date:v.union(v.string(),v.null())}))},returns:v.object({groups:v.array(summaryGroup),overview:v.array(summaryInsight)}),
   handler:async(ctx,args)=>{
     if(!args.sources.length || args.sources.length>40 || args.sources.reduce((count,s)=>count+s.event.length+s.when.length,0)>8000)throw new Error('summary-too-large');
     const key=process.env.SARVAM_API_KEY;
@@ -72,7 +72,7 @@ export async function preparePeriod(ctx:ActionCtx,args:{patientId:Id<'people'>;s
     if(dated.length>40 || dated.reduce((n,s)=>n+s.event.length+s.when.length,0)>8000)return{...selected,status:'too_many' as const,message:'There is more detail than fits in one summary. Choose a shorter period.'};
     if(!dated.length)return{...selected,status:'empty' as const};
     try {
-      const organized:{groups:Infer<typeof summaryGroup>[];overview:Infer<typeof summaryInsight>[]} =await ctx.runAction(internal.summaries.organize,{sources:dated.map(({key,event,when,evidence,polarity,date})=>({key,event,when,evidence,polarity,date}))});
+      const organized:{groups:Infer<typeof summaryGroup>[];overview:Infer<typeof summaryInsight>[]} =await ctx.runAction(internal.summaries.organize,{sources:dated.map(({key,event,when,evidence,polarity,date,type})=>({...type?{type}:{},key,event,when,evidence,polarity,date}))});
       if(!await ctx.runQuery(internal.summaries.unchanged,{caregiverId,sources:[...dated,...selected.undated]}))throw new Error('changed');
       return{...selected,status:'ready' as const,...organized,sources:dated,generatedAt:Date.now()};
     }catch{throw new Error('Busy right now. Try again in a few minutes.');}

@@ -79,6 +79,7 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
     root.querySelector('form').onsubmit=e => {e.preventDefault(); read(); const t=saved.timing;
       if (!saved.event.trim() || (t.date && !validDate(t.date)) || (t.precision==='exact' && (!t.date || !t.time)) || (t.precision==='date' && !t.date) || (t.precision==='approximate' && !saved.when.trim())) {error='Check the description and timing before applying changes.'; edit(item); return;}
       if(t.precision==='unknown') {t.date=null;t.time=null;} if(t.precision==='date') t.time=null;
+      if(item.event!==saved.event){delete saved.symptomName;delete saved.measurement;delete item.symptomName;delete item.measurement;saved.type='pending';}
       Object.assign(item,saved,{confirmed:false,edited:true}); draft.confirmed=null; draft.observationEdit=null; error=''; draw(); };
     root.querySelector('#remove-detail').onclick=()=>{
       if(draft.savedEdit && items.length===1){error='Keep one detail here. To remove the whole update, return to the timeline and choose Delete update.';edit(item);return;}

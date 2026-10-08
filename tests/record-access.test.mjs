@@ -7,6 +7,7 @@ const validatorsSource = stripTypeScriptTypes(readFileSync(new URL('../convex/li
 const validatorsUrl = dataUrl(validatorsSource);
 const serverSource = readFileSync(new URL('../convex/_generated/server.js', import.meta.url), 'utf8').replace('"convex/server"', JSON.stringify(import.meta.resolve('convex/server')));
 const source = stripTypeScriptTypes(readFileSync(new URL('../convex/records.ts', import.meta.url), 'utf8'))
+  .replace('"./_generated/api"', JSON.stringify(dataUrl(readFileSync(new URL('../convex/_generated/api.js', import.meta.url),'utf8').replace('"convex/server"',JSON.stringify(import.meta.resolve('convex/server'))))))
   .replace('"./_generated/server"', JSON.stringify(dataUrl(serverSource)))
   .replace('"@convex-dev/auth/server"', JSON.stringify(import.meta.resolve('@convex-dev/auth/server')))
   .replace('"convex/values"', JSON.stringify(import.meta.resolve('convex/values')))
@@ -36,7 +37,7 @@ function database() {
     count: name => (tables.get(name) || []).length,
   };
 }
-const ctx = (db, user) => ({ db, auth: { getUserIdentity: async () => user ? { subject: `${user}|session` } : null } });
+const ctx = (db, user) => ({ db, scheduler:{runAfter:async()=>null}, auth: { getUserIdentity: async () => user ? { subject: `${user}|session` } : null } });
 
 test('anonymous calls cannot read or save health records', async () => {
   const db = database();
@@ -50,7 +51,7 @@ test('saving is owned by the signed-in account and retrying does not duplicate t
   const id = await saveFirstRecord._handler(owner, input);
   assert.equal(await saveFirstRecord._handler(owner, input), id);
   for (const table of ['families', 'people', 'healthRecords', 'healthTimelines', 'healthEvents']) assert.equal(db.count(table), 1);
-  assert.deepEqual(await firstRecord._handler(owner, {}), { ...input.patient, event });
+  assert.deepEqual(await firstRecord._handler(owner, {}), { ...input.patient, event: {...event,type:'pending'} });
   assert.equal(await firstRecord._handler(ctx(db, 'users:other'), {}), null);
   await assert.rejects(saveFirstRecord._handler(owner, { ...input, event: { ...event, confirmationId: '00000000-0000-4000-8000-000000000002' } }), /already has/);
 });
@@ -69,7 +70,7 @@ test('a capture saves several individually confirmed observations together, pres
   const id=await saveCapture._handler(owner,args);
   assert.equal(await saveCapture._handler(owner,args),id);
   assert.equal(db.count('healthEvents'),1);
-  assert.deepEqual((await firstRecord._handler(owner,{})).event.observations,details.observations);
+  assert.deepEqual((await firstRecord._handler(owner,{})).event.observations,details.observations.map(item=>({...item,type:'pending'})));
   assert.equal(await firstRecord._handler(ctx(db,'users:other'),{}),null);
 });
 test('new capture API rejects unresolved, unconfirmed, unsupported or invalid observation timing without writing a partial capture', async () => {
@@ -126,7 +127,7 @@ test('saved corrections preserve capture evidence, survive read-back, retry safe
   await assert.rejects(correctUpdate._handler(owner,{...args,event:{...corrected,observations:[]}}));
   assert.equal(await correctUpdate._handler(owner,args),1);
   assert.equal(await correctUpdate._handler(owner,args),1);
-  const row=await db.get(id);assert.deepEqual(row.originalDetails,original);assert.equal(row.details.capturedAt,original.capturedAt);assert.equal(row.details.originalText,original.originalText);
+  const row=await db.get(id);assert.deepEqual(row.originalDetails,{...original,observations:original.observations.map(item=>({...item,type:'pending'}))});assert.equal(row.details.capturedAt,original.capturedAt);assert.equal(row.details.originalText,original.originalText);
   const page=await timelinePage._handler(owner,{paginationOpts:{numItems:10,cursor:null}});assert.equal(page.page[0].details.observations[0].event,'Mild tiredness');assert.equal(page.page[0].revision,1);assert.equal(db.count('healthEvents'),1);
   await assert.rejects(correctUpdate._handler(owner,{...args,changeId:'00000000-0000-4000-8000-000000000011'}),/changed elsewhere/);
   await assert.rejects(deleteUpdate._handler(owner,{id,expectedRevision:0}),/changed elsewhere/);
@@ -164,5 +165,5 @@ test('post-login matching is account-owned and requires an explicit same-person 
   assert.equal(db.count('healthEvents'),1);
   const id=await saveMatchedUpdate._handler(owner,input);assert.equal(await saveMatchedUpdate._handler(owner,input),id);
   assert.equal(db.count('healthEvents'),2);assert.equal(db.count('people'),1);assert.equal(db.count('families'),1);
-  assert.deepEqual((await db.get(id)).details,next);
+  assert.deepEqual((await db.get(id)).details,{...next,observations:next.observations.map(item=>({...item,type:'pending'}))});
 });

@@ -1,170 +1,61 @@
 # AGENTS.md
 
-## 1\. How the product works
+How we work on CareNama. Product rules live in PRODUCT.md, screens in DESIGN.md, technical rules in ARCHITECTURE.md.
 
-Interface: A mobile-first web app used primarily on a phone. The core action is: **tell the product what happened to someone you care for**, by voice or text.
+## 1. Read first
 
-Business logic: The user gives a natural-language health update. The system uses AI to identify the patient, date/time, event and relevant health information, shows the user what it understood, and saves the event to that patient's persistent health timeline only after confirmation.
+| Before… | Read |
+|---|---|
+| Any task | PRODUCT.md, PLAN.md, PROGRESS.md |
+| Screen work | DESIGN.md |
+| Backend, AI, data, limits, tracking | ARCHITECTURE.md |
+| Questioning an existing rule | DECISIONS.md (why it was decided) |
+| Anything beyond the current version | ROADMAP.md |
 
-Database: The product needs to remember the caregiver account, family, patient/person identity and relationship, health events, event dates/times, measurements, symptoms/observations, context, source type, AI interpretation and user corrections, plus the information needed to generate summaries and doctor briefs. The agent designs the tables around the Family → Person → Health Record → Health Timeline → Health Event model.
+IDEA_SCOPE.md and `archive/` are history only. Never build from them.
 
-Third party:
+## 2. How we work
 
-* **Convex** — application backend, database, server-side functions/actions, authentication integration and server-side secrets. Keys/configuration live in Convex environment variables.
-* **Convex Auth** — email-based authentication and OTP login. V1 uses email + OTP only; no mobile-number authentication and no password.
-* **Sarvam AI** — Saaras for voice transcription and `sarvam-105b` for health-event interpretation, clarification, summaries and doctor briefs. AI calls run server-side in Convex actions. API credentials live in Convex environment variables. V1 uses existing Sarvam credits and has no OpenAI API dependency.
+- Before writing code, tell me in two or three sentences what you think I'm after, then your plan. Wait for my yes. Don't guess.
+- One milestone at a time: the next one in PLAN.md, working end to end. Nothing outside it.
+- If I ask for something new mid-milestone, add it to the right version in ROADMAP.md and carry on.
+- If a product decision, interaction or requirement is unclear or conflicts with PRODUCT.md, DESIGN.md or ARCHITECTURE.md, stop and ask.
+- When I report a bug, I'll name the part. Look there first and tell me if you think I named the wrong one. Find the cause before changing anything. Fix only that.
+- When we add something, write tests so what already works doesn't break. When I drop a feature, drop its tests.
+- Never say "done" until you've seen it work (a test, or a screenshot at phone width) and told me how to check it on my phone.
+- Build and test only in the mobile-first web app. No separate test page or alternate interface.
 
-Not in v1:
+## 3. Keeping the docs current
 
-* Mobile-number authentication
-* Password authentication
-* Multiple caregivers per patient
-* Full multi-patient UI / family management
-* WhatsApp bot or WhatsApp capture
-* Medical report upload, OCR or document extraction
-* ABHA/ABDM integration
-* Doctor accounts or portals
-* Appointment booking
-* Medication adherence/reminders
-* Prescription management
-* Lab, pharmacy, wearable or device integrations
-* Insurance functionality
-* Telemedicine
-* Payments
-* Generic health chatbot
-* Diagnosis or treatment recommendations
-* Automated health alerts
-* Fitness, nutrition or vaccination tracking
-* Marketplace or government-service integrations
-* Required daily check-ins, streaks or health scores
+Each topic lives in exactly one file. When something changes:
 
-When I report a bug, I'll name the part. Look there first, and tell me if you think I named the wrong one.
+1. Update the one file that owns the topic (current state only, no dated addenda).
+2. Add a dated entry to DECISIONS.md saying what changed and why.
+3. After I confirm a milestone works: add one line to PROGRESS.md.
 
-## 2\. How we work
+Never append "Approved … (date)" paragraphs to PRODUCT.md, DESIGN.md or PLAN.md.
 
-* Read IDEA\_SCOPE.md, PRODUCT.md, PLAN.md and PROGRESS.md before anything else, and DESIGN.md before any screen work.
-* Before writing code, tell me in two or three sentences what you think I'm after, then your plan. Wait for my yes. Don't guess.
-* One milestone at a time: the next one in PLAN.md, working end to end. Nothing outside it.
-* If I ask for something new mid-milestone, add it to the parked list in PLAN.md and carry on.
-* Never say "done" until you've seen it work (a test, or a screenshot at phone width) and told me how to check it on my phone.
-* When I report a bug, find the cause before changing anything. Fix only that.
-* When we add something new, write tests so what already works doesn't break. When I drop a feature, drop its tests.
-* Build and test only in the mobile-first web app. Do not create a separate web test page or alternate interface.
-* After I confirm a milestone works: commit, push, and add one line to PROGRESS.md.
-* Never put a key or password in code, in a VITE\_ variable (those are sent to every visitor) or in a committed file.
-* **If a product decision, interaction or requirement is unclear or conflicts with PRODUCT.md or DESIGN.md, stop and ask rather than guessing.**
+## 4. Shipping
 
-## 3\. Shipping
+- Live link: https://aware-starfish-233.convex.site
+- Repo: github.com/noopurgoel25/buildai (public)
+- Deploy: `npm run deploy`. A push never deploys by itself.
+- After I confirm a milestone: commit, push, deploy, then verify the live site at phone width with a fictional update. Don't send login emails or create permanent records during live checks.
+- Publishing before confirmation is allowed only when I explicitly approve it for phone testing (voice and native sharing need the HTTPS site).
+- Local preview: `npm run dev -- --host 0.0.0.0`; desktop http://localhost:5173, phone on the same Wi-Fi via the computer's LAN address. HTTP preview supports text and copying only.
+- If the agent session can't reach npm, Convex or git (EACCES / read-only), stop and give me the exact commands to run in my terminal.
+- Before I share the link publicly: I open it on my phone, logged out, on mobile data, and do the core flow once.
 
-Live link: \[https://aware-starfish-233.convex.site]
+## 5. Keys and data
 
-Repo: \[github.com/noopurgoel25/buildai], public
+- Keys live only in Convex environment variables (dev and prod). See ARCHITECTURE.md §9 for the list.
+- Never put a key or password in code, a `VITE_` variable (sent to every visitor) or a committed file. `.gitignore` covers `.env.local`.
+- Never ask me to paste a key into chat. Give me the dashboard step or a script that sends it straight to Convex.
+- Real people's data (health information, names, emails, phone numbers or anything identifying) never goes in the repo, not even as a test file. Tests use made-up examples.
+- Every limit and every "is this allowed" check happens in a Convex function, never only on screen.
 
-Deploy: npm run deploy. A push never deploys by itself. After I say a milestone works: commit, push, then deploy.
+## 6. Tests
 
-Keys:
-
-* Convex Auth configuration lives in Convex environment variables for dev and prod.
-* SARVAM\_API\_KEY lives in Convex environment variables for dev and prod.
-* Never put keys in code, a VITE\_ variable or a committed file.
-* Never ask me to paste a key into chat.
-
-.gitignore covers .env.local.
-
-Real people's data (health information, chats, names, email addresses, phone numbers or other identifying information) never goes in the repo, not even as a test file. Tests use made-up examples.
-
-Every limit and every "is this allowed" check happens in a Convex function, never only on screen.
-
-Before I share the link: I open it on my phone, logged out, on mobile data, and do the core flow once.
-
-## 4\. The AI call
-
-Model: Sarvam `sarvam-105b`. Use `reasoning_effort: null` to keep the bounded reply available within the token cap.
-
-What goes in, and its limit:
-
-* For voice input, Sarvam AI transcribes the user's spoken update before the health-event interpretation call.
-* The AI receives the user's transcribed/text health update plus only the patient/timeline context needed for the current task.
-* Keep prompts/context minimal and grounded in recorded information.
-* Do not send unrelated family or health information to the model.
-* Health-event interpretation should preserve uncertainty and distinguish measured, patient-reported, caregiver-observed and document-derived information.
-
-Where it runs: A Convex action. Never in the interface.
-
-Key: SARVAM\_API\_KEY in Convex environment variables, dev and prod. No separate OpenAI billing or fallback in V1.
-
-Reply cap: `max_tokens: 500`. Request structured JSON and validate it server-side before showing an interpretation.
-
-Calls cap: at most 100 AI calls an hour across the app, checked server-side in Convex.
-
-When a cap is hit or the call fails:
-
-* Show: **"Busy right now. Try again in a few minutes."**
-* Do not save an unverified AI interpretation as a permanent health event.
-* The user's original input must not be silently discarded.
-
-Login: Email authentication with OTP through Convex Auth happens after the user reaches first value in the initial V1 flow. The user can experience the core capture → AI interpretation → confirmation flow before signup; authentication is required before the health record is made persistent. Returning users authenticate when required and are returned to their existing patient/timeline; they do not repeat patient setup.
-
-The AI must never:
-
-* Give a medical diagnosis.
-* Recommend treatment, medication changes or other medical interventions.
-* Invent or silently infer medically significant facts.
-* Guess which family member an update refers to when the patient is ambiguous.
-* Guess a date when the timing is materially ambiguous.
-* Present an inference as a measured, reported or observed fact.
-* Treat "no update" as "no symptoms."
-* Present an AI-generated summary as a clinical verdict.
-* Answer unrelated/off-topic questions as a general-purpose chatbot.
-
-If the patient or date is ambiguous, ask a specific clarification question rather than guessing.
-
-## 5\. Voice and transcription
-
-Voice input: The user can speak a health update from the phone.
-
-Transcription provider: Sarvam AI.
-
-Key: SARVAM\_API\_KEY in Convex environment variables, dev and prod.
-
-Where it runs: Server-side. The interface sends the recording/input through the application's backend flow; API credentials are never exposed to the browser.
-
-While recording/transcribing:
-
-* Show a clear listening/transcription state.
-* Do not show live transcription in V1; show transcription after recording stops.
-* Let the user stop, retry or switch to text.
-
-If microphone access is blocked:
-
-* Explain that microphone permission is required for voice capture.
-* Provide text input as an immediate alternative.
-
-If the recording is empty or transcription produces no usable text:
-
-* Say that nothing was captured.
-* Offer retry and text input.
-* Never create an empty health event.
-
-## 6\. Product rules the agent must preserve
-
-* The record is the product; features enrich the patient's persistent health story.
-* Capture before categorize.
-* Voice is the fastest path; text is always available.
-* AI shows what it understood before anything is saved as a health event.
-* Do not require authentication before the first-value experience; ask for email + OTP after the user confirms the first event and before persistent storage.
-* The first-value UI must never describe the event as permanently saved or imply that it will survive closing/reopening until authentication succeeds.
-* Evidence beats inference.
-* The caregiver controls recording, editing, deleting and sharing.
-* Never silently guess the patient, date or medically significant meaning.
-* Never make the user complete a medical form before capturing an observation.
-* Never turn the product into a chatbot destination.
-* Timeline over dashboard.
-* No diagnosis or treatment advice in V1.
-* No required daily maintenance, streaks, scores or similar engagement mechanics.
-* Keep future Family Health OS complexity invisible in V1.
-* New capabilities should strengthen the existing Family → Person → Health Record → Health Timeline → Health Event model rather than create disconnected feature destinations.
-* Design and implementation must support the empty, loading, broken and done states defined in DESIGN.md.
-* The product must be usable and understandable at phone width before desktop optimisation.
-
-When a requirement conflicts with PRODUCT.md, DESIGN.md or this file, stop and ask before coding.
+- Default `npm test`: unit/server and browser tests with simulated providers and accounts.
+- Live-provider tests (real Sarvam) are optional and skipped by default; run them on purpose. They spend credits and count toward the shared AI limit.
+- Check layouts at 320, 390, 768 and 1440 px; no horizontal overflow; keyboard focus visible.

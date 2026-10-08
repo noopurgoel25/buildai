@@ -10,8 +10,9 @@ export default defineSchema({
   healthRecords: defineTable({ personId: v.id("people") }).index("by_person", ["personId"]),
   healthTimelines: defineTable({ recordId: v.id("healthRecords") }).index("by_record", ["recordId"]),
   healthEvents: defineTable({ caregiverId: v.id("users"), timelineId: v.id("healthTimelines"), details: confirmedEvent, confirmedAt: v.number(),
-    originalDetails: v.optional(confirmedEvent), revision: v.optional(v.number()), updatedAt: v.optional(v.number()), lastChangeId: v.optional(v.string()) })
+    classificationVersion: v.optional(v.number()), originalDetails: v.optional(confirmedEvent), revision: v.optional(v.number()), updatedAt: v.optional(v.number()), lastChangeId: v.optional(v.string()) })
     .index("by_caregiver_confirmation", ["caregiverId", "details.confirmationId"])
+    .index("by_classification", ["classificationVersion"])
     .index("by_timeline", ["timelineId"])
     .index("by_timeline_capture", ["timelineId", "details.capturedAt"]),
   loginEmailUsage: defineTable({ emailHash: v.string(), requestedAt: v.number() })

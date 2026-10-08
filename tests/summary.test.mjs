@@ -14,6 +14,11 @@ const helper=data(read('lib/summary.ts').replace("'convex/values'",values).repla
 const source=read('summaries.ts').replace("'./_generated/server'",JSON.stringify(server)).replace("'./_generated/api'",JSON.stringify(api)).replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))).replace("'convex/server'",JSON.stringify(import.meta.resolve('convex/server'))).replace("'convex/values'",values).replace("'./lib/healthEvent'",JSON.stringify(health)).replace("'./lib/summary'",JSON.stringify(helper));
 const {sourcePage,unchanged,organize,generate}=await import(data(source));
 const {checkPeriod,selectSources,validateGroups,validateCategories,overviewCandidates,selectOverview}=await import(helper);
+test('pending facts stay in Other and cannot become an overview claim',()=>{
+  const sources=[{key:'1',type:'pending',event:'Dizziness today',evidence:'Patient-reported',polarity:'present',date:'2026-10-01'},{key:'2',type:'pending',event:'Dizziness today',evidence:'Patient-reported',polarity:'present',date:'2026-10-02'}];
+  assert.deepEqual(validateCategories({categories:[1,1]},sources),[{title:'Other',keys:['1','2']}]);
+  assert.deepEqual(overviewCandidates(sources),[]);
+});
 const observation=(id,event,date)=>({id,event,when:date||'Unknown',supportingWords:event,evidence:'Patient-reported',polarity:'present',timing:{date,time:null,precision:date?'date':'unknown',resolved:true},confirmed:true,edited:false});
 const capture=(observations,capturedAt=Date.parse('2026-10-06T06:00:00Z'))=>({confirmationId:'00000000-0000-4000-8000-000000000001',event:observations.map(o=>o.event).join('; '),when:'Multiple observations',evidence:'Not specified',source:'text',originalText:observations.map(o=>o.event).join('; '),edited:false,aiInterpretation:null,clarifications:[],capturedAt,timeZone:'Asia/Kolkata',observations});
 const records=[{id:'healthEvents:1',revision:0,details:capture([observation('1','Mira Example felt tired.','2026-10-01'),{...observation('2','No dizziness.','2026-10-06'),polarity:'absent'},observation('3','Sometime last week.',null)])}];

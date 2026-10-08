@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as capture from "../capture.js";
+import type * as classification from "../classification.js";
 import type * as doctorBriefs from "../doctorBriefs.js";
 import type * as http from "../http.js";
 import type * as interpretation from "../interpretation.js";
@@ -34,6 +35,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   capture: typeof capture;
+  classification: typeof classification;
   doctorBriefs: typeof doctorBriefs;
   http: typeof http;
   interpretation: typeof interpretation;
