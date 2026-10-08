@@ -22,4 +22,4 @@ One line per confirmed milestone. Detailed session notes up to 2026-10-08: `arch
 | 2026-10-06 | Timing-screen checkbox layout | Live (8cf451f) |
 | 2026-10-08 | Docs restructured; V1.1 scope agreed | Docs only |
 
-Last full test run: 40 unit/server, 59 browser passed; 9 optional live-provider tests skipped.
+Last full test run: 49 unit/server, 60 browser passed; 9 optional live-provider tests skipped. One fictional capture was then checked separately against real Sarvam and passed without saving a record. Milestone 16 is awaiting builder confirmation.
