@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) are built and awaiting builder testing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and a fictional event accepted by the EU API; dashboard confirmation remains pending; Milestone 21 remains pending. Future-proofing work is listed in ROADMAP.md.
+Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) are built and awaiting builder testing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and the builder confirming a fictional event in its Events view; Milestone 21 remains pending. Future-proofing work is listed in ROADMAP.md.
 
 ## 1. Stack
 

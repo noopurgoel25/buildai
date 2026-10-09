@@ -1,6 +1,6 @@
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-19 labels, timeline icons, stored-type Summary, concise sharing and account deletion are built and awaiting builder testing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and a fictional event accepted by the EU API; dashboard confirmation remains pending; Milestone 21 remains pending.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-19 labels, timeline icons, stored-type Summary, concise sharing and account deletion are built and awaiting builder testing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and the builder confirming a fictional event in its Events view; Milestone 21 remains pending.
 
 ## 1. Feeling
 
