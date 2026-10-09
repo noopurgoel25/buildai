@@ -1,5 +1,9 @@
 # DECISIONS.md
 
+### 2026-10-10 - Preserve Milestone 22 and build embedded first-note guidance
+Preserve the existing Milestone 22 commit `c56e456` on `milestone-22-identity-navigation` and continue the approved Milestone 23 on `milestone-23-welcome-onboarding`. Welcome uses the prepared original family caricature, a clear Start a health note action, short illustrative inputs and Say / Check / Keep guidance. The signed-in empty-account introduction explains direct saving; existing-person and expired-session routes remain intact. Guidance lives in the existing screens, and examples never become drafts or saved notes.
+*Why:* the builder explicitly requested a separate branch for Milestone 22 and continued work on Milestone 23. This advances the approved sequence without publishing before phone review or introducing a compulsory tour. Two unrelated untracked files remain outside milestone commits.
+
 ### 2026-10-10 - Shared menu preserves work and protects exits
 Move account/privacy actions into the common menu, retain visible core actions, and use labelled arrow back controls. Opening help/menu leaves the current screen mounted. Privacy returns to the originating draft; after refresh it falls back to the appropriate home. Leaving saved corrections or edited sharing text retains their existing discard protection. Active recording blocks navigation away; pending sign-out cannot replace menu contents.
 *Why:* Milestone 22 needs simpler navigation without losing the capture, correction and sharing protections. Browser regression checks and independent design review verified these cases before builder review; deployment remains pending confirmation.

@@ -12,6 +12,7 @@ import { mountPrivacy } from './privacy.js';
 import { configureAnalytics,resetAnalytics,track } from './analytics.js';
 import { mountNavigation } from './navigation.js';
 import { mountAccountDeletion } from './account-deletion.js';
+import { noteOrientation, noteExamples } from './onboarding.js';
 
 const app = document.querySelector('#app');
 // Unsaved capture details stay only in this open page.
@@ -102,7 +103,7 @@ function render() {
           <div class="field"><label for="relationship">Your relationship to them</label><input id="relationship" name="relationship" autocomplete="off" value="${escapeHtml(patient.relationship)}" aria-describedby="relationship-hint relationship-error" required><p id="relationship-hint" class="hint">For example, daughter, son or partner.</p><p id="relationship-error" class="error" hidden></p></div>
           <p class="reassurance">${session.isAuthenticated ? 'No medical profile needed.' : 'A name and your relationship are enough to start.'}</p>
           <p class="hint temporary">These details will be saved with your first update. Until then, refreshing this page will clear them.</p>
-          <button class="primary" type="submit">Continue</button>
+          <button class="primary" type="submit">Continue to your update</button>
         </form>
       </div>
     </section>` : `
@@ -111,9 +112,13 @@ function render() {
         <h1 id="title" tabindex="-1">A place for the details you want to remember.</h1>
         <p>Health notes for someone you care for, in your own words.</p>
       </div>
-      <div class="folded-note" aria-hidden="true"><span class="note-fold"></span><span class="note-stroke"></span><span class="note-stroke short"></span><span class="note-stroke last"></span></div>
-      <a class="primary" href="#patient-setup">Get started</a>
-      <a class="returning-signin" href="#signin">Already started? Sign in</a>
+      <img class="welcome-family" src="/images/welcome-family-caricature.png" width="1672" height="941" alt="Illustration of an adult daughter embracing her father." fetchpriority="high">
+      ${noteOrientation()}
+      <div class="welcome-actions">
+        <a class="primary" href="#patient-setup">Start a health note</a>
+        <a class="returning-signin" href="#signin">Already started? Sign in</a>
+      </div>
+      ${noteExamples()}
     </section>`;
   if (setup || capture || firstValue) document.querySelector('h1').focus();
   if(capture) captureDraft.saveDirectly=session.isAuthenticated;

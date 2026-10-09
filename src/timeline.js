@@ -1,3 +1,4 @@
+import { noteOrientation, noteExamples } from './onboarding.js';
 import { mountAccountDeletion } from './account-deletion.js';
 import { escape, savedObservationDetails, occurrenceLabel } from './observation-display.js';
 import { mountObservationReview } from './observation-review.js';
@@ -19,10 +20,11 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
   function draw() {
     correctionOpen=false;
     shell(`<h1 id="title" tabindex="-1">${patient ? `${escape(patient.name)}’s health story` : 'Who are you caring for?'}</h1>
-      ${patient ? `<p>${escape(patient.relationship)}</p>` : '<p>Start with their name and your relationship. Then add a health update and check it before saving.</p><p class="journey-preview">Person &rarr; Update &rarr; Review</p>'}
+      ${patient ? `<p>${escape(patient.relationship)}</p>` : `<p>Start with their name and your relationship. Then add a health update and check it before saving.</p>${noteOrientation(true)}`}
       ${saved ? `<p class="saved-message" role="status">Saved to ${escape(patient.name)}’s record.</p>` : ''}
       <button class="primary account-start" id="add-update" type="button" ${!loaded?'disabled':''}>${patient ? 'Add update' : 'Set up a health record'}</button>
       ${patient?'<button class="text-action summary-link" id="period-summary" type="button">Summary for a period</button>':''}
+      ${!patient ? noteExamples() : ''}
       ${patient ? '<h2 class="timeline-heading">Your timeline</h2><p class="hint">Newest recorded updates first. Each detail shows when it happened.</p>' : ''}
       ${loaded && !entries.length ? '<div class="timeline-empty"><p>No saved updates yet.</p><p class="hint">You can add a note whenever there’s something you want to remember.</p></div>' : ''}
       <ol class="timeline-list">${entries.map((entry,index)=>timelineEntry(entry,index,openedEntries.has(entry.id))).join('')}</ol>

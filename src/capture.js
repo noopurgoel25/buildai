@@ -1,3 +1,4 @@
+import { noteExamples } from './onboarding.js';
 import { toWav } from './audio.js';
 import { mountObservationReview } from './observation-review.js';
 import { createRecordId } from './record-id.js';
@@ -239,6 +240,7 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
       ${recording ? '<p id="recording-time" class="hint">0 / 30 seconds</p>' : ''}
       <button class="${draft.textMode && !recording ? 'secondary' : 'primary voice-button'}" id="voice" type="button" ${busy || permission ? 'disabled' : ''}>${recording ? 'Stop recording' : 'Speak an update'}</button>
       ${recording || permission ? '<button class="text-action" id="switch-text" type="button">Switch to text</button>' : `<button class="text-action" id="type-instead" type="button" aria-expanded="${Boolean(draft.textMode)}" aria-controls="capture-text-form">Type instead</button>`}
+      ${!draft.existingPatient && !draft.text.trim() && !draft.audio && !busy && !recording && !permission ? noteExamples() : ''}
       ${error ? `<p class="error" role="alert">${escape(error === BUSY && retryStep === 'interpret' ? 'We couldn’t prepare your update just now. Your words are still here.' : error)}</p>` : ''}
       ${error && retryStep ? '<button class="secondary" id="retry" type="button">Try again</button>' : ''}
       ${error && retryStep === 'interpret' ? '<button class="secondary" id="manual-edit" type="button">Edit manually</button>' : ''}

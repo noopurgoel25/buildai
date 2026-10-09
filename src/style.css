@@ -98,11 +98,6 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #352a2b; outl
 .welcome h1 { max-width: 12ch; font-size: 38px; line-height: 1.16; letter-spacing: -.035em; }
 .welcome p { max-width: 30ch; }
 .welcome .primary { margin-top: auto; }
-.folded-note { position: relative; width: 158px; height: 158px; margin: 10px auto 12px; background: var(--support-surface); border-radius: 16px 0 16px 16px; transform: rotate(-7deg); }
-.note-fold { position: absolute; top: 0; right: 0; width: 36px; height: 36px; background: #eab9aa; clip-path: polygon(0 0, 100% 100%, 0 100%); }
-.folded-note:after { content: ''; position: absolute; top: 0; right: 0; width: 36px; height: 36px; background: #fff9f5; clip-path: polygon(0 0,100% 0,100% 100%); }
-.note-stroke { position: absolute; top: 62px; left: 30px; width: 96px; height: 4px; border-radius: 4px; background: var(--accent); }
-.note-stroke.short { top: 82px; width: 66px; }.note-stroke.last { top: 102px; width: 80px; }
 .back { margin-bottom: 28px; min-height: 44px; display: flex; align-items: center; }
 .returning-signin { min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .patient-context { margin-bottom: 24px; }.patient-context h2 { font-size: 18px; margin: 0; }.patient-context p { font-size: 13px; }
@@ -305,3 +300,20 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #352a2b; outl
 a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible { outline-color: var(--plum); }
 .screen { padding-top: 16px; }
 @media (max-width: 360px) { .app-header { padding-left: 20px; padding-right: 20px; } .screen { padding-left: 20px; padding-right: 20px; } #common-navigation { padding: 20px; } }
+
+/* First-note guidance lives beside the action, without a separate tour. */
+.welcome { min-height: auto; gap: 24px; padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+.welcome h1 { max-width: none; font-size: 32px; margin-bottom: 12px; }
+.welcome p { max-width: none; }
+.welcome-family { display: block; width: 100%; height: auto; border-radius: 16px; }
+.welcome-actions { display: grid; gap: 8px; }
+.welcome-actions .primary { margin-top: 0; }
+.note-orientation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; }
+.note-orientation strong { display: block; margin-bottom: 6px; font-size: 16px; font-weight: 600; }
+.note-orientation span { display: block; font-size: 13px; line-height: 1.5; color: #6f5b5b; }
+.note-examples p { color: var(--ink); font-size: 13px; }
+.note-examples ul { list-style: none; padding: 0; margin: 8px 0 0; }
+.note-examples li { font-size: 13px; line-height: 1.65; color: #6f5b5b; }
+.capture-actions .note-examples { margin-top: 16px; }
+.timeline-screen > .note-orientation { margin-top: 24px; }
+.timeline-screen > .note-examples { margin-top: 24px; }

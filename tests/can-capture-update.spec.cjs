@@ -13,10 +13,10 @@ const understood = { status: 'ready', event: update, when: 'after lunch today', 
 
 async function openCapture(page) {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Get started' }).click();
+  await page.getByRole('link', { name: 'Start a health note' }).click();
   await page.getByLabel('Their name').fill('Mira Example');
   await page.getByLabel('Your relationship to them').fill('Daughter');
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Speak an update' })).toBeVisible();
   await page.getByRole('button', { name: 'Type instead', exact: true }).click();
   await expect(page.getByText('Voice and text capture are coming next.')).toHaveCount(0);
@@ -140,7 +140,7 @@ test('changing patient details clears the old interpretation and rechecks the or
   await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible();
   await page.getByRole('link', { name: 'Back' }).click();
   await page.getByLabel('Their name').fill('Jamie Example');
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Does this look right?' })).toHaveCount(0);
   await expect(page.getByLabel('Or type your update')).toHaveValue(update);
   await page.route('**/api/interpret', route => {
@@ -315,7 +315,7 @@ test('review edits are applied, cancellation preserves previous details, and ori
   await page.getByRole('button', { name: 'Cancel editing' }).click();
   await expect(page.getByText('Mira Example felt tired, not dizzy.', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Back' }).click();
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await expect(page.getByText('Mira Example felt tired, not dizzy.', { exact: true })).toBeVisible();
   expect(calls.map(call => call.endpoint)).toEqual(['/api/capture-text', '/api/interpret']);
   await expect(page.getByRole('button', { name: 'Yes, continue' })).toBeVisible();
@@ -394,7 +394,7 @@ test('unfinished review edits and clarification answers survive Back without sav
   await page.getByLabel('What happened', { exact: true }).fill('Mira Example reported tiredness.');
   await page.getByLabel('When', { exact: true }).fill('Yesterday');
   await page.getByRole('link', { name: 'Back' }).click();
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await expect(page.getByLabel('What happened', { exact: true })).toHaveValue('Mira Example reported tiredness.');
   await expect(page.getByLabel('When', { exact: true })).toHaveValue('Yesterday');
   await page.getByRole('button', { name: 'Cancel editing' }).click();
@@ -404,7 +404,7 @@ test('unfinished review edits and clarification answers survive Back without sav
   await page.getByRole('button', { name: 'Continue with text' }).click();
   await page.getByLabel('Your answer').fill('Yesterday');
   await page.getByRole('link', { name: 'Back' }).click();
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await expect(page.getByLabel('Your answer')).toHaveValue('Yesterday');
 });
 
@@ -482,7 +482,7 @@ test('a manually reviewed update needs explicit confirmation, and changing patie
   await page.getByRole('link', { name: 'Back to review' }).click();
   await page.getByRole('link', { name: 'Back to person details', exact: true }).click();
   await page.getByLabel('Their name').fill('Jamie Example');
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await page.evaluate(() => { location.hash = '#first-value'; });
   await expect(page.getByRole('button', { name: 'Speak an update' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Mira Example’s update' })).toHaveCount(0);

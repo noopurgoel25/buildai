@@ -67,7 +67,7 @@ components:
 
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 1-21 are live. Milestone 22 identity and shared navigation are implemented locally and await builder confirmation; they have not been deployed. The approved [Desert Dusk proposal](design/desert-dusk-proposal.md) is a future screen-review reference, not a description of implemented Milestones 23-26.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 1-21 are live. Milestones 22-23 identity, shared navigation, Welcome and onboarding are implemented locally for builder review; they have not been deployed. The approved [Desert Dusk proposal](design/desert-dusk-proposal.md) remains a future screen-review reference for Milestones 24-26.
 
 ## 1. Feeling
 
@@ -93,7 +93,7 @@ Avoid cheerful celebration, clinical good/bad colour coding, and assumptions abo
 
 **Identity:** CareNama wordmark with the held-light geometric SVG: an orange circle held by two terracotta arcs. The common header carries the identity on every primary screen; logo and interface icons remain simple SVG geometry.
 
-**Type:** self-hosted Inter 400/600, deliberately retained. Screen headline 32 px / 1.2, section and summary headings 22 px, compact person heading 18 px, body/inputs/buttons 16 px, metadata 13 px. Small-screen Welcome retains its existing 34 px headline override. Do not introduce an external font request.
+**Type:** self-hosted Inter 400/600, deliberately retained. Screen headline 32 px / 1.2, section and summary headings 22 px, compact person heading 18 px, body/inputs/buttons 16 px, metadata and short onboarding examples 13 px. Welcome uses a 32 px headline at all widths. Do not introduce an external font request.
 
 **Colour**
 
@@ -123,7 +123,7 @@ Rose and orange are supporting identity colours, never a health assessment. The 
 
 **Surfaces and states:** controls use 12 px corners, primary buttons 14 px, the menu dialog 16 px. Tonal surfaces convey most depth; only the menu uses the structural shadow `0 12px 40px #352a2b33` with backdrop `#352a2b55`. Action colour transitions take 160 ms ease-out; respect reduced motion. Keyboard focus uses a 3 px plum outline with space around the control.
 
-**Illustration medium:** original Indian daughter-and-father editorial caricature, softly painted 2D, mature proportions, matte texture and diffuse late-afternoon light. No photography mixed into the interface, childish proportions, medical equipment, glossy 3D or helpless patient framing. See [style anchor](design/style-anchor.md). The prepared `public/images/welcome-family-caricature.png` belongs to Milestone 23 and is not on the current Welcome screen.
+**Illustration medium:** original Indian daughter-and-father editorial caricature, softly painted 2D, mature proportions, matte texture and diffuse late-afternoon light. No photography mixed into the interface, childish proportions, medical equipment, glossy 3D or helpless patient framing. See [style anchor](design/style-anchor.md). Welcome displays `public/images/welcome-family-caricature.png` at its natural landscape ratio, with both faces and the embrace visible; its alternative text identifies it as an illustration.
 
 **Shared navigation:** one header menu opens a native modal dialog without unmounting the current screen, so text, review, correction and sharing drafts remain in place. Signed-out users see Sign in; signed-in users see Your timeline and account actions. Support contains What can I record? and Privacy & your choices. Menu help is optional, not an extra onboarding screen. Closing returns focus to the menu button. Recording blocks departures and asks the caregiver to finish recording; draft-discard and in-progress action guards apply when actually leaving.
 
@@ -157,19 +157,22 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 ### Welcome
 - Headline: **"A place for the details you want to remember."**
 - Supporting line: **"Health notes for someone you care for, in your own words."**
-- Existing subtle note/timeline visual (the new family illustration is Milestone 23). Button: **Get started** → Setup.
+- Original daughter-and-father family illustration, followed by embedded **Say / Check / Keep** guidance: speak or type what happened, review and correct details, save with an email code. Button: **Start a health note** → Setup, with **Already started? Sign in** visibly available for returning caregivers.
+- Three short examples below the actions: a symptom, a BP reading and sleep. They are illustrative text only; never prefill or save them. No compulsory tour or extra sign-in screen.
 - Never lead with "AI", "tracking", "health records", "medical data" or "Family Health OS". Lead with the outcome: not having to remember everything alone.
 
 ### Setup
 - Name and relationship (text fields) with reassurance that no medical profile is needed.
 - Notice: one person per account in this version; returning-user sign-in link only when signed out. Signed-out setup explains upfront that an email code is needed to save. Signed-in setup has Back to your record and no sign-in invitation.
 - Empty fields show a specific message and keep the other entry. Back keeps the draft; refresh clears it (explained on screen). Details are saved with the first update, including when already signed in.
-- **Continue** → Capture.
+- **Continue to your update** → Capture.
+- Signed-in accounts with no person see the same Say / Check / Keep orientation before **Set up a health record**, with **Save to their record** instead of an email-code invitation. Accounts that retain a person after deleting all updates keep their existing empty timeline and **Add update** action.
 
 ### Capture
 - Heading: **"What would you like to note about [Name]?"**
 - Primary: **Speak an update**. Always visible: **Type instead**.
 - Short hint: symptoms, readings, doctor visits, reported medicine changes, appetite/sleep/energy.
+- Empty first-note capture shows the same three illustrative examples below the voice and typing choices. Examples do not become input. Existing-person updates omit these first-note examples and keep their two-step Update / Review journey.
 - Recording: "Listening…", elapsed time, **Stop recording**. Then "Transcribing…". No live transcript.
 - Broken: mic blocked → explain permission, offer typing. Empty/unusable → "I couldn't hear anything. Try again or type it instead." Over 30 seconds → ask for a shorter update; never truncate silently.
 - Then "Understanding what you told me…" with nothing editable shown yet.

@@ -99,10 +99,10 @@ async function mockSession(page, { failSave = false, interpretation = null, init
 }
 async function confirm(page) {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Get started', exact: true }).click();
+  await page.getByRole('link', { name: 'Start a health note', exact: true }).click();
   await page.getByLabel('Their name').fill('Mira Example');
   await page.getByLabel('Your relationship to them').fill('Daughter');
-  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await page.getByRole('button', { name: 'Type instead', exact: true }).click();
   await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');
   await page.getByRole('button', { name: 'Continue with text' }).click();
@@ -172,9 +172,9 @@ function multiInterpretation() {
   ]};
 }
 async function openMulti(page, text=multiText, url='/') {
-  await page.goto(url); await page.getByRole('link',{name:'Get started',exact:true}).click();
+  await page.goto(url); await page.getByRole('link',{name:'Start a health note',exact:true}).click();
   await page.getByLabel('Their name').fill('Mira Example'); await page.getByLabel('Your relationship to them').fill('Daughter');
-  await page.getByRole('button',{name:'Continue',exact:true}).click(); await page.getByRole('button',{name:'Type instead',exact:true}).click();
+  await page.getByRole('button',{name:'Continue to your update',exact:true}).click(); await page.getByRole('button',{name:'Type instead',exact:true}).click();
   await page.getByLabel('Or type your update').fill(text);await page.getByRole('button',{name:'Continue with text'}).click();
 }
 async function resolveMulti(page) {
@@ -391,6 +391,10 @@ test('a signed-in empty account sets up a person and saves once without another 
   await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();
   await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code'}).click();
   await expect(page.getByRole('button',{name:'Set up a health record'})).toBeVisible();
+  await expect(page.getByRole('list',{name:'How a health note works'})).toContainText('Save to their record.');
+  await expect(page.getByText('Save with an email code.',{exact:true})).toHaveCount(0);
+  expect(mock.state().codeRequests).toBe(1);
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/empty-record-m23-${width}.png`,fullPage:true});}
   await page.getByRole('button',{name:'Set up a health record'}).click();
   await expect(page.getByRole('link',{name:'Already have a record? Sign in'})).toHaveCount(0);
   await expect(page.getByRole('navigation',{name:'Update progress'}).locator('[aria-current="step"]')).toHaveText(/Person/);
@@ -398,11 +402,11 @@ test('a signed-in empty account sets up a person and saves once without another 
   expect(await page.locator('h1 + p').textContent()).toBe('A name and your relationship are enough to start.');
   for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/first-record-setup-${width}.png`,fullPage:true});}
   await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Mother');
-  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.getByRole('button',{name:'Continue to your update',exact:true}).click();
   await expect(page.getByRole('navigation',{name:'Update progress'}).locator('[aria-current="step"]')).toHaveText(/Update/);
   for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/first-record-capture-${width}.png`,fullPage:true});}
   await page.getByRole('link',{name:'Back to person details'}).click();await expect(page.getByLabel('Their name')).toHaveValue('Mira Example');
-  await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Type instead'}).click();
+  await page.getByRole('button',{name:'Continue to your update',exact:true}).click();await page.getByRole('button',{name:'Type instead'}).click();
   await expect(page.locator('#capture-draft-note')).toBeHidden();
   await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await expect(page.locator('#capture-draft-note')).toBeVisible();await expect(page.locator('#capture-draft-note')).toHaveText('Unsaved draft \u00b7 Refreshing clears it');await page.getByRole('button',{name:'Continue with text'}).click();
   await expect(page.getByRole('navigation',{name:'Update progress'}).locator('[aria-current="step"]')).toHaveText(/Review/);
@@ -515,7 +519,7 @@ test('same-person capture before login is kept, explicitly matched, retried and 
 
 test('different identity after login stays unsaved and can return to its prepared update (services mocked)',async({page})=>{
   const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],signedOutInitially:true});
-  await page.goto('/');await page.getByRole('link',{name:'Get started',exact:true}).click();await page.getByLabel('Their name').fill('Other Example');await page.getByLabel('Your relationship to them').fill('Father');await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await page.goto('/');await page.getByRole('link',{name:'Start a health note',exact:true}).click();await page.getByLabel('Their name').fill('Other Example');await page.getByLabel('Your relationship to them').fill('Father');await page.getByRole('button',{name:'Continue to your update',exact:true}).click();
   await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('Other Example felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();await page.getByRole('button',{name:'Yes, continue'}).click();await login(page);
   await expect(page.getByRole('alert')).toContainText('each account keeps notes for one person');await expect(page.getByRole('button',{name:'Yes, save to this record'})).toHaveCount(0);expect(mock.state().appendCalls).toBe(0);
   await page.getByRole('link',{name:'Back to your update'}).click();await expect(page.getByRole('heading',{name:'Your update is ready.'})).toBeVisible();expect(mock.state().entries).toHaveLength(1);
@@ -727,6 +731,7 @@ test('returning caregiver reopens an unfinished capture at the saved timeline wi
  await page.getByRole('button',{name:'Add update',exact:true}).click();await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('An unfinished note.');
  await page.reload();await expect(page.getByRole('heading',{name:'Your timeline',exact:true})).toBeVisible();await expect(page.getByLabel('Their name')).toHaveCount(0);expect(mock.state().savedCalls).toBe(0);
  await page.getByRole('button',{name:'Add update',exact:true}).click();await expect(page.getByRole('heading',{name:'Mira Example',exact:true})).toBeVisible();
+ await expect(page.getByRole('list',{name:'How a health note works'})).toHaveCount(0);await expect(page.getByText('“Felt dizzy after lunch today.”',{exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();await resolveMulti(page);await page.getByRole('button',{name:'Save update',exact:true}).click();
  await expect(page.locator('.timeline-entry')).toHaveCount(2);await page.goto('/');await expect(page.locator('.timeline-entry')).toHaveCount(2);expect(mock.state().appendCalls).toBe(1);expect(mock.state().codeRequests).toBe(0);
  await page.screenshot({path:'.impeccable/review/returning-caregiver-mobile.png',fullPage:true});
@@ -737,7 +742,7 @@ test('expired returning session reopens at sign-in and returns to the same notes
  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],signedOutInitially:true});await page.addInitScript(()=>localStorage.setItem('carenama.returning','1'));await page.goto('/');
  await expect(page.getByRole('heading',{name:'Welcome back.',exact:true})).toBeVisible();expect(mock.state().timelineCalls).toBe(0);
  await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code'}).click();
- await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();
+ await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('link',{name:'Start a health note',exact:true})).toBeVisible();
 });
 
 test('reopening waits for sign-in verification and retries timeline failure without creating records (services mocked)',async({page})=>{
@@ -774,8 +779,8 @@ test('account deletion requires a fresh code, allows cancellation, retains inval
  await page.getByLabel('Deletion code').fill('123456');await page.getByRole('button',{name:'Permanently delete account and record',exact:true}).click();await expect(page.getByRole('alert')).toContainText('not correct');await expect(page.getByLabel('Deletion code')).toHaveValue('123456');expect(mock.state().entries).toHaveLength(1);
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/delete-account-${width}.png`,fullPage:true});}
  await page.getByLabel('Deletion code').fill('654321');await page.getByRole('button',{name:'Permanently delete account and record',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Deletion has started');await expect(page.getByRole('button',{name:'Keep my account',exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'Finish deleting my account',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Your account and health record have been permanently deleted.');await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();expect(mock.state().entries).toHaveLength(0);expect(mock.state().record).toBe(null);expect(await page.evaluate(()=>localStorage.getItem('carenama.returning'))).toBe(null);
- await page.reload();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();await page.getByRole('link',{name:'Already started? Sign in',exact:true}).click();await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code',exact:true}).click();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Set up a health record',exact:true}).click();await expect(page.getByLabel('Their name')).toHaveValue('');await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Daughter');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Type instead',exact:true}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text',exact:true}).click();await page.getByRole('button',{name:'Save update',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(1);
+ await page.getByRole('button',{name:'Finish deleting my account',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Your account and health record have been permanently deleted.');await expect(page.getByRole('link',{name:'Start a health note',exact:true})).toBeVisible();expect(mock.state().entries).toHaveLength(0);expect(mock.state().record).toBe(null);expect(await page.evaluate(()=>localStorage.getItem('carenama.returning'))).toBe(null);
+ await page.reload();await expect(page.getByRole('link',{name:'Start a health note',exact:true})).toBeVisible();await page.getByRole('link',{name:'Already started? Sign in',exact:true}).click();await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code',exact:true}).click();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Set up a health record',exact:true}).click();await expect(page.getByLabel('Their name')).toHaveValue('');await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Daughter');await page.getByRole('button',{name:'Continue to your update',exact:true}).click();await page.getByRole('button',{name:'Type instead',exact:true}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text',exact:true}).click();await page.getByRole('button',{name:'Save update',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(1);
 });
 
 
@@ -844,7 +849,7 @@ test('privacy is reachable before sign-in, explains processing, and keeps browse
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/privacy-${width}.png`,fullPage:true});}
  await page.keyboard.press('Tab');await page.getByRole('switch').focus();expect(await page.getByRole('switch').evaluate(el=>getComputedStyle(el).outlineStyle)).not.toBe('none');
  await page.getByRole('switch').click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');expect(mock.state().analytics).toBe(false);expect(await page.evaluate(()=>localStorage.getItem('carenama.analytics'))).toBe('off');
- const count=mock.state().analyticsEvents.length;await page.getByRole('button',{name:'Back',exact:true}).click();await page.getByRole('link',{name:'Get started',exact:true}).click();await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Daughter');await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.getByRole('button',{name:'Speak an update',exact:true})).toBeVisible();expect(mock.state().analyticsEvents).toHaveLength(count);
+ const count=mock.state().analyticsEvents.length;await page.getByRole('button',{name:'Back',exact:true}).click();await page.getByRole('link',{name:'Start a health note',exact:true}).click();await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Daughter');await page.getByRole('button',{name:'Continue to your update',exact:true}).click();await expect(page.getByRole('button',{name:'Speak an update',exact:true})).toBeVisible();expect(mock.state().analyticsEvents).toHaveLength(count);
  await page.goto('/#privacy');await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');await page.getByRole('switch').click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');expect(mock.state().analytics).toBe(true);
 });
 

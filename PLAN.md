@@ -2,7 +2,7 @@
 
 Current version: **V1.2 - caregiver feedback improvements.** V1/V1.1 Milestones 1-21 are complete and live. Each milestone needs builder testing before publishing.
 
-Current work: **Milestone 22 - identity and shared navigation is built and checked, awaiting builder review; not published.** Scope, sequence and designs are approved. The initial photo was rejected; the builder chose an original daughter-and-father caricature, prepared for Milestone 23. Work on Milestone 23 starts after Milestone 22 is confirmed.
+Current work: **Milestone 23 - Welcome and onboarding is implemented locally, awaiting builder review; not published.** At the builder's request, Milestone 22 is preserved at `c56e456` on `milestone-22-identity-navigation`; Milestone 23 continues from it on `milestone-23-welcome-onboarding`. Scope, sequence and designs are approved. Welcome now uses the chosen original daughter-and-father caricature, short input examples and Say / Check / Keep guidance. Signed-in empty accounts save directly; returning caregivers keep their existing route to their timeline. Phone review remains required before publishing.
 
 ## V1.2 - caregiver feedback improvements
 
