@@ -16,6 +16,7 @@ body { margin: 0; }
 ::selection { background: #f4dbd0; }
 .screen {
   width: min(100%, 480px);
+  overflow-wrap: anywhere;
   min-height: 100svh;
   margin: auto;
   padding: max(48px, env(safe-area-inset-top)) 28px max(28px, env(safe-area-inset-bottom));
@@ -198,6 +199,7 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #352a2b; outl
 .summary-section { margin-top: 28px; }
 .summary-source { margin-top: 12px; font-size: 13px; }
 .summary-source p { font-size: 13px; }
+.summary-source > summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
 .summary-limited { background: #f3e7de; border-radius: 12px; padding: 16px; }
 .undated-summary { margin-top: 32px; }
 
@@ -286,7 +288,7 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #352a2b; outl
 .privacy-section ul { padding-left: 22px; }
 .privacy-section li { margin-bottom: 16px; line-height: 1.6; }
 .privacy-toggle { display: flex; justify-content: space-between; align-items: center; gap: 16px; width: 100%; min-height: 56px; padding: 12px 16px; border: 1px solid #8c7063; border-radius: 12px; background: transparent; color: #352a2b; font: inherit; cursor: pointer; }
-.toggle-state { color: #a2574f; font-weight: 600; }
+.toggle-state { color: #874840; font-weight: 600; }
 .privacy-toggle[aria-checked="true"] { background: #f4dbd0; border-color: #a2574f; }
 .privacy-toggle:disabled { opacity: .65; cursor: wait; }
 .privacy-storage { margin-top: 32px; }

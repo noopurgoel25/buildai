@@ -2,7 +2,7 @@
 
 Current version: **V1.2 - caregiver feedback improvements.** V1/V1.1 Milestones 1-21 are complete and live. Each milestone needs builder testing before publishing.
 
-Current work: **Milestones 22-24 are combined for builder review; Milestones 25 and 26 are implemented locally, awaiting builder testing. None is published.** At the builder's request, `milestone-23-welcome-onboarding` now includes Milestone 24 at `ee65269`. The stable combined branch is `milestone-22-24-combined`, with the separate preview on port 5174; earlier individual checkpoints remain in history. Milestone 25 continues from that build on `milestone-25-connected-records`: connected facts with individual dates, timeline date ranges for explicit links, a shorter populated editor and source details opened on request. Milestone 24's server changes are still local, so checking its real AI and saving behaviour requires an authorised backend publish. Milestone 26 continues from Milestone 25 on `milestone-26-useful-summary`: selected dated notes, separate supported patterns, concise category highlights, category-specific full-detail links and meaningful checked sharing text. Phone review remains required before publishing.
+Current work: **Milestone 27 release checks on `milestone-27-release-checks`, including all Milestones 22-26. Not published.** The release candidate continues from Milestone 26 (`c06baca`). The earlier stable Milestone 22-24 preview remains on `milestone-22-24-combined` at port 5174. Local checks protect existing notes, test the approved designs and cover draft preservation, timing, connections, Summary and sharing. Phone review and explicit permission to publish for HTTPS testing remain required; a local preview cannot verify the new backend or native device sharing.
 
 ## V1.2 - caregiver feedback improvements
 
@@ -22,6 +22,15 @@ Scope: Desert Dusk identity and original Indian daughter-and-father editorial ca
 Build and confirm one milestone at a time. Grouping presentation for same-capture related observations is pulled forward from V2; broader family/cross-record linking is not included. Versioned interpretation checks required for this work are pulled forward only as needed; do not expand into a general AI platform. Existing-label correction requires a concrete migration scope and recoverable backup, never silent rewriting of recorded facts.
 
 Out of this release: multiple family members, second caregivers, languages, reminders, PDF export, a separate doctor-brief destination, clinical diagnosis/causation or automatic learning from real health notes. The rest of the roadmap remains unchanged.
+
+## Milestone 27 release review
+
+- Approved designs reviewed: Desert Dusk identity, original family illustration, shared navigation, embedded onboarding, compact connected records, dated category highlights and separate supported patterns. No new features or redesign.
+- Local release fixes: long names wrap in capture/first value/timeline; Summary source controls have 44 px touch areas; Privacy On/Off text uses darker approved terracotta for contrast.
+- Automated proof: 87 unit/server and 84 simulated browser checks pass (171 total); 9 optional live-provider tests skipped. The fictional release journey passes across 20 screens/states at 320, 390, 768 and 1440 px with no overflow, small active targets, low text contrast or browser errors. Existing tests cover keyboard access, retries, draft preservation, ownership and unchanged originals.
+- Build and Convex TypeScript check pass. The existing live homepage responds, but still serves the earlier release. No backend publish, migration, login email or permanent live record has been made during these checks.
+- Phone layout preview: open `http://10.184.239.71:5173` on the same Wi-Fi. Timeline ? Summary ? View all details ? View source; open Privacy from the menu and check On/Off. HTTP preview supports text and copying; new backend behaviour and native sharing need the authorised HTTPS release.
+- After explicit permission to publish for phone testing: push this combined branch, run `npm run deploy`, then verify the live site at phone width using a fictional temporary update, without login emails or saving permanent records. The caregiver then checks voice/text, existing timeline, cancelling an edit, Summary highlights/full readings, Copy text and native sharing on their phone. Public sharing waits for the caregiver's logged-out mobile-data core-flow check.
 
 ## Completed V1.1 milestones
 

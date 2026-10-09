@@ -67,7 +67,7 @@ components:
 
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 1-21 are live. Milestones 22-23 identity, shared navigation, Welcome and onboarding are implemented locally for builder review; they have not been deployed. The approved [Desert Dusk proposal](design/desert-dusk-proposal.md) remains a future screen-review reference for Milestones 24-26.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 1-21 are live. Milestones 22-26 are implemented locally and undergoing Milestone 27 release checks; they have not been deployed. The approved [Desert Dusk proposal](design/desert-dusk-proposal.md) remains the release-review reference.
 
 ## 1. Feeling
 
@@ -119,7 +119,7 @@ Rose and orange are supporting identity colours, never a health assessment. The 
 | Medication change, doctor visit | Care icon, terracotta #874840 on orange-tinted #F9E0C9 |
 | Daily wellbeing, appetite | Moon, muted plum #743968 on rose #F3DCE4 |
 
-**Layout:** phone first; content column at most 480 px, shared header at most 520 px. Standard screen gutters 28 px, narrowed to 20 px at 360 px and below; retained timeline/summary overrides use 18 px below 350 px. Shared screen top padding is 16 px. Check 320, 390, 768 and 1440 px with no horizontal scroll, targets at least 44 px and visible keyboard focus.
+**Layout:** phone first; content column at most 480 px, shared header at most 520 px. Standard screen gutters 28 px, narrowed to 20 px at 360 px and below; retained timeline/summary overrides use 18 px below 350 px. Shared screen top padding is 16 px. Check 320, 390, 768 and 1440 px with no horizontal scroll, targets at least 44 px and visible keyboard focus. Long names, emails and notes wrap within the content column; source disclosures also have a 44 px touch area.
 
 **Surfaces and states:** controls use 12 px corners, primary buttons 14 px, the menu dialog 16 px. Tonal surfaces convey most depth; only the menu uses the structural shadow `0 12px 40px #352a2b33` with backdrop `#352a2b55`. Action colour transitions take 160 ms ease-out; respect reduced motion. Keyboard focus uses a 3 px plum outline with space around the control.
 
@@ -233,7 +233,7 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 - Once verified, deletion cannot be cancelled. If interrupted, **Finish deleting my account** resumes cleanup. Completion clears the current device sign-in and returning-record hint, then opens Welcome with a short confirmation; signing in again starts with an empty record.
 
 ### Privacy [V1.1]
-- The common header menu links to Privacy from every journey. A dedicated reading page uses the existing calm colours and type, with clear headings and a keyboard-accessible Usage tracking switch. It explains account-wide choices after sign-in and browser choices before sign-in, failures preserve the previous choice, and reopening stays on Privacy.
+- The common header menu links to Privacy from every journey. A dedicated reading page uses the existing calm colours and type, with clear headings and a keyboard-accessible Usage tracking switch. On/Off uses darker terracotta #874840 for readable contrast on both switch surfaces. It explains account-wide choices after sign-in and browser choices before sign-in, failures preserve the previous choice, and reopening stays on Privacy.
 - Plain-language page: what is stored (Convex), who processes it (Sarvam for AI, Resend for sign-in and account-deletion codes, Mixpanel analytics in the EU without health content), deletion, and an **analytics on/off** switch (on by default). Turning it off stops new events without changing health-record features; previously sent events are not removed by the switch. Profile deletion and shared copies are explained separately.
 
 ### Signed-in account without a person
