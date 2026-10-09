@@ -1,5 +1,9 @@
 # DECISIONS.md
 
+### 2026-10-10 - Feedback redesign scope remains single-person
+Keep one person per account for the proposed caregiver-feedback release; working family switching stays in V2. Prepare scope, milestone sequence and visual designs before app implementation. The proposed presentation keeps related observations together without deleting their separate dates or inferring medical causes.
+*Why:* the builder explicitly selected single-person scope and requested sign-off on scope, plan and designs before building. Existing records entered during testing remain live data; summaries retain the 1,500-character limit with full measurements and source details deeper.
+
 Why things are the way they are. Newest first. Each entry: what was decided, why, and what it replaced. Full original wording is in `archive/2026-10-08/`.
 
 ---
