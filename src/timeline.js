@@ -1,4 +1,5 @@
 import { noteOrientation, noteExamples } from './onboarding.js';
+import { formatDate, localDate } from '../convex/lib/observationTiming.ts';
 import { mountAccountDeletion } from './account-deletion.js';
 import { escape, savedObservationDetails, occurrenceLabel } from './observation-display.js';
 import { mountObservationReview } from './observation-review.js';
@@ -46,7 +47,7 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
     const draft={...base,savedEdit:true,interpretation:{observations},removedObservations:base.removedObservations || []};
     function review(){if(disposed)return;shell(`<h1 id="title" tabindex="-1">Change your update</h1><p>${escape(patient.name)} · Recorded ${escape(recordedDate(base))}</p><div id="saved-review"></div>`);mountObservationReview(root.querySelector('#saved-review'),draft,saveChanges,()=>{draw();root.querySelector('h1').focus();});}
     async function saveChanges(){
-      const event={...base,observations:structuredClone(observations),removedObservations:structuredClone(draft.removedObservations),edited:true,
+      const event={...base,...(base.relatedGroups?{relatedGroups:base.relatedGroups.filter(group=>group.observationIds.every(id=>observations.some(item=>item.id===id&&!item.edited)))}:{}),observations:structuredClone(observations),removedObservations:structuredClone(draft.removedObservations),edited:true,
         event:observations.map(item=>item.event).join('; '),when:observations.map(item=>item.when).join('; '),evidence:observations[0].evidence};
       shell('<h1 id="title" tabindex="-1">Saving your changes…</h1><p role="status">Keeping the original capture time.</p>');
       try {const revision=await session.correctUpdate({id:entry.id,event,expectedRevision:entry.revision ?? 0,changeId});if(disposed)return;entry.details=event;entry.revision=revision;draw();root.querySelector('h1').focus();}
@@ -124,7 +125,7 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
 }
 
 function recordedDate(event) {
-  return new Intl.DateTimeFormat('en-GB',{timeZone:event.timeZone,dateStyle:'medium'}).format(event.capturedAt);
+  return formatDate(localDate(event.capturedAt,event.timeZone));
 }
 
 function timelineEntry(entry,index,open) {

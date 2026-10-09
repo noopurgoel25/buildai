@@ -23,6 +23,14 @@ test('pending facts stay in Other and cannot become an overview claim',()=>{
 const observation=(id,event,date)=>({type:'symptom',symptomName:/dizz/i.test(event)?'dizziness':'tiredness',id,event,when:date||'Unknown',supportingWords:event,evidence:'Patient-reported',polarity:'present',timing:{date,time:null,precision:date?'date':'unknown',resolved:true},confirmed:true,edited:false});
 const capture=(observations,capturedAt=Date.parse('2026-10-06T06:00:00Z'))=>({confirmationId:'00000000-0000-4000-8000-000000000001',event:observations.map(o=>o.event).join('; '),when:'Multiple observations',evidence:'Not specified',source:'text',originalText:observations.map(o=>o.event).join('; '),edited:false,aiInterpretation:null,clarifications:[],capturedAt,timeZone:'Asia/Kolkata',observations});
 const records=[{id:'healthEvents:1',revision:0,details:capture([observation('1','Mira Example felt tired.','2026-10-01'),{...observation('2','No dizziness.','2026-10-06'),polarity:'absent'},observation('3','Sometime last week.',null)])}];
+
+test('summary keeps approximate days separate but includes an exact day with an approximate clock',()=>{
+  const approximateDay={...observation('a','Fictional symptom around last Tuesday.','2026-10-06'),timing:{date:'2026-10-06',time:null,precision:'approximate',datePrecision:'approximate',timePrecision:'unknown',resolved:true}};
+  const approximateClock={...observation('b','Fictional symptom today around 5 p.m.','2026-10-06'),timing:{date:'2026-10-06',time:null,precision:'date',datePrecision:'exact',timePrecision:'approximate',resolved:true}};
+  const rows=[{id:'healthEvents:fictional',revision:0,details:capture([approximateDay,approximateClock])}];
+  const selected=selectSources(rows,'2026-10-01','2026-10-06');
+  assert.deepEqual(selected.dated.map(fact=>fact.observationId),['b']);assert.deepEqual(selected.undated.map(fact=>fact.observationId),['a']);
+});
 const patient={_id:'people:1',familyId:'families:1',name:'Mira Example',relationship:'Daughter'};
 function context(rows=records,owner='users:owner'){
   const db={get:async id=>id==='users:owner'?{_id:id}:id===patient._id?patient:id==='families:1'?{caregiverId:'users:owner'}:rows.find(row=>row.id===id)?{_id:id,caregiverId:'users:owner',revision:rows.find(row=>row.id===id).revision}:null,

@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) are built and awaiting builder testing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and the builder confirming a fictional event in its Events view; Milestone 21 remains pending. Future-proofing work is listed in ROADMAP.md.
+Technical source of truth. V1/V1.1 are live. V1.2 Milestones 22-24 are implemented locally for builder review and remain unpublished. Future work is listed in ROADMAP.md; implementation state is in PLAN.md.
 
 ## 1. Stack
 
@@ -24,8 +24,10 @@ No OpenAI dependency or fallback. Sarvam uses existing credits.
 - **Family / Person / HealthRecord / Timeline** — one person per account in V1; tables already allow more.
 - **Capture** — one original update: original text or transcript, source (voice/text), exact capture timestamp with seconds + device time zone, AI interpretation, clarification Q&A, first-saved snapshot, version (for conflict checks), confirmation ID (for duplicate-safe retries).
 - **Observation** — supporting words, evidence/speaker, presence (`present | absent | uncertain`), occurrence timing (exact, date, approximate wording or unknown), user-corrected flag.
+  - **[V1.2]** optional `timing.datePrecision` and `timing.timePrecision`: `exact | approximate | unknown`, independent of the legacy combined `precision`. Missing fields derive their display from legacy timing; populated records require no backfill. Dates store YYYY-MM-DD and display/accept DD/MM/YYYY.
   - **[V1.1]** `type: symptom | measurement | medication_change | doctor_visit | daily_wellbeing | appetite | other | pending` (`pending` only while labelling is retried)
   - **[V1.1]** `symptomName` (standardised, symptoms only); `measurement { kind, value, unit }` (measurements only)
+- **[V1.2] Capture interpretation** — optional `interpretationVersion` (`capture-context-v2`) and `relatedGroups [{observationIds, supportingWords}]` in the reviewed capture and preserved AI snapshot. Groups use existing IDs and an exact contiguous original quote, require an explicit connection, and cannot overlap or include edited/missing facts. Invalid provider grouping falls back to no groups; invalid confirmed grouping is rejected in Convex. Corrections cannot change the original interpretation version or snapshot.
 - **Usage counters** — rolling AI call counts (§6).
 - **Login limits** — attempts and resends (§5).
 
@@ -35,8 +37,8 @@ Every read and write is checked against the signed-in account's ownership of the
 
 1. **Record** (≤30 s) or type. Capture timestamp + time zone fixed on stop/submit.
 2. **Transcribe** (voice) — Convex action → Saaras. Empty/unusable → no capture.
-3. **Interpret** — Convex action → `sarvam-105b`, `reasoning_effort: null`, `max_tokens: 500`, structured JSON validated server-side before display. Prompt includes only the update text plus the minimal context needed (person name/relationship, capture date/time zone). Preserves speaker ("Doctor said" is not another patient), doses are not vitals, uncertainty kept. **[V1.1]** also returns type, symptom name, measurement kind/value/unit — validated against the allowed lists; invalid → `other`, never guessed.
-4. **Clarify timing** — one question at a time; answers stored with the capture.
+3. **Interpret** — Convex action → `sarvam-105b`, `reasoning_effort: null`, `max_tokens: 500`, structured JSON validated server-side before display. Prompt includes only the update text plus the minimal context needed (person name/relationship, capture date/time zone). Preserves speaker ("Doctor said" is not another patient), doses are not vitals, uncertainty kept. **[V1.2]** Versioned capture/classification prompts distinguish ongoing symptoms from explicit denial and uncertainty, and classify heartburn in the reported context without diagnosis. Existing labels and records are not automatically rewritten. **[V1.1]** also returns type, symptom name, measurement kind/value/unit — validated against the allowed lists; invalid → `other`, never guessed.
+4. **Clarify timing** — resolve explicit today/yesterday against the original capture-local day. Day and clock certainty are independent; approximate clock wording does not make a known day unresolved. Context checks stay within the fact's source clause/sentence and retain qualifiers omitted by a model excerpt. Ask only unresolved day, one question at a time; answers stored with the capture.
 5. **Review** — client-side draft; IDs from a secure-random helper (`crypto.randomUUID` with `getRandomValues` fallback for HTTP previews).
 6. **Save** — before sign-in the draft lives only in the open page. After verification: atomic, owner-checked create of Family/Person/Record/Timeline/Capture/Observations, duplicate-safe by confirmation ID. Returning users append the same way.
 7. **[V1.1] Labelling outside the first interpretation** — facts entered manually or whose words changed in Change are labelled on save with one AI call per update (edited/new facts only; unchanged facts keep their label). If the shared limit is reached or the call fails: save anyway with `type: pending`; a scheduled Convex retry fills it within the allowance (one initial attempt, then retries after 5 minutes, 30 minutes and 1 hour; after the final failure use `other`). Results apply only to still-pending facts with the same ID and words; deleted records stay deleted. Metadata changes do not alter the health-record revision or saved snapshots. Pending facts render as *Other* in Summary and with the neutral icon on the timeline. No caregiver-facing label control.
@@ -44,8 +46,8 @@ Every read and write is checked against the signed-in account's ownership of the
 
 ## 4. Summary and sharing
 
-**Current implementation (Milestones 17-18; frontend awaiting builder confirmation):**
-1. Owner-checked, indexed timeline reads in pages of 50 records, up to 200 KB per page. Only the selected occurrence dates are retained; undated facts captured in the period stay separate. The inclusive period is at most 90 days. There is no 40-observation, 8,000-character or 20-page cutoff.
+**Current implementation:**
+1. Owner-checked, indexed timeline reads in pages of 50 records, up to 200 KB per page. Only the selected occurrence dates are retained; unknown/approximate-day facts captured in the period stay separate. A known day remains dated even when its clock is approximate. The inclusive period is at most 90 days. There is no 40-observation, 8,000-character or 20-page cutoff.
 2. Group all dated facts by their stored type in code: Symptoms, Measurements, Medication changes, Doctor visits, Daily wellbeing, Appetite and Other. Pending, missing or uncertain labels remain Other; never guess from words or ask AI to group them.
 3. Compute overview candidates from any stored symptom name across multiple dated captures. Deduplicate recorded days; explicit absence describes its dated note only. Explicit reported better/worse wording may be linked to an earlier dated note on the same topic and evidence source. An isolated change never becomes an overview.
 4. At most one Sarvam call chooses cautious wording for up to two precomputed candidates from exact, source-grounded alternatives. The server checks each candidate ID and every wording choice. No candidates means no AI call. Missing key, shared allowance reached, provider failure, truncation or invalid wording returns the deterministic template and all grouped facts.

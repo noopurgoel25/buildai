@@ -15,7 +15,7 @@ export function summaryNarrative(period:Pick<Infer<typeof periodResult>,'overvie
 }
 
 export function formatSharingDraft(period:Infer<typeof periodResult>,start:string,end:string) {
-  const day=(value:string)=>new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(`${value}T12:00:00Z`));
+  const day=(value:string)=>`${value.slice(8,10)}/${value.slice(5,7)}/${value.slice(0,4)}`;
   const header=`CareNama: ${period.name}'s health summary\nPeriod: ${day(start)} to ${day(end)}`;
   const details=`${period.sources.length} dated ${period.sources.length===1?'detail':'details'}${period.undatedCount?` and ${period.undatedCount} details with uncertain timing`:''}. Full measurements and notes are available in CareNama through View all details.`;
   const context=`Based on ${period.recordCount} saved ${period.recordCount===1?'update':'updates'}.${period.recordCount<=2?' Only a few updates are available, so this gives a limited picture.':''}`;

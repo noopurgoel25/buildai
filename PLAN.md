@@ -2,7 +2,7 @@
 
 Current version: **V1.2 - caregiver feedback improvements.** V1/V1.1 Milestones 1-21 are complete and live. Each milestone needs builder testing before publishing.
 
-Current work: **Milestone 23 - Welcome and onboarding is implemented locally, awaiting builder review; not published.** At the builder's request, Milestone 22 is preserved at `c56e456` on `milestone-22-identity-navigation`; Milestone 23 continues from it on `milestone-23-welcome-onboarding`. Scope, sequence and designs are approved. Welcome now uses the chosen original daughter-and-father caricature, short input examples and Say / Check / Keep guidance. Signed-in empty accounts save directly; returning caregivers keep their existing route to their timeline. Phone review remains required before publishing.
+Current work: **Milestones 22 and 23 are combined for builder review; Milestone 24 is implemented locally, awaiting builder testing. None is published.** The stable combined branch is `milestone-22-23-combined` at `0b96d81`, with a separate local preview on port 5174. Original milestone branches remain available. Milestone 24 continues from the combined branch on `milestone-24-timing-context`: DD/MM/YYYY dates, independent day/clock certainty, capture-local timing, context-aware interpretation and validated optional related-fact metadata. Grouped presentation belongs to Milestone 25. Phone review remains required before publishing.
 
 ## V1.2 - caregiver feedback improvements
 

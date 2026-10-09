@@ -1,5 +1,40 @@
 const { test, expect } = require('@playwright/test');
 
+test.describe('Milestone 24 date and context review',()=>{
+ test.use({timezoneId:'Asia/Kolkata'});
+ test('known day with approximate clock reaches review, corrects DD/MM/YYYY and saves with its capture time intact',async({page})=>{
+  await page.addInitScript(()=>{Date.now=()=>Date.parse('2026-10-05T19:00:00Z');});
+  const text='She reported heartburn today around 5 p.m.';
+  const interpretation={status:'ready',event:text,when:'Multiple observations',evidence:'Not specified',question:'',message:'',interpretationVersion:'capture-context-v2',relatedGroups:[],observations:[{id:'1',event:text,supportingWords:text,when:'today around 5 p.m.',evidence:'Patient-reported',polarity:'present',type:'symptom',symptomName:'heartburn',timing:{date:'2026-10-06',time:null,precision:'date',datePrecision:'exact',timePrecision:'approximate',resolved:true},confirmed:false,edited:false}]};
+  const mock=await mockSession(page,{interpretation});await openMulti(page,text);
+  await expect(page.getByRole('heading',{name:'Does this look right?',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Today',exact:true})).toHaveCount(0);
+  await expect(page.locator('.fact-time')).toHaveText('06/10/2026 · around 5 p.m.');
+  const deviceZone=await page.evaluate(()=>Intl.DateTimeFormat().resolvedOptions().timeZone);const captured=await page.getByText(/^Captured on /).textContent();expect(captured).toContain('06/10/2026, 00:30:00');expect(captured).toContain(deviceZone);
+  await page.getByRole('button',{name:'Change detail 1',exact:true}).click();
+  await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('06/10/2026');await expect(page.getByLabel('How certain is the day?',{exact:true})).toHaveValue('exact');await expect(page.getByLabel('How certain is the clock time?',{exact:true})).toHaveValue('approximate');
+  await page.getByLabel('Event date',{exact:true}).fill('30/02/2026');await page.getByRole('button',{name:'Apply changes',exact:true}).click();await expect(page.getByRole('alert')).toContainText('DD/MM/YYYY');await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('30/02/2026');
+  await page.getByLabel('Event date',{exact:true}).fill('');await page.getByLabel('Event date',{exact:true}).pressSequentially('07102026');await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('07/10/2026');
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/m24-date-editor-${width}.png`,fullPage:true});}
+  await page.getByRole('button',{name:'Apply changes',exact:true}).click();await expect(page.locator('.fact-time')).toHaveText('07/10/2026 · around 5 p.m.');await page.getByRole('button',{name:'Yes, continue',exact:true}).click();await login(page);await expect(page.locator('.timeline-entry')).toHaveCount(1);
+  expect(mock.state().record.event.capturedAt).toBe(Date.parse('2026-10-05T19:00:00Z'));expect(mock.state().record.event.timeZone).toBe(deviceZone);expect(mock.state().record.event.observations[0].timing.date).toBe('2026-10-07');expect(mock.state().record.event.aiInterpretation.observations[0].timing.date).toBe('2026-10-06');expect(mock.state().codeRequests).toBe(1);
+  await page.locator('.timeline-disclosure > summary').click();await expect(page.getByText(captured,{exact:true})).toBeVisible();
+ });
+ test('related dinner and vomiting keep separate dates and a correction drops grouping without changing the original interpretation',async({page})=>{
+  const text='She vomited today after dinner yesterday.';
+  const facts=[['1','vomited today','today','2026-10-06'],['2','dinner yesterday','yesterday','2026-10-05']].map(([id,event,when,date])=>({id,event,when,supportingWords:event,evidence:'Not specified',polarity:'present',timing:{date,time:null,precision:'date',datePrecision:'exact',timePrecision:'unknown',resolved:true},confirmed:false,edited:false}));
+  const relatedGroups=[{observationIds:['1','2'],supportingWords:text}],interpretation={status:'ready',event:text,when:'Multiple observations',evidence:'Not specified',question:'',message:'',interpretationVersion:'capture-context-v2',relatedGroups,observations:facts};
+  const mock=await mockSession(page,{interpretation});await openMulti(page,text);await expect(page.locator('.fact-time')).toHaveText(['06/10/2026','05/10/2026']);
+  await page.getByRole('button',{name:'Change detail 2',exact:true}).click();await page.getByLabel('What happened',{exact:true}).fill('Dinner was partly eaten.');await page.getByRole('button',{name:'Apply changes',exact:true}).click();await page.getByRole('button',{name:'Yes, continue',exact:true}).click();await login(page);await expect(page.locator('.timeline-entry')).toHaveCount(1);
+  expect(mock.state().record.event.relatedGroups).toEqual([]);expect(mock.state().record.event.aiInterpretation.relatedGroups).toEqual(relatedGroups);expect(mock.state().record.event.observations.map(item=>item.timing.date)).toEqual(['2026-10-06','2026-10-05']);expect(mock.state().savedCalls).toBe(1);
+ });
+ test('Summary rejects invalid display dates, keeps entries and sends canonical dates to the server',async({page})=>{
+  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)]}),periods=[];page.on('request',request=>{if(new URL(request.url()).pathname==='/__test/summary')periods.push(request.postDataJSON());});
+  await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period',exact:true}).click();
+  await page.getByLabel('From',{exact:true}).fill('30/02/2026');await page.getByLabel('To',{exact:true}).fill('06/10/2026');await page.getByRole('button',{name:'Prepare summary',exact:true}).click();await expect(page.getByRole('alert')).toContainText('DD/MM/YYYY');await expect(page.getByLabel('From',{exact:true})).toHaveValue('30/02/2026');expect(mock.state().summaryCalls).toBe(0);
+  await page.getByLabel('From',{exact:true}).fill('01/10/2026');await page.getByRole('button',{name:'Prepare summary',exact:true}).click();await expect(page.getByText('There are no dated updates to summarise for this period.',{exact:true})).toBeVisible();expect(periods[0].start).toBe('2026-10-01');expect(periods[0].end).toBe('2026-10-06');
+ });
+});
+
 async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0, pendingSession = false, failDeletionCode = false, failAccountDeletion = false, deletingInitially = false,analyticsInitially=true,failPrivacy=false } = {}) {
   let analytics=analyticsInitially,privacyCalls=0;const analyticsEvents=[];
   let deletionStarted=deletingInitially;
@@ -245,9 +280,9 @@ test('a shared date requires an explicit choice, names both facts and preserves 
   await shared.check();await page.getByRole('button',{name:'Choose a date'}).click();
   // Opening the date picker must preserve the explicit shared-date choice.
   await expect(page.getByRole('checkbox',{name:/Use the day I choose for these details/})).toBeChecked();
-  await page.getByLabel('Date for this detail').fill('2026-10-06');await page.getByRole('button',{name:'Use this date'}).click();
+  await page.getByLabel('Date for this detail').fill('06/10/2026');await page.getByRole('button',{name:'Use this date'}).click();
   await expect(page.getByRole('heading',{name:'Does this look right?'})).toBeVisible();
-  await expect(page.locator('.fact-time').nth(1)).toHaveText('6 Oct 2026 at 17:00');
+  await expect(page.locator('.fact-time').nth(1)).toHaveText('06/10/2026 at 17:00');
   await expect(page.getByRole('button',{name:'Yes, continue'})).toBeEnabled();
 });
 
@@ -534,9 +569,9 @@ test('six-week summary shows all stored categories and 126 facts, with source de
   const result={...summaryFixture(),sources,groups:categories.map((title,index)=>({title,keys:sources.filter((_,sourceIndex)=>sourceIndex%7===index).map(source=>source.key)})),recordCount:126,undated:[],undatedCount:0,overview:[{id:'repeat:swelling',text:'Swelling appears in recorded notes on 42 different days. This counts recorded days, not separate episodes.',keys:['1','4']}],snapshotHash:'a'.repeat(64)};
   const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:result});
   await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();
-  await page.getByLabel('From',{exact:true}).fill('2026-07-01');await page.getByLabel('To',{exact:true}).fill('2026-09-29');await page.getByRole('button',{name:'Prepare summary'}).click();
+  await page.getByLabel('From',{exact:true}).fill('01/07/2026');await page.getByLabel('To',{exact:true}).fill('29/09/2026');await page.getByRole('button',{name:'Prepare summary'}).click();
   await expect(page.getByRole('alert')).toHaveText('Choose a period of up to 90 days.');expect(mock.state().summaryCalls).toBe(0);
-  await page.getByLabel('From',{exact:true}).fill('2026-08-26');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare summary'}).click();
+  await page.getByLabel('From',{exact:true}).fill('26/08/2026');await page.getByLabel('To',{exact:true}).fill('06/10/2026');await page.getByRole('button',{name:'Prepare summary'}).click();
   await expect(page.locator('.summary-narrative')).toContainText('42 different days');await expect(page.locator('.summary-categories')).toHaveCount(0);await page.getByRole('button',{name:'View all details',exact:true}).click();await expect(page.locator('.summary-categories .summary-category')).toHaveCount(7);
   await expect(page.locator('.summary-category .marker-wellbeing')).toHaveCount(2);await expect(page.locator('.summary-category .marker-care')).toHaveCount(2);
   for(const width of [320,390,768,1440]){
@@ -552,13 +587,13 @@ test('six-week summary shows all stored categories and 126 facts, with source de
 
 test('period summary validates dates, retains period on failure, shows source evidence and undated details, then returns to timeline (services mocked)',async({page})=>{
   const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture(),failSummary:true});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();
-  await page.getByLabel('From',{exact:true}).fill('2026-10-07');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('start before the end');expect(mock.state().summaryCalls).toBe(0);
-  await page.getByLabel('From',{exact:true}).fill('2026-10-01');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('Busy right now');await expect(page.getByLabel('From',{exact:true})).toHaveValue('2026-10-01');
+  await page.getByLabel('From',{exact:true}).fill('07/10/2026');await page.getByLabel('To',{exact:true}).fill('06/10/2026');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('start before the end');expect(mock.state().summaryCalls).toBe(0);
+  await page.getByLabel('From',{exact:true}).fill('01/10/2026');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('Busy right now');await expect(page.getByLabel('From',{exact:true})).toHaveValue('01/10/2026');
   await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('button',{name:'View all details',exact:true})).toBeVisible();await expect(page.getByText('This is based on only a few updates, so it gives a limited picture of this period.')).toBeVisible();
   await page.getByRole('button',{name:'View all details',exact:true}).click();await expect(page.locator('.period-result .fact-text').first()).toHaveText('She did not feel dizzy.');await page.getByText('View source',{exact:true}).first().click();await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();await expect(page.getByText('Corrected by you.',{exact:true})).toBeVisible();
   await expect(page.getByText(/^Timing not known/)).toBeVisible();
   await page.screenshot({path:'.impeccable/review/summary-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:900});await page.screenshot({path:'.impeccable/review/summary-desktop.png',fullPage:true});
-  await page.getByRole('button',{name:'Back to summary',exact:true}).click();await page.getByText('Change dates',{exact:true}).click();await page.getByLabel('From',{exact:true}).fill('2026-09-01');await expect(page.locator('.period-result')).toHaveCount(0);await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);
+  await page.getByRole('button',{name:'Back to summary',exact:true}).click();await page.getByText('Change dates',{exact:true}).click();await page.getByLabel('From',{exact:true}).fill('01/09/2026');await expect(page.locator('.period-result')).toHaveCount(0);await page.getByRole('button',{name:'Back to timeline'}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);
 });
 
 for(const scenario of ['empty','too_many'])test(`period summary ${scenario} explains available data and retains saved timeline (services mocked)`,async({page})=>{
@@ -640,7 +675,7 @@ test('summary includes visit preparation without a second screen or second AI re
   const result=briefFixture();result.groups=[{title:'Symptoms and observations',keys:['1','3','6']},{title:'Measurements',keys:['4']},{title:'Care and visits',keys:['5']},{title:'Appetite, sleep and energy',keys:['2']}];
   const errors=[];page.on('pageerror',error=>errors.push(error.message));const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:result,failSummary:true});
   await page.goto('/#record');await expect(page.getByRole('button',{name:'For a doctor visit'})).toHaveCount(0);await page.getByRole('button',{name:'Summary for a period'}).click();
-  await page.getByLabel('From',{exact:true}).fill('2026-10-01');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('Busy');await expect(page.getByLabel('From',{exact:true})).toHaveValue('2026-10-01');await page.getByRole('button',{name:'Prepare summary'}).click();
+  await page.getByLabel('From',{exact:true}).fill('01/10/2026');await page.getByLabel('To',{exact:true}).fill('06/10/2026');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByRole('alert')).toContainText('Busy');await expect(page.getByLabel('From',{exact:true})).toHaveValue('01/10/2026');await page.getByRole('button',{name:'Prepare summary'}).click();
   await expect(page.locator('.period-result')).toBeVisible();await expect(page.getByRole('button',{name:'Prepare doctor brief'})).toHaveCount(0);
   await page.getByRole('button',{name:'View all details',exact:true}).click();await page.getByText('Points to discuss at a visit',{exact:true}).click();await expect(page.locator('.summary-discussion .fact-text')).toBeVisible();
   await page.locator('.summary-category').filter({has:page.getByRole('heading',{name:'Daily wellbeing',exact:true})}).locator(':scope > summary').focus();await expect(page.getByText('Reported improvements',{exact:true})).toBeVisible();await expect(page.locator('.period-result').getByText('She said her appetite seems better.',{exact:true}).first()).toBeVisible();
@@ -651,14 +686,14 @@ test('summary includes visit preparation without a second screen or second AI re
 
 test('prepared summary keeps dates in a compact row, opens the form on demand and retains the individual change (services mocked)',async({page})=>{
  const result=summaryFixture();result.sources[0].event='Mira Example started feeling better around 9 p.m. today';result.sources[0].supportingWords=result.sources[0].event;result.sources[0].polarity='present';result.sections=[{title:'Reported improvements',keys:['1']}];
- await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:result});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByLabel('From',{exact:true}).fill('2026-10-01');await page.getByLabel('To',{exact:true}).fill('2026-10-06');await page.getByRole('button',{name:'Prepare summary'}).click();
+ await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:result});await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByLabel('From',{exact:true}).fill('01/10/2026');await page.getByLabel('To',{exact:true}).fill('06/10/2026');await page.getByRole('button',{name:'Prepare summary'}).click();
  await expect(page.locator('.summary-narrative')).toContainText('Add more updates to build a fuller picture.');await expect(page.locator('.summary-narrative')).not.toContainText('started feeling better');await expect(page.getByLabel('From',{exact:true})).not.toBeVisible();
- for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});const row=await page.locator('.summary-period-picker').boundingBox();expect(row.height).toBeLessThanOrEqual(52);await expect(page.locator('.selected-period')).toContainText('1 Oct');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/compact-summary-dates-${width}.png`,fullPage:true});}
+ for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});const row=await page.locator('.summary-period-picker').boundingBox();expect(row.height).toBeLessThanOrEqual(52);await expect(page.locator('.selected-period')).toContainText('01/10/2026');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/compact-summary-dates-${width}.png`,fullPage:true});}
  await page.getByRole('button',{name:'View all details',exact:true}).click();await expect(page.locator('.summary-category .fact-text').first()).toHaveText(result.sources[0].event);await expect(page.getByText('Reported improvements',{exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Back to summary',exact:true}).click();await page.getByText('Change dates',{exact:true}).click();await expect(page.getByLabel('From',{exact:true})).toHaveValue('2026-10-01');await page.getByLabel('From',{exact:true}).fill('2026-09-01');await expect(page.locator('.period-result')).toHaveCount(0);await expect(page.locator('.selected-period')).toContainText('1 Sept');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByLabel('From',{exact:true})).not.toBeVisible();
+ await page.getByRole('button',{name:'Back to summary',exact:true}).click();await page.getByText('Change dates',{exact:true}).click();await expect(page.getByLabel('From',{exact:true})).toHaveValue('01/10/2026');await page.getByLabel('From',{exact:true}).fill('01/09/2026');await expect(page.locator('.period-result')).toHaveCount(0);await expect(page.locator('.selected-period')).toContainText('01/09/2026');await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.getByLabel('From',{exact:true})).not.toBeVisible();
 });
 
-const sharingFixtureText="CareNama: Mira Example's health summary\nPeriod: 1 Oct 2026 to 6 Oct 2026\n\nThere is not enough information to describe an overall change in health yet. Add more updates to build a fuller picture.\n\nBased on 1 saved update. Only a few updates are available, so this gives a limited picture.\n\n1 dated detail and 1 detail with uncertain timing. Full measurements and notes are available in CareNama through View all details.\n\nBased on saved caregiver notes. Days without notes tell us nothing about symptoms.";
+const sharingFixtureText="CareNama: Mira Example's health summary\nPeriod: 01/10/2026 to 06/10/2026\n\nThere is not enough information to describe an overall change in health yet. Add more updates to build a fuller picture.\n\nBased on 1 saved update. Only a few updates are available, so this gives a limited picture.\n\n1 dated detail and 1 detail with uncertain timing. Full measurements and notes are available in CareNama through View all details.\n\nBased on saved caregiver notes. Days without notes tell us nothing about symptoms.";
 async function openSharing(page,options={},origin=''){
  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:summaryFixture(),...options});await page.goto(`${origin}/#record`);await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();await page.getByRole('button',{name:'Review & share'}).click();return mock;
 }
@@ -680,7 +715,7 @@ test('summary sharing reviews exact text, keeps edits on Back, copies and shares
  await page.getByRole('button',{name:'Share',exact:true}).click();await expect(page.getByText('Sharing completed on this device. Your draft is still here.',{exact:true})).toBeVisible();expect(await page.evaluate(()=>window.__deviceShares[0].text)).toBe(revised);
  await page.evaluate(()=>window.__testSessionChange({isLoading:true,isAuthenticated:false}));await page.evaluate(()=>window.__testSessionChange({isLoading:false,isAuthenticated:true}));await expect(page.getByLabel('Text to share')).toHaveValue(revised);
  expect(mock.state().summaryCalls).toBe(1);expect(mock.state().shareCheckCalls).toBe(3);expect(mock.state().savedCalls).toBe(0);expect(mock.state().correctionCalls).toBe(0);
- await page.getByRole('button',{name:'Back to summary',exact:true}).click();await page.getByText('Change dates',{exact:true}).click();page.once('dialog',dialog=>dialog.dismiss());await page.getByLabel('From',{exact:true}).fill('2026-09-01');await expect(page.locator('.period-result')).toBeVisible();await page.getByRole('button',{name:'Review & share'}).click();await expect(page.getByLabel('Text to share')).toHaveValue(revised);
+ await page.getByRole('button',{name:'Back to summary',exact:true}).click();await page.getByText('Change dates',{exact:true}).click();page.once('dialog',dialog=>dialog.dismiss());await page.getByLabel('From',{exact:true}).fill('01/09/2026');await expect(page.locator('.period-result')).toBeVisible();await page.getByRole('button',{name:'Review & share'}).click();await expect(page.getByLabel('Text to share')).toHaveValue(revised);
  await page.getByLabel('Text to share').fill('   ');await expect(page.getByRole('button',{name:'Share',exact:true})).toBeDisabled();await expect(page.getByRole('button',{name:'Copy text',exact:true})).toBeDisabled();
 });
 

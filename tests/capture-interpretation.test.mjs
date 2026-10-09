@@ -89,3 +89,50 @@ test('a medication report with missing name or dose stays incomplete in meaning 
   await assert.rejects(run({status:'ready',question:'',observations:[{event:'medicine was changed to 5 mg',when:'yesterday',evidence:'Not specified',polarity:'present'}]},'stop',{...args,text}),/ungrounded-output/);
   const bp=await run({status:'ready',question:'',observations:[{event:'BP 142/88',when:'today',evidence:'Measured',polarity:'present'}]},'stop',{...args,text:'BP 142/88 today.'});assert.equal(bp.observations[0].evidence,'Measured');
 });
+
+test('context distinguishes not improving, not dizzy and not sure without borrowing sibling uncertainty',async()=>{
+  for(const [text,polarity] of [
+    ['Her dizziness is not improving today.','present'],
+    ['She is not dizzy today.','absent'],
+    ['Not sure whether she is dizzy today.','uncertain'],
+    ['There is no change in her dizziness today.','present'],
+  ]){
+    const result=await run({status:'ready',question:'',observations:[{event:text,when:'today',evidence:'Not specified',polarity:'present',type:'symptom',symptomName:'dizziness'}]},'stop',{...args,text});
+    assert.equal(result.observations[0].polarity,polarity,text);
+    assert.equal(result.observations[0].event,text);
+  }
+  const text='She was dizzy today and vomited sometime last week, not sure which day.';
+  const result=await run({status:'ready',question:'',observations:[{event:'She was dizzy today',when:'today',evidence:'Not specified',polarity:'present'},{event:'vomited sometime last week',when:'sometime last week',evidence:'Not specified',polarity:'present'}]},'stop',{...args,text});
+  assert.equal(result.observations[0].timing.resolved,true);assert.equal(result.observations[1].timing.resolved,false);
+});
+
+test('heartburn stays a source-grounded symptom and the interpretation request has a versioned context contract',async()=>{
+  const text='She reported heartburn after lunch today.';
+  const result=await run({status:'ready',question:'',observations:[{event:text,when:'today',evidence:'Patient-reported',polarity:'present',type:'symptom',symptomName:'heartburn'}]},'stop',{...args,text});
+  assert.equal(result.observations[0].type,'symptom');assert.equal(result.observations[0].symptomName,'heartburn');
+  assert.equal(result.interpretationVersion,'capture-context-v2');
+});
+
+test('sentence boundaries keep uncertainty local and omitted timing qualifiers cannot invent certainty',async()=>{
+  const text='She was dizzy today. She vomited last week, not sure which day.';
+  const result=await run({status:'ready',question:'',observations:[{event:'dizzy',when:'today',evidence:'Not specified',polarity:'present'},{event:'vomited',when:'last week',evidence:'Not specified',polarity:'present'}]},'stop',{...args,text});
+  assert.equal(result.observations[0].timing.resolved,true);assert.equal(result.observations[1].timing.resolved,false);
+  for(const text of ['She was dizzy today at 5 p.m. or 6 p.m.','She was dizzy today around 5 p.m.']) {
+    const result=await run({status:'ready',question:'',observations:[{event:'dizzy',when:'5 p.m.',evidence:'Not specified',polarity:'present'}]},'stop',{...args,text});
+    assert.equal(result.observations[0].timing.datePrecision,'exact');assert.equal(result.observations[0].timing.timePrecision,'approximate');assert.equal(result.observations[0].timing.time,null);assert.equal(result.observations[0].timing.resolved,true);
+  }
+  const automatic=await run({status:'ready',question:'',observations:[{event:'dizzy',when:'Not specified',evidence:'Not specified',polarity:'present'}]},'stop',{...args,text:'She was dizzy today.'});
+  assert.equal(automatic.observations[0].timing.resolved,true);
+});
+
+test('related facts keep individual dates; invalid, overlapping or invented grouping falls back intact',async()=>{
+  const text='She vomited today after dinner yesterday.';
+  const observations=[{event:'vomited today',when:'today',evidence:'Not specified',polarity:'present',type:'symptom',symptomName:'vomiting'},{event:'dinner yesterday',when:'yesterday',evidence:'Not specified',polarity:'present',type:'appetite'}];
+  const group={observationIds:['1','2'],supportingWords:text};
+  const result=await run({status:'ready',question:'',observations,relatedGroups:[group]},'stop',{...args,text});
+  assert.deepEqual(result.relatedGroups,[group]);assert.notEqual(result.observations[0].timing.date,result.observations[1].timing.date);
+  for(const relatedGroups of [[{...group,observationIds:['1','missing']}],[{...group,supportingWords:'Dinner caused vomiting.'}],[group,group]]){
+    const fallback=await run({status:'ready',question:'',observations,relatedGroups},'stop',{...args,text});
+    assert.deepEqual(fallback.relatedGroups,[]);assert.deepEqual(fallback.observations,result.observations);
+  }
+});

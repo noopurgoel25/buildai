@@ -1,5 +1,9 @@
 # DECISIONS.md
 
+### 2026-10-10 - Combine review milestones and preserve timing context
+Keep Milestones 22 and 23 together on `milestone-22-23-combined` at `0b96d81`, using a separate local worktree and port 5174 so review stays stable while Milestone 24 advances. Milestone 24 uses DD/MM/YYYY fields, original device-local capture time, independent day/clock certainty and source-clause context checks. New optional interpretation-version and related-group metadata preserve existing records and snapshots; unsupported groups are discarded without dropping facts, and corrections remove affected live links. Known-day/approximate-clock facts belong in dated Summary; uncertain-day facts remain separate.
+*Why:* the builder requested testing 22 and 23 together and continuing 24. Explicit today must not trigger a redundant date question, approximate hours must not erase known days, and negated improvement must not become symptom absence. No migration, publishing or related-fact presentation is included; those require their approved later steps.
+
 ### 2026-10-10 - Preserve Milestone 22 and build embedded first-note guidance
 Preserve the existing Milestone 22 commit `c56e456` on `milestone-22-identity-navigation` and continue the approved Milestone 23 on `milestone-23-welcome-onboarding`. Welcome uses the prepared original family caricature, a clear Start a health note action, short illustrative inputs and Say / Check / Keep guidance. The signed-in empty-account introduction explains direct saving; existing-person and expired-session routes remain intact. Guidance lives in the existing screens, and examples never become drafts or saved notes.
 *Why:* the builder explicitly requested a separate branch for Milestone 22 and continued work on Milestone 23. This advances the approved sequence without publishing before phone review or introducing a compulsory tour. Two unrelated untracked files remain outside milestone commits.

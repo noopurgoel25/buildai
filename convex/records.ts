@@ -106,7 +106,7 @@ export const correctUpdate = mutation({
     if ((saved.revision ?? 0) !== args.expectedRevision) throw new Error('This update changed elsewhere. Return to the timeline and open it again.');
     validateConfirmedEvent(args.event);
     const before = saved.details;
-    for (const key of ['confirmationId', 'capturedAt', 'timeZone', 'source', 'originalText', 'aiInterpretation', 'clarifications'] as const) {
+    for (const key of ['confirmationId', 'capturedAt', 'timeZone', 'source', 'originalText', 'aiInterpretation', 'clarifications', 'interpretationVersion'] as const) {
       if (JSON.stringify(before[key]) !== JSON.stringify(args.event[key])) throw new Error('The original capture cannot be changed.');
     }
     const allowed = [...(before.observations ?? []), ...(before.removedObservations ?? [])];

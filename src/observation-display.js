@@ -1,7 +1,7 @@
-import { timingLabel } from '../convex/lib/observationTiming.ts';
+import { timingLabel, formatDate, localDate } from '../convex/lib/observationTiming.ts';
 export const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 export function captureLabel(event) {
-  return new Intl.DateTimeFormat('en-GB', { timeZone: event.timeZone, dateStyle: 'medium', timeStyle: 'long' }).format(event.capturedAt) + ` (${event.timeZone})`;
+  return `${formatDate(localDate(event.capturedAt,event.timeZone))}, ${new Intl.DateTimeFormat('en-GB', { timeZone: event.timeZone, hour:'2-digit',minute:'2-digit',second:'2-digit',timeZoneName:'short',hourCycle:'h23' }).format(event.capturedAt)} (${event.timeZone})`;
 }
 export function classificationLabel(item) {
   const names={symptom:'Symptom',measurement:'Measurement',medication_change:'Medication change',doctor_visit:'Doctor visit',daily_wellbeing:'Daily wellbeing',appetite:'Appetite',other:'Other'};
@@ -26,10 +26,7 @@ export function updateFacts(event, editable = false) {
 export function occurrenceLabel(item) {
   if (!item.timing) return item.when;
   if (item.timing.precision === 'unknown') return 'Timing not known';
-  const label = timingLabel(item.when, item.timing);
-  if (!item.timing.date) return label;
-  const date = new Intl.DateTimeFormat('en-GB', {day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(`${item.timing.date}T12:00:00Z`));
-  return label.replace(item.timing.date, date);
+  return timingLabel(item.when, item.timing);
 }
 
 export function recordDetails(event) {

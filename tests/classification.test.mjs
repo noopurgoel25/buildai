@@ -27,6 +27,15 @@ test('invalid labels and invented names/readings fall back without adding clinic
   assert.deepEqual(classifyMetadata({...reading,measurement:{...reading.measurement,unit:'mmHg'}},'BP 142/88'),{type:'other'});
   assert.deepEqual(classifyMetadata(reading,'Doctor reduced medicine to 5 mg'),{type:'other'});
 });
+
+test('new heartburn labels are checked in context while unchanged saved labels are preserved',()=>{
+  const words='Heartburn after lunch today.';
+  assert.deepEqual(classifyMetadata({type:'symptom',symptomName:'heartburn'},words),{type:'symptom',symptomName:'heartburn'});
+  assert.deepEqual(classifyMetadata({type:'symptom',symptomName:'GERD'},words),{type:'other'});
+  assert.deepEqual(classifyMetadata({type:'daily_wellbeing'},words),{type:'other'});
+  const before={event:words,type:'daily_wellbeing',edited:false};
+  assert.equal(labelsForSave({...before,edited:true},before).type,'daily_wellbeing');
+});
 test('changing timing keeps a label; changing words clears stale labels even if a client claims otherwise',()=>{
   assert.equal(labelsForSave({...fact,edited:true},fact).type,'symptom');
   const changed=labelsForSave({...fact,event:'Appetite improved',edited:false},fact);

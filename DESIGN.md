@@ -178,13 +178,16 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 - Then "Understanding what you told me…" with nothing editable shown yet.
 
 ### Timing question (only when needed)
-- One question at a time, quoting the relevant words.
+- All calendar displays and date fields use **DD/MM/YYYY**; phone number entry adds slashes. Invalid or unfinished entries stay visible with a clear message. Internal dates remain unambiguous YYYY-MM-DD.
+- **Captured on** shows DD/MM/YYYY, local hours/minutes/seconds, UTC offset and the original device time-zone name. Editing occurrence timing never changes capture time.
+- Explicit **today** uses the capture-local day. A known day with an approximate clock goes straight to review. Missing or conflicting day asks one question at a time, quoting the relevant words.
 - Options: **Today**, **Yesterday**, **Choose a date**, **I'm not sure** — none preselected. Approximate wording can be kept explicitly.
 - Shared-day checkbox: native 20 px checkbox beside **"Use the day I choose for these details"**, with the named facts stacked underneath in the same column; whole label tappable; starts unchecked. Each fact keeps its own clock time.
 
 ### Review
 - Heading: **"Does this look right?"** One quiet surface listing every fact with its timing.
 - Primary: **Yes, continue** (first update) / **Save update** (returning). Approves all facts together.
+- The editor has an Event date field, Clock time if known, and separate **How certain is the day?** / **How certain is the clock time?** choices. An approximate clock or part of the day never requires an exact hour; an uncertain day does not erase a known clock.
 - Quiet **Change** link per fact opens the editor; removal lives inside the editor. Source and meaning controls are disclosed only when wanted. Changes return to review. Removing every fact returns to Capture.
 - **Record details** (disclosure): exact capture time and zone, evidence, presence/absence/uncertainty, supporting words, original input, clarifications.
 - **[V1.1] "Recorded as" line in Record details** per fact, in plain words: e.g. *Recorded as: Symptom · dizziness*, *Recorded as: Measurement · blood pressure 142/88 mmHg*, *Recorded as: Appetite*. While a label is being worked out: *Recorded as: being sorted — it will appear here shortly.* Never shown on the main review surface; there is no control to pick or change a label.

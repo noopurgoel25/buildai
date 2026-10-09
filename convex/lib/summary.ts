@@ -21,7 +21,7 @@ export function selectSources(records:{id:string;revision:number;details:Infer<t
     const d=record.details, captureDay=new Intl.DateTimeFormat('en-CA',{timeZone:d.timeZone}).format(d.capturedAt);
     const items=d.observations ?? [{type:d.type,symptomName:d.symptomName,measurement:d.measurement,id:'legacy',event:d.event,when:d.when,evidence:d.evidence,polarity:'uncertain',supportingWords:d.originalText,timing:resolveTiming(d.when,d.capturedAt,d.timeZone)}];
     for(const item of items){
-      const date=item.timing.resolved ? item.timing.date : null;
+      const date=item.timing.resolved && item.timing.datePrecision !== 'approximate' && item.timing.datePrecision !== 'unknown' ? item.timing.date : null;
       const source={observationId:item.id,...('type' in item && item.type?{type:item.type}:{}),...('symptomName' in item && item.symptomName?{symptomName:item.symptomName}:{}),...('measurement' in item && item.measurement?{measurement:item.measurement}:{}),key:'',recordId:record.id as SummarySource['recordId'],revision:record.revision,event:item.event,when:item.when,evidence:item.evidence,polarity:item.polarity,edited:'edited' in item?item.edited:d.edited,date,capturedAt:d.capturedAt,timeZone:d.timeZone,supportingWords:item.supportingWords};
       if(date && date>=start && date<=end)dated.push(source);
       else if(!date && captureDay>=start && captureDay<=end)undated.push(source);
@@ -64,7 +64,7 @@ export function numberSources(dated:SummarySource[],undated:SummarySource[]) {
 }
 // These templates describe notes, never clinical progress or days without notes.
 export function overviewCandidates(sources:(Pick<SummarySource,'key'|'event'|'date'|'polarity'|'evidence'|'type'|'symptomName'>&Partial<Pick<SummarySource,'recordId'>>)[]):Infer<typeof summaryInsight>[] {
-  const day=(date:string)=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(`${date}T12:00:00Z`));
+  const day=(date:string)=>`${date.slice(8,10)}/${date.slice(5,7)}/${date.slice(0,4)}`;
   const topics=new Map<string,typeof sources>();
   for(const source of sources){
     if(!source.date||source.type==='pending'||source.type==='measurement')continue;

@@ -76,13 +76,30 @@ test('a capture saves several individually confirmed observations together, pres
   assert.equal(await firstRecord._handler(ctx(db,'users:other'),{}),null);
 });
 test('new capture API rejects unresolved, unconfirmed, unsupported or invalid observation timing without writing a partial capture', async () => {
-  for(const patch of [{confirmed:false},{timing:{date:null,time:null,precision:'unknown',resolved:false}},{supportingWords:'invented symptom'},{timing:{date:'2026-02-30',time:null,precision:'date',resolved:true}},{timing:{date:null,time:'25:00',precision:'exact',resolved:true}}]) {
+  for(const patch of [{confirmed:false},{timing:{date:null,time:null,precision:'unknown',resolved:false}},{supportingWords:'invented symptom'},{timing:{date:'2026-02-30',time:null,precision:'date',resolved:true}},{timing:{date:null,time:'25:00',precision:'exact',resolved:true}},{timing:{date:null,time:null,precision:'unknown',datePrecision:'exact',resolved:true}},{timing:{date:'2026-10-06',time:'17:00',precision:'exact',datePrecision:'approximate',timePrecision:'exact',resolved:true}}]) {
     const db=database();
     const details={...event,observations:[{...observation('1',event.originalText),...patch}]};
     await assert.rejects(saveCapture._handler(ctx(db,'users:owner'),{patient:{name:'Mira Example',relationship:'Daughter'},event:details}));
     assert.equal(db.count('families'),0); assert.equal(db.count('healthEvents'),0);
   }
   await assert.rejects(saveCapture._handler(ctx(database(),'users:owner'),{patient:{name:'Mira Example',relationship:'Daughter'},event}),/Review each/);
+});
+
+test('separate date and clock certainty and source-grounded grouping save without altering originals',async()=>{
+  const db=database(),owner=ctx(db,'users:owner'),originalText='BP 142/88 today but no dizziness today.';
+  const details={...event,edited:false,event:originalText,originalText,interpretationVersion:'capture-context-v2',
+    observations:[observation('1','BP 142/88 today'),observation('2','no dizziness today.','absent')],
+    relatedGroups:[{supportingWords:originalText,observationIds:['1','2']}]};
+  details.observations[0].timing={date:'2026-10-06',time:null,precision:'date',datePrecision:'exact',timePrecision:'approximate',resolved:true};
+  const id=await saveCapture._handler(owner,{patient:{name:'Mira Example',relationship:'Daughter'},event:details});
+  const record=await firstRecord._handler(owner,{});assert.deepEqual(record.event.relatedGroups,details.relatedGroups);
+  assert.deepEqual(record.event.observations[0].timing,details.observations[0].timing);assert.equal(record.event.originalText,originalText);
+  const bad=structuredClone(details);bad.relatedGroups[0].observationIds[1]='missing';bad.confirmationId='00000000-0000-4000-8000-000000000002';
+  await assert.rejects(saveCapture._handler(owner,{patient:{name:'Mira Example',relationship:'Daughter'},event:bad}),/related details/);
+  const changed=structuredClone(record.event);changed.observations[0].event='BP corrected by caregiver';changed.observations[0].edited=true;changed.relatedGroups=[];
+  await correctUpdate._handler(owner,{id,event:changed,expectedRevision:0,changeId:'00000000-0000-4000-8000-000000000003'});
+  const snapshot=await db.get(id);
+  assert.equal(snapshot.originalDetails.originalText,originalText);assert.deepEqual(snapshot.originalDetails.relatedGroups,details.relatedGroups);
 });
 
 test('timeline includes legacy notes and added captures, paginates by captured time and isolates each account',async()=>{

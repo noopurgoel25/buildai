@@ -227,7 +227,7 @@ test('LIVE: spoken fictional update reaches actual Sarvam transcription then int
   await page.screenshot({ path: '.impeccable/review/capture-live-voice.png', fullPage: true });
   await page.getByRole('button', { name: 'Change detail 1' }).click();
   await page.getByLabel('Timing words', { exact: true }).fill('Today after lunch');
-  await page.getByLabel('How certain is the timing?').selectOption('approximate');
+  await page.getByLabel('How certain is the day?').selectOption('approximate');
   await page.getByRole('button', { name: 'Apply changes' }).click();
   await expect(page.locator('.fact-time').filter({ hasText: 'Today after lunch' })).toBeVisible();
   await page.getByText('Record details', { exact: true }).click();
@@ -372,7 +372,7 @@ test('LIVE: unclear date can be answered and the resulting interpretation edited
   await expect(page.getByRole('heading',{name:'A little more about the timing'})).toBeVisible({timeout:90000});
   await expect(page.getByRole('button',{name:'Yes, continue'})).toHaveCount(0);
   await page.getByRole('button',{name:'Choose a date'}).click();
-  await page.getByLabel('Date for this detail').fill('2026-10-05');
+  await page.getByLabel('Date for this detail').fill('05/10/2026');
   await page.getByRole('button',{name:'Use this date'}).click();
   await page.getByRole('button',{name:'Change detail 1'}).click();
   await page.getByLabel('What happened',{exact:true}).fill('Mira Example felt tired.');

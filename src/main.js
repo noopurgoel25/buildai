@@ -131,6 +131,8 @@ function render() {
       edited: Boolean(result.edited || result.observations?.some(o => o.edited)), source: captureDraft.source,
       confirmationId: captureDraft.confirmed?.confirmationId || createRecordId(),
       aiInterpretation: captureDraft.aiInterpretation || null,
+      ...(result.interpretationVersion ? {interpretationVersion:result.interpretationVersion} : {}),
+      ...(result.relatedGroups ? {relatedGroups:result.relatedGroups.filter(group=>group.observationIds.every(id=>result.observations.some(item=>item.id===id&&!item.edited)))} : {}),
       capturedAt: captureDraft.capturedAt || Date.now(),
       timeZone: captureDraft.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       originalText: captureDraft.originalText || captureDraft.text,
