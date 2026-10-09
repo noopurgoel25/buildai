@@ -7,7 +7,7 @@ import { track } from './analytics.js';
 const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const BUSY = 'Busy right now. Try again in a few minutes.';
 
-export function mountCapture(root, patient, draft, onConfirm) {
+export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
   let state = draft.editDraft ? 'editing' : draft.interpretation ? 'ready' : 'idle';
   let error = '';
   let recorder, stream, timer, startedAt;
@@ -165,6 +165,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
 
   function draw() {
     if (disposed) return;
+    onStage(state==='ready' || state==='editing' ? 'review' : 'update');
     const intro=root.closest('.screen')?.querySelector('.capture-intro');
     if(intro) intro.hidden=state==='ready' || state==='editing';
     const busy = ['processing', 'transcribing', 'submitting', 'understanding'].includes(state);
@@ -212,7 +213,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
         ${result.status === 'ready' ? `<div class="review-surface">${updateFacts(result)}</div>` : `<p>${escape(result.question || result.message)}</p>`}
         ${recordDetails({...draft,...result})}
         <p class="hint">Nothing has been saved yet.</p>
-        ${result.status === 'ready' ? '<button class="primary" id="confirm" type="button">Yes, continue</button><button class="secondary" id="edit" type="button">Change</button>' : result.status === 'clarification' ? `<form id="clarify" novalidate><label for="clarification-answer">Your answer</label><textarea id="clarification-answer" rows="2" maxlength="1000">${escape(draft.clarificationAnswer || '')}</textarea>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}<button class="primary" type="submit">Update interpretation</button></form>` : ''}
+        ${result.status === 'ready' ? `<button class="primary" id="confirm" type="button">${draft.saveDirectly ? 'Save update' : 'Yes, continue'}</button><button class="secondary" id="edit" type="button">Change</button>` : result.status === 'clarification' ? `<form id="clarify" novalidate><label for="clarification-answer">Your answer</label><textarea id="clarification-answer" rows="2" maxlength="1000">${escape(draft.clarificationAnswer || '')}</textarea>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}<button class="primary" type="submit">Update interpretation</button></form>` : ''}
         <button class="secondary" id="revise" type="button">Return to capture</button>
       </div>`;
       root.querySelector('#confirm')?.addEventListener('click', onConfirm);

@@ -378,12 +378,29 @@ test('an initial timeline failure retries, while leaving an unconfirmed new capt
   expect(mock.state().savedCalls).toBe(0);
 });
 
-test('a signed-in account with no notes sees an honest empty timeline and can start patient setup (services mocked)',async({page})=>{
-  await mockSession(page);await page.goto('/');await page.getByRole('link',{name:'Already started? Sign in'}).click();
+test('a signed-in empty account sets up a person and saves once without another sign-in',async({page})=>{
+  const mock=await mockSession(page);await page.goto('/#signin');
   await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();
   await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code'}).click();
-  await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Add update'}).click();await expect(page.getByRole('heading',{name:'Who are you caring for?'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Set up a health record'})).toBeVisible();
+  await page.getByRole('button',{name:'Set up a health record'}).click();
+  await expect(page.getByRole('link',{name:'Already have a record? Sign in'})).toHaveCount(0);
+  await expect(page.getByText('Step 1 of 3', {exact:false})).toBeVisible();
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/first-record-setup-${width}.png`,fullPage:true});}
+  await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Mother');
+  await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.getByText('Step 2 of 3',{exact:false})).toBeVisible();
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/first-record-capture-${width}.png`,fullPage:true});}
+  await page.getByRole('link',{name:'Back to person details'}).click();await expect(page.getByLabel('Their name')).toHaveValue('Mira Example');
+  await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Type instead'}).click();
+  await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();
+  await expect(page.getByText('Step 3 of 3',{exact:false})).toBeVisible();
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/first-record-review-${width}.png`,fullPage:true});}
+  await page.getByRole('button',{name:'Save update',exact:true}).focus();await expect(page.getByRole('button',{name:'Save update',exact:true})).toBeFocused();await page.keyboard.press('Enter');
+  await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(1);expect(mock.state().codeRequests).toBe(1);
+  await page.getByRole('button',{name:'Add update'}).click();await expect(page.getByText('Step 1 of 2',{exact:false})).toBeVisible();
+  await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();await expect(page.getByText('Step 2 of 2',{exact:false})).toBeVisible();
+  await page.getByRole('button',{name:'Return to capture',exact:true}).click();await expect(page.getByText('Step 1 of 2',{exact:false})).toBeVisible();await expect(page.getByLabel('Or type your update')).toHaveValue('Mira Example said she felt tired today.');
 });
 
 test('back from a failed confirmed save does not silently retry saving when opening the timeline (services mocked)',async({page})=>{
@@ -747,7 +764,7 @@ test('account deletion requires a fresh code, allows cancellation, retains inval
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/delete-account-${width}.png`,fullPage:true});}
  await page.getByLabel('Deletion code').fill('654321');await page.getByRole('button',{name:'Permanently delete account and record',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Deletion has started');await expect(page.getByRole('button',{name:'Keep my account',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Finish deleting my account',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Your account and health record have been permanently deleted.');await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();expect(mock.state().entries).toHaveLength(0);expect(mock.state().record).toBe(null);expect(await page.evaluate(()=>localStorage.getItem('carenama.returning'))).toBe(null);
- await page.reload();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();await page.getByRole('link',{name:'Already started? Sign in',exact:true}).click();await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code',exact:true}).click();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Add update',exact:true}).click();await expect(page.getByLabel('Their name')).toHaveValue('');await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Daughter');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Type instead',exact:true}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text',exact:true}).click();await page.getByRole('button',{name:'Yes, continue',exact:true}).click();await page.getByRole('link',{name:'Save this update',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(1);
+ await page.reload();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();await page.getByRole('link',{name:'Already started? Sign in',exact:true}).click();await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code',exact:true}).click();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Set up a health record',exact:true}).click();await expect(page.getByLabel('Their name')).toHaveValue('');await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Daughter');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Type instead',exact:true}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text',exact:true}).click();await page.getByRole('button',{name:'Save update',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(1);
 });
 
 

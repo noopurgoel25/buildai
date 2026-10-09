@@ -258,3 +258,15 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .privacy-toggle[aria-checked="true"] { background: #d5e9e3; border-color: #2f7d72; }
 .privacy-toggle:disabled { opacity: .65; cursor: wait; }
 .privacy-storage { margin-top: 32px; }
+.journey { margin-bottom: 28px; }
+.journey ol { display: flex; list-style: none; padding: 0; margin: 0; }
+.journey li { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13px; color: #68736f; }
+.journey li:not(:last-child)::after { content: ''; position: absolute; top: 14px; left: 50%; width: 100%; height: 1px; background: #bac8bf; }
+.journey-marker { z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid #8b9a91; border-radius: 50%; background: #f8f7f3; }
+.journey .current { color: #2f7d72; font-weight: 600; }
+.journey .current .journey-marker { background: #2f7d72; border-color: #2f7d72; color: white; }
+.journey .complete .journey-marker { background: #d5e9e3; border-color: #d5e9e3; color: #2f7d72; }
+.journey-marker svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+.journey .hint { margin-top: 16px; }
+.journey-preview { padding: 18px; margin-top: 24px; background: #edf1eb; border-radius: 14px; color: #24302d; }
+.setup:has(.journey) > .back { margin-bottom: 24px; }

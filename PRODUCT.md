@@ -2,7 +2,7 @@
 
 **CareNama** — a calm place to leave health notes about someone you care for, so you can tell the doctor what actually happened since the last visit.
 
-Status: V1 (milestones 1–15) is live. V1.1 completes V1 scope; items marked **[V1.1]** below belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) are built and awaiting builder testing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and the builder confirming a fictional event in its Events view; Milestone 21 remains pending (see PLAN.md). Later versions: ROADMAP.md. Reasons behind rules: DECISIONS.md.
+Status: V1 (milestones 1–15) is live. V1.1 completes V1 scope; items marked **[V1.1]** below belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) have passed builder testing; the signed-in setup/progress fix awaits a phone recheck before publishing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and the builder confirming a fictional event in its Events view; Milestone 21 remains pending (see PLAN.md). Later versions: ROADMAP.md. Reasons behind rules: DECISIONS.md.
 
 ---
 
@@ -48,7 +48,7 @@ A caregiver of an ageing parent captures changes as they happen, then reconstruc
 2. The caregiver says or types it naturally.
 3. AI identifies each fact and when it happened; asks only if timing is missing or conflicting.
 4. The caregiver sees every fact, corrects if needed, and confirms the whole update once.
-5. First time only: the update shows as the start of the record, then email + code sign-in saves it.
+5. First time while signed out: the update shows as the start of the record, then email + code sign-in saves it. Already signed-in caregivers save directly from review, including when creating their first person record.
 6. More updates accumulate. No forms, no daily check-ins, no categories to choose.
 7. Before a visit: choose a period → Summary → review and edit the text → share (WhatsApp/share sheet or copy).
 8. After the visit, the caregiver continues the same record.

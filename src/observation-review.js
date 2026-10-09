@@ -30,7 +30,7 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
       ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
       ${details}
       ${draft.interpretation.manual ? `<button class="text-action" id="add-observation" type="button" ${items.length >= 20 ? 'disabled' : ''}>Add a detail from your update</button>` : ''}
-      <div class="flow-actions"><button class="primary" id="confirm-update" type="button" ${!items.length ? 'disabled' : ''}>${draft.savedEdit ? 'Save changes' : draft.existingPatient ? 'Save update' : 'Yes, continue'}</button><p class="hint">${draft.savedEdit ? 'Your saved update stays as it is until you save changes.' : 'Nothing has been saved yet.'}</p><button class="text-action" id="return-capture" type="button">${draft.savedEdit ? 'Cancel changes' : 'Return to capture'}</button></div></div>`;
+      <div class="flow-actions"><button class="primary" id="confirm-update" type="button" ${!items.length ? 'disabled' : ''}>${draft.savedEdit ? 'Save changes' : (draft.saveDirectly || draft.existingPatient) ? 'Save update' : 'Yes, continue'}</button><p class="hint">${draft.savedEdit ? 'Your saved update stays as it is until you save changes.' : 'Nothing has been saved yet.'}</p><button class="text-action" id="return-capture" type="button">${draft.savedEdit ? 'Cancel changes' : 'Return to capture'}</button></div></div>`;
     if (first) {
       root.querySelector('#shared-date')?.addEventListener('change', event => { draft.sharedDateForId=first.id; draft.sharedDateSelected=event.target.checked; });
       function setDate(date) {

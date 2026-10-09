@@ -1,6 +1,6 @@
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-19 labels, timeline icons, stored-type Summary, concise sharing and account deletion are built and awaiting builder testing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and the builder confirming a fictional event in its Events view; Milestone 21 remains pending.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-19 labels, timeline icons, stored-type Summary, concise sharing and account deletion have passed builder testing; the signed-in setup/progress fix awaits a phone recheck before publishing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and the builder confirming a fictional event in its Events view; Milestone 21 remains pending.
 
 ## 1. Feeling
 
@@ -64,6 +64,8 @@ Avoid cheerful celebration, clinical good/bad colour coding, and assumptions abo
 ## 5. Journeys
 
 - **First use:** Welcome → Setup → Capture → (Timing question) → Review → First value → Email → Code → Timeline
+- **Signed-in first record:** Empty record introduction ? Setup ? Capture ? Review ? Save update ? Timeline; no additional sign-in.
+- **Progress:** Setup/capture/review show Person ? Update ? Review, with the current step and step count. Existing-person updates show Update ? Review. Timing and corrections remain within Review; returning to capture restores Update and preserves text. Saved-update corrections use their existing focused editing screen.
 - **Returning:** Open link → (Email → Code if expired) → Timeline → Add update / Summary
 - **Before a visit:** Timeline → Summary → Review & share → Share / Copy
 
@@ -79,8 +81,8 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 
 ### Setup
 - Name and relationship (text fields) with reassurance that no medical profile is needed.
-- Notice: one person per account in this version; returning-user sign-in link.
-- Empty fields show a specific message and keep the other entry. Back keeps the draft; refresh clears it (explained on screen).
+- Notice: one person per account in this version; returning-user sign-in link only when signed out. Signed-out setup explains upfront that an email code is needed to save. Signed-in setup has Back to your record and no sign-in invitation.
+- Empty fields show a specific message and keep the other entry. Back keeps the draft; refresh clears it (explained on screen). Details are saved with the first update, including when already signed in.
 - **Continue** → Capture.
 
 ### Capture
@@ -144,3 +146,7 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 ### Privacy [V1.1]
 - Welcome and the timeline Account menu link to Privacy. A dedicated reading page uses the existing calm colours and type, with clear headings and a keyboard-accessible Usage tracking switch. It explains account-wide choices after sign-in and browser choices before sign-in, failures preserve the previous choice, and reopening stays on Privacy.
 - Plain-language page: what is stored (Convex), who processes it (Sarvam for AI, Resend for sign-in and account-deletion codes, Mixpanel analytics in the EU without health content), deletion, and an **analytics on/off** switch (on by default). Turning it off stops new events without changing health-record features; previously sent events are not removed by the switch. Profile deletion and shared copies are explained separately.
+
+### Signed-in account without a person
+- Headline: **Who are you caring for?** Supporting copy explains name/relationship, then update and review. Quiet Person ? Update ? Review preview; primary **Set up a health record** opens Setup. Account controls remain available.
+- Signed-in review uses **Save update** and saves directly to the current account. The signed-out first-value and email-code journey remain available.

@@ -1,6 +1,7 @@
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/600.css';
 import './style.css';
+import { journeyProgress } from './journey-progress.js';
 import { mountCapture } from './capture.js';
 import { startSession } from './session.js';
 import { mountSignIn } from './account.js';
@@ -77,22 +78,23 @@ function render() {
       </div>
     </section>` : capture ? `
     <section class="screen setup" aria-labelledby="title">
-      <a class="back" id="capture-back" href="${captureDraft.existingPatient ? '#record' : '#patient-setup'}">${captureDraft.existingPatient ? 'Back to timeline' : 'Back'}</a>
+      <a class="back" id="capture-back" href="${captureDraft.existingPatient ? '#record' : '#patient-setup'}">${captureDraft.existingPatient ? 'Back to timeline' : 'Back to person details'}</a>
+      <div id="journey-progress">${journeyProgress(captureDraft.existingPatient ? ['Update','Review'] : ['Person','Update','Review'],captureDraft.existingPatient ? 0 : 1)}</div>
       <div class="patient-context"><h2>${escapeHtml(patient.name)}</h2><p>${escapeHtml(patient.relationship)}</p></div>
       <div class="capture-intro"><h1 id="title" tabindex="-1">What would you like to note about ${escapeHtml(patient.name)}?</h1><p>Say it in your own words.</p></div>
       <div id="capture-controls"></div>
     </section>` : setup ? `
     <section class="screen setup" aria-labelledby="title">
-      <a class="back" href="#">Back</a>
+      <a class="back" href="${session.isAuthenticated ? '#record' : '#'}">${session.isAuthenticated ? 'Back to your record' : 'Back'}</a>
+      ${journeyProgress(['Person','Update','Review'],0)}
       <div class="intro">
         <h1 id="title" tabindex="-1">Who are you caring for?</h1>
-        <p class="hint">For now, each account keeps notes for one person. If you already have a record, sign in to continue their timeline.</p>
-        <a class="text-action" href="#signin">Already have a record? Sign in</a>
+        ${session.isAuthenticated ? '<p>No medical profile needed.</p>' : '<p class="hint">For now, each account keeps notes for one person. If you already have a record, sign in to continue their timeline.</p><a class="text-action" href="#signin">Already have a record? Sign in</a><p class="hint">Person, update, then review. An email code is needed to save your first update.</p>'}
         <form id="patient-form" novalidate>
           <div class="field"><label for="patient-name">Their name</label><input id="patient-name" name="name" autocomplete="off" value="${escapeHtml(patient.name)}" aria-describedby="name-error" required><p id="name-error" class="error" hidden></p></div>
           <div class="field"><label for="relationship">Your relationship to them</label><input id="relationship" name="relationship" autocomplete="off" value="${escapeHtml(patient.relationship)}" aria-describedby="relationship-hint relationship-error" required><p id="relationship-hint" class="hint">For example, daughter, son or partner.</p><p id="relationship-error" class="error" hidden></p></div>
           <p class="reassurance">A name and your relationship are enough to start.</p>
-          <p class="hint temporary">These details are temporary until you sign up. Refreshing this page will clear them.</p>
+          <p class="hint temporary">These details will be saved with your first update. Until then, refreshing this page will clear them.</p>
           <button class="primary" type="submit">Continue</button>
         </form>
       </div>
@@ -107,6 +109,7 @@ function render() {
       <a class="returning-signin" href="#signin">Already started? Sign in</a><a class="text-action privacy-link" href="#privacy">Privacy &amp; your choices</a>
     </section>`;
   if (setup || capture || firstValue) document.querySelector('h1').focus();
+  if(capture) captureDraft.saveDirectly=session.isAuthenticated;
   if (capture) disposeCapture = mountCapture(document.querySelector('#capture-controls'), patient, captureDraft, () => {
     const result = captureDraft.interpretation;
     if (result?.status !== 'ready' || !result.event.trim() || captureDraft.editDraft) return;
@@ -123,9 +126,9 @@ function render() {
       ...(result.observations ? {observations:result.observations,removedObservations:captureDraft.removedObservations || []} : {}),
     });
     track('update_confirmed',{fact_count:result.observations?.length??1,was_edited:captureDraft.confirmed.edited});
-    if(captureDraft.existingPatient && session.isAuthenticated){captureDraft.saveRequested=true;location.hash='#record';}
+    if(session.isAuthenticated){captureDraft.saveRequested=true;location.hash='#record';}
     else location.hash = '#first-value';
-  });
+  },stage=>{const labels=captureDraft.existingPatient ? ['Update','Review'] : ['Person','Update','Review'];document.querySelector('#journey-progress').innerHTML=journeyProgress(labels,stage==='review' ? labels.length-1 : labels.length-2);});
   if(capture) document.querySelector('#capture-back').onclick=()=>{captureDraft.saveRequested=false;};
   if (setup) {
     const form = document.querySelector('#patient-form');

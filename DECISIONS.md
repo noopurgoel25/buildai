@@ -136,3 +136,7 @@ Users reach first value before sign-in; email + code only (no password, no phone
 - Example "Dizziness recorded three times… two episodes after lunch" — counts are recorded days, not episodes.
 - Example "BP has decreased overall" — no measurement-based verdicts.
 - Timeline example ordered by event date — timeline is ordered by recorded date.
+
+### 2026-10-09 ? Contextual setup and update progress
+Signed-in empty accounts receive a person-first introduction and no repeated sign-in invitation. Setup, capture and review share a three-step progress indicator; existing-person updates use two steps. Signed-in review saves directly, while signed-out visitors retain first value followed by email-code saving, explained upfront. Back navigation preserves in-page drafts.
+*Why:* after deletion and fresh sign-in, unconditional first-time sign-in messaging sent caregivers back to the empty timeline and obscured who the next update was for. The builder approved screen mockups before implementation.

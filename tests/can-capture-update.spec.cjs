@@ -469,7 +469,7 @@ test('a manually reviewed update needs explicit confirmation, and changing patie
   await expect(page.locator('.fact-text').first()).toHaveText(update);
   await expect(page.getByText('Timing not known', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Back to review' }).click();
-  await page.getByRole('link', { name: 'Back', exact: true }).click();
+  await page.getByRole('link', { name: 'Back to person details', exact: true }).click();
   await page.getByLabel('Their name').fill('Jamie Example');
   await page.getByRole('button', { name: 'Continue', exact: true }).click();
   await page.evaluate(() => { location.hash = '#first-value'; });
