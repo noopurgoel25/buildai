@@ -1,7 +1,8 @@
 const { test, expect } = require('@playwright/test');
 
-async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0, pendingSession = false } = {}) {
-  let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0, shareCheckCalls=0;
+async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0, pendingSession = false, failDeletionCode = false, failAccountDeletion = false, deletingInitially = false } = {}) {
+  let deletionStarted=deletingInitially;
+  let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0, shareCheckCalls=0,deletionCodeCalls=0,accountDeletionCalls=0;
   const entries=initialEvents.map((details,index)=>({id:String(index+1),details}));
   const savedIds = [];
   await page.route('**/src/session.js*', route => route.fulfill({ contentType: 'application/javascript', body: `
@@ -12,6 +13,9 @@ async function mockSession(page, { failSave = false, interpretation = null, init
           if (!response.ok) throw new Error('Invalid code');
           if (params.code) { state.isAuthenticated = true; onChange({ ...state }); }
         },
+        async getAccountState() {return (await fetch('/__test/account-state')).json();},
+        async requestDeletionCode() {const response=await fetch('/__test/deletion-code');if(!response.ok)throw new Error('Delivery unavailable');return response.json();},
+        async deleteAccount(value) {const response=await fetch('/__test/delete-account',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());state.isAuthenticated=false;onChange({...state});},
         async signOut() { await fetch('/__test/signout'); state.isAuthenticated = false; onChange({ ...state }); },
         async saveRecord(value) { const response = await fetch('/__test/save', { method: 'POST', body: JSON.stringify(value) }); if (!response.ok) throw new Error(await response.text()); },
         async getRecord() { return (await fetch('/__test/record')).json(); },
@@ -33,9 +37,12 @@ async function mockSession(page, { failSave = false, interpretation = null, init
       if (params.code !== '123456') return route.fulfill({ status: 400, json: {} });
       signed = true; return route.fulfill({ json: {} });
     }
+    if(path.endsWith('account-state'))return route.fulfill({json:deletionStarted?'deleting':signed?'active':'deleted'});
+    if(path.endsWith('deletion-code')) {deletionCodeCalls++;if(failDeletionCode&&deletionCodeCalls===1)return route.fulfill({status:503,body:'Unavailable'});return route.fulfill({json:{challengeId:'d'.repeat(32)}});}
+    if(path.endsWith('delete-account')) {accountDeletionCalls++;const input=route.request().postDataJSON();if(!deletionStarted&&input.code!=='654321')return route.fulfill({status:400,body:'That deletion code is not correct. Try again.'});if(failAccountDeletion&&accountDeletionCalls===2){deletionStarted=true;return route.fulfill({status:503,body:'Deletion has started. Retry to finish removing your account.'});}deletionStarted=false;signed=false;record=null;entries.splice(0);return route.fulfill({json:null});}
     if (path.endsWith('signout')) { signed = false; return route.fulfill({ json: {} }); }
     if(path.endsWith('timeline')) {
-      timelineCalls++;if(timelineCalls===failTimelineAt)return route.fulfill({status:503,json:{}});
+      timelineCalls++;if(deletionStarted||timelineCalls===failTimelineAt)return route.fulfill({status:503,json:{}});
       const options=route.request().postDataJSON(),start=Number(options.cursor||0),ordered=[...entries].sort((a,b)=>b.details.capturedAt-a.details.capturedAt || Number(b.id)-Number(a.id)),page=ordered.slice(start,start+options.numItems);
       return route.fulfill({json:{patient:record?{id:'person-test',name:record.name,relationship:record.relationship}:null,page,isDone:start+page.length>=entries.length,continueCursor:String(start+page.length)}});
     }
@@ -71,7 +78,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (path.endsWith('save')) {
       savedCalls++;
       savedIds.push(route.request().postDataJSON().event.confirmationId);
-      if (initialEvents.length)return route.fulfill({status:409,body:'This account already has a health record.'});
+      if (initialEvents.length && record)return route.fulfill({status:409,body:'This account already has a health record.'});
       if (failSave && savedCalls === 1) return route.fulfill({ status: 503, json: {} });
       const input = route.request().postDataJSON();
       record = { ...input.patient, event: input.event }; if(!entries.some(entry=>entry.details.confirmationId===input.event.confirmationId))entries.push({id:String(entries.length+1),details:input.event}); return route.fulfill({ json: {} });
@@ -82,7 +89,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (route.request().url().endsWith('/capture-text')) return route.fulfill({ json: { text: route.request().postDataJSON().text, source: 'text' } });
     return route.fulfill({ json: interpretation || { status: 'ready', event: 'Mira Example said she felt tired today.', when: 'today', evidence: 'Patient-reported', question: '', message: '' } });
   });
-  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls, summaryCalls, shareCheckCalls }) };
+  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls, summaryCalls, shareCheckCalls, deletionCodeCalls, accountDeletionCalls }) };
 }
 async function confirm(page) {
   await page.goto('/');
@@ -123,7 +130,7 @@ test('sign-in follows first value, incorrect code preserves the update, and save
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Mira Example’s health story', exact: true })).toBeVisible();
   expect(mock.state().savedCalls).toBe(1);
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await page.getByText('Account',{exact:true}).click();await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Already started? Sign in' })).toBeVisible();
   await page.getByRole('link', { name: 'Already started? Sign in' }).click();
   await page.getByLabel('Your email').fill('caregiver@example.test');
@@ -581,7 +588,7 @@ test('checking an existing sign-in never signs out or clears a typed update, and
   await page.getByRole('link',{name:'Back to timeline'}).click();await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.locator('.period-result')).toBeVisible();
   const reads=mock.state().timelineCalls;
   await page.evaluate(()=>window.__testSessionChange({isLoading:false,isAuthenticated:true}));await expect(page.locator('.period-result')).toBeVisible();expect(mock.state().timelineCalls).toBe(reads);
-  await page.getByRole('button',{name:'Back to timeline'}).click();await page.getByRole('button',{name:'Sign out'}).click();await expect(page.getByRole('link',{name:'Already started? Sign in'})).toBeVisible();
+  await page.getByRole('button',{name:'Back to timeline'}).click();await page.getByText('Account',{exact:true}).click();await page.getByRole('button',{name:'Sign out'}).click();await expect(page.getByRole('link',{name:'Already started? Sign in'})).toBeVisible();
 });
 
 const briefFixture=()=>{
@@ -696,7 +703,7 @@ test('expired returning session reopens at sign-in and returns to the same notes
  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],signedOutInitially:true});await page.addInitScript(()=>localStorage.setItem('carenama.returning','1'));await page.goto('/');
  await expect(page.getByRole('heading',{name:'Welcome back.',exact:true})).toBeVisible();expect(mock.state().timelineCalls).toBe(0);
  await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code'}).click();
- await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();
+ await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);await page.getByText('Account',{exact:true}).click();await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();
 });
 
 test('reopening waits for sign-in verification and retries timeline failure without creating records (services mocked)',async({page})=>{
@@ -722,4 +729,23 @@ test('concise sharing keeps edits through one-click full details, enforces 1500 
  await page.getByLabel('Text to share').fill(revised);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();expect(await page.evaluate(()=>window.__deviceCopies)).toEqual([revised]);expect(mock.state().savedCalls).toBe(0);
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/concise-sharing-${width}.png`,fullPage:true});}
  await page.getByRole('button',{name:'Back to summary',exact:true}).click();await page.getByRole('button',{name:'View all details',exact:true}).focus();await page.keyboard.press('Enter');await expect(page.getByRole('heading',{name:'All recorded details',exact:true})).toBeFocused();
+});
+
+
+test('account deletion requires a fresh code, allows cancellation, retains invalid input, and returns to a fresh start',async({page})=>{
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],failDeletionCode:true,failAccountDeletion:true});await page.goto('/#record');await page.getByText('Account',{exact:true}).click();await page.getByRole('button',{name:'Delete account and record',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Delete account and record?',exact:true})).toBeVisible();await expect(page.getByText(/This cannot be undone/)).toBeVisible();expect(mock.state().deletionCodeCalls).toBe(0);await page.getByRole('button',{name:'Keep my account',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);
+ await page.getByText('Account',{exact:true}).click();await page.getByRole('button',{name:'Delete account and record',exact:true}).click();await page.getByRole('button',{name:'Send deletion code',exact:true}).click();await expect(page.getByRole('alert')).toContainText('couldn');expect(mock.state().entries).toHaveLength(1);
+ await page.getByRole('button',{name:'Send deletion code',exact:true}).click();await expect(page.getByLabel('Deletion code')).toBeFocused();await page.getByRole('button',{name:'Send a new code',exact:true}).click();await expect(page.getByRole('alert')).toContainText('wait a minute');expect(mock.state().deletionCodeCalls).toBe(2);
+ await page.getByLabel('Deletion code').fill('123456');await page.getByRole('button',{name:'Permanently delete account and record',exact:true}).click();await expect(page.getByRole('alert')).toContainText('not correct');await expect(page.getByLabel('Deletion code')).toHaveValue('123456');expect(mock.state().entries).toHaveLength(1);
+ for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/delete-account-${width}.png`,fullPage:true});}
+ await page.getByLabel('Deletion code').fill('654321');await page.getByRole('button',{name:'Permanently delete account and record',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Deletion has started');await expect(page.getByRole('button',{name:'Keep my account',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Finish deleting my account',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Your account and health record have been permanently deleted.');await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();expect(mock.state().entries).toHaveLength(0);expect(mock.state().record).toBe(null);expect(await page.evaluate(()=>localStorage.getItem('carenama.returning'))).toBe(null);
+ await page.reload();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();await page.getByRole('link',{name:'Already started? Sign in',exact:true}).click();await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code',exact:true}).click();await expect(page.getByText('No saved updates yet.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Add update',exact:true}).click();await expect(page.getByLabel('Their name')).toHaveValue('');await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Daughter');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Type instead',exact:true}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text',exact:true}).click();await page.getByRole('button',{name:'Yes, continue',exact:true}).click();await page.getByRole('link',{name:'Save this update',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(1);
+});
+
+
+test('reopening an already verified deletion resumes cleanup without exposing notes or sending another code',async({page})=>{
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],deletingInitially:true});await page.goto('/#record');await expect(page.getByRole('button',{name:'Finish deleting my account',exact:true})).toBeVisible();await expect(page.locator('.timeline-entry')).toHaveCount(0);await expect(page.getByRole('button',{name:'Keep my account',exact:true})).toHaveCount(0);expect(mock.state().deletionCodeCalls).toBe(0);
+ await page.getByRole('button',{name:'Finish deleting my account',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Your account and health record have been permanently deleted.');expect(mock.state().entries).toHaveLength(0);expect(mock.state().accountDeletionCalls).toBe(1);
 });

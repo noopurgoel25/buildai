@@ -5,6 +5,8 @@ import { confirmedEvent } from "./lib/healthEvent";
 
 export default defineSchema({
   ...authTables,
+  authVerifiers: authTables.authVerifiers.index('by_session', ['sessionId']),
+  accountDeletions: defineTable({userId:v.id('users'),challengeId:v.string(),codeHash:v.string(),emailHash:v.string(),expiresAt:v.number(),failedAt:v.array(v.number()),deleting:v.boolean()}).index('by_user',['userId']),
   families: defineTable({ caregiverId: v.id("users") }).index("by_caregiver", ["caregiverId"]),
   people: defineTable({ familyId: v.id("families"), name: v.string(), relationship: v.string() }).index("by_family", ["familyId"]),
   healthRecords: defineTable({ personId: v.id("people") }).index("by_person", ["personId"]),

@@ -11,7 +11,8 @@ const api=data(read('_generated/api.js').replace('"convex/server"',JSON.stringif
 const health=data(read('lib/healthEvent.ts').replace('"convex/values"',values));
 const timing=data(read('lib/observationTiming.ts'));
 const helper=data(read('lib/summary.ts').replace("'@oslojs/crypto/sha2'",JSON.stringify(import.meta.resolve('@oslojs/crypto/sha2'))).replace("'convex/values'",values).replace("'./healthEvent'",JSON.stringify(health)).replace("'./observationTiming'",JSON.stringify(timing)));
-const source=read('summaries.ts').replace("'./lib/summaryShare'",JSON.stringify(data(read('lib/summaryShare.ts')))).replace("'./_generated/server'",JSON.stringify(server)).replace("'./_generated/api'",JSON.stringify(api)).replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))).replace("'convex/server'",JSON.stringify(import.meta.resolve('convex/server'))).replace("'convex/values'",values).replace("'./lib/healthEvent'",JSON.stringify(health)).replace("'./lib/summary'",JSON.stringify(helper));
+const access=data(read('lib/accountAccess.ts').replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))));
+const source=read('summaries.ts').replace("'./lib/accountAccess'",JSON.stringify(access)).replace("'./lib/summaryShare'",JSON.stringify(data(read('lib/summaryShare.ts')))).replace("'./_generated/server'",JSON.stringify(server)).replace("'./_generated/api'",JSON.stringify(api)).replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))).replace("'convex/server'",JSON.stringify(import.meta.resolve('convex/server'))).replace("'convex/values'",values).replace("'./lib/healthEvent'",JSON.stringify(health)).replace("'./lib/summary'",JSON.stringify(helper));
 const {sourcePage,unchanged,organize,generate}=await import(data(source));
 const {checkPeriod,selectSources,validateGroups,groupSources,overviewCandidates,selectOverview,validateOverview,wordingOptions}=await import(helper);
 test('pending facts stay in Other and cannot become an overview claim',()=>{
@@ -24,8 +25,8 @@ const capture=(observations,capturedAt=Date.parse('2026-10-06T06:00:00Z'))=>({co
 const records=[{id:'healthEvents:1',revision:0,details:capture([observation('1','Mira Example felt tired.','2026-10-01'),{...observation('2','No dizziness.','2026-10-06'),polarity:'absent'},observation('3','Sometime last week.',null)])}];
 const patient={_id:'people:1',familyId:'families:1',name:'Mira Example',relationship:'Daughter'};
 function context(rows=records,owner='users:owner'){
-  const db={get:async id=>id===patient._id?patient:id==='families:1'?{caregiverId:'users:owner'}:rows.find(row=>row.id===id)?{_id:id,caregiverId:'users:owner',revision:rows.find(row=>row.id===id).revision}:null,
-    query:table=>{const query={withIndex:()=>query,unique:async()=>table==='healthRecords'?{_id:'record:1'}:{_id:'timeline:1'},paginate:async opts=>{const start=Number(opts.cursor||0);return{page:rows.slice(start,start+50).map(row=>({_id:row.id,revision:row.revision,details:row.details})),isDone:start+50>=rows.length,continueCursor:String(start+50)};}};return query;}};
+  const db={get:async id=>id==='users:owner'?{_id:id}:id===patient._id?patient:id==='families:1'?{caregiverId:'users:owner'}:rows.find(row=>row.id===id)?{_id:id,caregiverId:'users:owner',revision:rows.find(row=>row.id===id).revision}:null,
+    query:table=>{const query={withIndex:()=>query,unique:async()=>table==='accountDeletions'?null:table==='healthRecords'?{_id:'record:1'}:{_id:'timeline:1'},paginate:async opts=>{const start=Number(opts.cursor||0);return{page:rows.slice(start,start+50).map(row=>({_id:row.id,revision:row.revision,details:row.details})),isDone:start+50>=rows.length,continueCursor:String(start+50)};}};return query;}};
   let modelCalls=0;
   const ctx={db,auth:{getUserIdentity:async()=>owner?{subject:owner+'|session'}:null},
     runQuery:async(ref,args)=>getFunctionName(ref)==='summaries:sourcePage'?sourcePage._handler(ctx,args):unchanged._handler(ctx,args),

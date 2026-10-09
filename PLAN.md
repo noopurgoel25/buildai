@@ -2,7 +2,7 @@
 
 Current version: **V1.1 — complete V1 scope.** Milestones 1–15 are live (see PROGRESS.md). Work one milestone at a time, in order; each needs scope confirmation before code and builder confirmation before publishing (AGENTS.md).
 
-Current work: **Milestones 16-18 are built and awaiting builder testing together** on `milestone-16-fact-labels`. The compatible backend is updated; the new frontend is available in local preview and has not been published. Milestone 17 groups stored fact types, accepts up to 90 days without the previous fact or page cutoffs, and falls back to a source-linked overview when AI is unavailable. Milestone 18 limits Summary and sharing drafts to 1,500 characters, with full facts and measurements one click deeper through View all details. Milestone 19 is next.
+Current work: **Milestones 16-19 are built and awaiting builder testing together** on `milestone-16-fact-labels`. The compatible backend is updated; the new frontend is available in local preview and has not been published. Milestone 17 groups stored fact types, accepts up to 90 days without the previous fact or page cutoffs, and falls back to a source-linked overview when AI is unavailable. Milestone 18 limits Summary and sharing drafts to 1,500 characters, with full facts and measurements one click deeper through View all details. Milestone 19 adds fresh-code account deletion with complete cleanup and safe recovery. Milestone 20 is next.
 
 ## V1.1 milestones
 

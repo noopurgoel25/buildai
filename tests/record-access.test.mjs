@@ -6,18 +6,19 @@ const dataUrl = source => `data:text/javascript;base64,${Buffer.from(source).toS
 const validatorsSource = stripTypeScriptTypes(readFileSync(new URL('../convex/lib/healthEvent.ts', import.meta.url), 'utf8')).replace('"convex/values"', JSON.stringify(import.meta.resolve('convex/values')));
 const validatorsUrl = dataUrl(validatorsSource);
 const serverSource = readFileSync(new URL('../convex/_generated/server.js', import.meta.url), 'utf8').replace('"convex/server"', JSON.stringify(import.meta.resolve('convex/server')));
+const accessUrl=dataUrl(stripTypeScriptTypes(readFileSync(new URL('../convex/lib/accountAccess.ts',import.meta.url),'utf8')).replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))));
 const source = stripTypeScriptTypes(readFileSync(new URL('../convex/records.ts', import.meta.url), 'utf8'))
   .replace('"./_generated/api"', JSON.stringify(dataUrl(readFileSync(new URL('../convex/_generated/api.js', import.meta.url),'utf8').replace('"convex/server"',JSON.stringify(import.meta.resolve('convex/server'))))))
   .replace('"./_generated/server"', JSON.stringify(dataUrl(serverSource)))
   .replace('"@convex-dev/auth/server"', JSON.stringify(import.meta.resolve('@convex-dev/auth/server')))
   .replace('"convex/values"', JSON.stringify(import.meta.resolve('convex/values')))
   .replace('"convex/server"', JSON.stringify(import.meta.resolve('convex/server')))
-  .replace('"./lib/healthEvent"', JSON.stringify(validatorsUrl));
+  .replace('"./lib/healthEvent"', JSON.stringify(validatorsUrl)).replace('"./lib/accountAccess"',JSON.stringify(accessUrl));
 const { firstRecord, saveFirstRecord, saveCapture, timelinePage, addUpdate, correctUpdate, deleteUpdate, matchingPatient, saveMatchedUpdate } = await import(dataUrl(source));
 const { validateConfirmedEvent } = await import(validatorsUrl);
 const event = { confirmationId: '00000000-0000-4000-8000-000000000001', event: 'Mira Example reported tiredness.', when: 'Today', evidence: 'Patient-reported', source: 'text', originalText: 'Mira Example said she felt tired today.', edited: true, aiInterpretation: null, clarifications: [], capturedAt: Date.now(), timeZone: 'Asia/Kolkata' };
 function database() {
-  const tables = new Map(); let next = 1;
+  const tables = new Map([['users',[{_id:'users:owner'},{_id:'users:other'}]]]); let next = 1;
   return {
     insert: async (name, fields) => { const id = `${name}:${next++}`; const rows = tables.get(name) || []; rows.push({ _id: id, _creationTime: next, ...structuredClone(fields) }); tables.set(name, rows); return id; },
     get: async id => [...tables.values()].flat().find(row=>row._id===id) || null,
@@ -166,4 +167,11 @@ test('post-login matching is account-owned and requires an explicit same-person 
   const id=await saveMatchedUpdate._handler(owner,input);assert.equal(await saveMatchedUpdate._handler(owner,input),id);
   assert.equal(db.count('healthEvents'),2);assert.equal(db.count('people'),1);assert.equal(db.count('families'),1);
   assert.deepEqual((await db.get(id)).details,{...next,observations:next.observations.map(item=>({...item,type:'pending'}))});
+});
+
+
+test('a deleted account or one being deleted cannot save a new record using its old sign-in',async()=>{
+ const db=database(),owner=ctx(db,'users:owner'),input={patient:{name:'Mira Example',relationship:'Daughter'},event};
+ await db.insert('accountDeletions',{userId:'users:owner',deleting:true});await assert.rejects(saveFirstRecord._handler(owner,input),/Sign in/);assert.equal(db.count('healthEvents'),0);
+ await db.delete('users:owner');await assert.rejects(saveFirstRecord._handler(owner,input),/Sign in/);assert.equal(db.count('families'),0);
 });

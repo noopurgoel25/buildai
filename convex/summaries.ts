@@ -6,6 +6,7 @@ import { paginationOptsValidator } from 'convex/server';
 import { v, type Infer } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 import { summaryNarrative } from './lib/summaryShare';
+import { accountIsActive } from './lib/accountAccess';
 import { confirmedEvent } from './lib/healthEvent';
 import { checkPeriod, selectSources, summarySource, summaryGroup, summaryInsight, periodResult, groupSources, overviewCandidates, validateOverview, wordingOptions, numberSources, periodHash } from './lib/summary';
 
@@ -13,6 +14,7 @@ export const sourcePage=internalQuery({
   args:{caregiverId:v.id('users'),patientId:v.id('people'),paginationOpts:paginationOptsValidator},
   returns:v.object({name:v.string(),page:v.array(v.object({id:v.id('healthEvents'),revision:v.number(),details:confirmedEvent})),isDone:v.boolean(),continueCursor:v.string()}),
   handler:async(ctx,args)=>{
+    if(!await accountIsActive(ctx,args.caregiverId))throw new Error('This account is not available.');
     const person=await ctx.db.get(args.patientId),family=person?await ctx.db.get(person.familyId):null;
     if(!person || family?.caregiverId!==args.caregiverId)throw new Error('This patient is not available in your account.');
     const record=await ctx.db.query('healthRecords').withIndex('by_person',q=>q.eq('personId',person._id)).unique();

@@ -8,12 +8,14 @@
  * @module
  */
 
+import type * as accountDeletion from "../accountDeletion.js";
 import type * as auth from "../auth.js";
 import type * as capture from "../capture.js";
 import type * as classification from "../classification.js";
 import type * as doctorBriefs from "../doctorBriefs.js";
 import type * as http from "../http.js";
 import type * as interpretation from "../interpretation.js";
+import type * as lib_accountAccess from "../lib/accountAccess.js";
 import type * as lib_captureValidation from "../lib/captureValidation.js";
 import type * as lib_doctorBrief from "../lib/doctorBrief.js";
 import type * as lib_formatSpokenTime from "../lib/formatSpokenTime.js";
@@ -33,12 +35,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountDeletion: typeof accountDeletion;
   auth: typeof auth;
   capture: typeof capture;
   classification: typeof classification;
   doctorBriefs: typeof doctorBriefs;
   http: typeof http;
   interpretation: typeof interpretation;
+  "lib/accountAccess": typeof lib_accountAccess;
   "lib/captureValidation": typeof lib_captureValidation;
   "lib/doctorBrief": typeof lib_doctorBrief;
   "lib/formatSpokenTime": typeof lib_formatSpokenTime;

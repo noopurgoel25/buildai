@@ -26,6 +26,9 @@ export function startSession(onChange) {
         generateSummary: data => client.action(api.doctorBriefs.generate, data),
         prepareSummaryShare: data => client.action(api.summarySharing.prepare, data),
         correctUpdate: data => client.mutation(api.records.correctUpdate, data),
+        getAccountState: () => client.query(api.accountDeletion.status, {}),
+        requestDeletionCode: () => client.action(api.accountDeletion.requestCode, {}),
+        deleteAccount: data => client.action(api.accountDeletion.confirm, data),
         deleteUpdate: data => client.mutation(api.records.deleteUpdate, data),
       });
     }, [isLoading, isAuthenticated, signIn, signOut]);

@@ -2,7 +2,7 @@
 
 **CareNama** — a calm place to leave health notes about someone you care for, so you can tell the doctor what actually happened since the last visit.
 
-Status: V1 (milestones 1–15) is live. V1.1 completes V1 scope; items marked **[V1.1]** below belong to that version. Fact classification, stored-type Summary and concise sharing (Milestones 16-18) are built and awaiting builder testing; later milestones remain pending (see PLAN.md). Later versions: ROADMAP.md. Reasons behind rules: DECISIONS.md.
+Status: V1 (milestones 1–15) is live. V1.1 completes V1 scope; items marked **[V1.1]** below belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) are built and awaiting builder testing; later milestones remain pending (see PLAN.md). Later versions: ROADMAP.md. Reasons behind rules: DECISIONS.md.
 
 ---
 

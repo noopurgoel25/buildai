@@ -240,3 +240,11 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .summary-full-details .fact-text { overflow-wrap: anywhere; }
 
 .summary-details-hint { margin-bottom: 20px; }
+
+.timeline-account { margin-top: 32px; font-size: 14px; }
+.timeline-account > summary { min-height: 44px; padding: 10px 0; cursor: pointer; }
+.timeline-account .timeline-signout { margin-top: 12px; }
+.account-deletion .deletion-warning { margin-top: 20px; color: #24302d; }
+.account-deletion > .hint { margin-top: 24px; }
+.account-deletion > p { overflow-wrap: anywhere; }
+.account-deletion .deletion-warning + p { margin-top: 24px; }

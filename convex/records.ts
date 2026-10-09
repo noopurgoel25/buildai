@@ -1,6 +1,6 @@
 import { internal } from "./_generated/api";
 import { query, mutation } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getActiveUserId } from "./lib/accountAccess";
 import { v, type Infer } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
 import { confirmedEvent, validateConfirmedEvent, labelsForSave } from "./lib/healthEvent";
@@ -10,7 +10,7 @@ export const firstRecord = query({
   args: {},
   returns: v.union(v.null(), v.object({ name: v.string(), relationship: v.string(), event: confirmedEvent })),
   handler: async ctx => {
-    const caregiverId = await getAuthUserId(ctx);
+    const caregiverId = await getActiveUserId(ctx);
     if (!caregiverId) throw new Error("Sign in to view your health record.");
     const family = await ctx.db.query("families").withIndex("by_caregiver", q => q.eq("caregiverId", caregiverId)).unique();
     if (!family) return null;
@@ -33,7 +33,7 @@ async function prepareLabels(ctx: MutationCtx, id: import('./_generated/dataMode
 }
 const saveArgs = { patient: v.object({ name: v.string(), relationship: v.string() }), event: confirmedEvent };
 async function persistFirstRecord(ctx: MutationCtx, args: { patient: {name:string;relationship:string}; event: Infer<typeof confirmedEvent> }) {
-    const caregiverId = await getAuthUserId(ctx);
+    const caregiverId = await getActiveUserId(ctx);
     if (!caregiverId) throw new Error("Sign in before saving this health record.");
     validateConfirmedEvent(args.event);
     const name = args.patient.name.trim(), relationship = args.patient.relationship.trim();
@@ -67,7 +67,7 @@ export const timelinePage = query({
     isDone: v.boolean(), continueCursor: v.string(),
   }),
   handler: async (ctx, args) => {
-    const caregiverId = await getAuthUserId(ctx);
+    const caregiverId = await getActiveUserId(ctx);
     if (!caregiverId) throw new Error('Sign in to view your timeline.');
     if (!Number.isInteger(args.paginationOpts.numItems) || args.paginationOpts.numItems < 1 || args.paginationOpts.numItems > 10) throw new Error('Request up to 10 updates at a time.');
     const empty = { patient: null, page: [], isDone: true, continueCursor: '' };
@@ -90,7 +90,7 @@ export const correctUpdate = mutation({
   args: { id: v.id('healthEvents'), event: confirmedEvent, expectedRevision: v.number(), changeId: v.string() },
   returns: v.number(),
   handler: async (ctx, args) => {
-    const caregiverId = await getAuthUserId(ctx);
+    const caregiverId = await getActiveUserId(ctx);
     if (!caregiverId) throw new Error('Sign in before changing this update.');
     const saved = await ctx.db.get(args.id);
     if (!saved || saved.caregiverId !== caregiverId) throw new Error('This update is not available in your account.');
@@ -119,7 +119,7 @@ export const correctUpdate = mutation({
 export const deleteUpdate = mutation({
   args: { id: v.id('healthEvents'), expectedRevision: v.number() }, returns: v.null(),
   handler: async (ctx, args) => {
-    const caregiverId = await getAuthUserId(ctx);
+    const caregiverId = await getActiveUserId(ctx);
     if (!caregiverId) throw new Error('Sign in before deleting this update.');
     const saved = await ctx.db.get(args.id);
     if (!saved) return null; // A retry after successful deletion is safe.
@@ -131,7 +131,7 @@ export const deleteUpdate = mutation({
 });
 
 async function persistUpdate(ctx: MutationCtx, args: { patientId: import('./_generated/dataModel').Id<'people'>; event: Infer<typeof confirmedEvent> }) {
-    const caregiverId = await getAuthUserId(ctx);
+    const caregiverId = await getActiveUserId(ctx);
     if (!caregiverId) throw new Error('Sign in before saving this update.');
     const person = await ctx.db.get(args.patientId);
     const family = person ? await ctx.db.get(person.familyId) : null;
@@ -163,7 +163,7 @@ export const matchingPatient = query({
   args: { patient: saveArgs.patient },
   returns: v.union(v.null(), v.object({ id: v.id('people'), name: v.string(), relationship: v.string() })),
   handler: async (ctx,args) => {
-    const caregiverId = await getAuthUserId(ctx);
+    const caregiverId = await getActiveUserId(ctx);
     if (!caregiverId) throw new Error('Sign in before checking your record.');
     if (!args.patient.name.trim() || !args.patient.relationship.trim() || args.patient.name.length > 500 || args.patient.relationship.length > 500) throw new Error('Check the patient details.');
     const family = await ctx.db.query('families').withIndex('by_caregiver', q=>q.eq('caregiverId',caregiverId)).unique();
@@ -175,7 +175,7 @@ export const saveMatchedUpdate = mutation({
   args: { patientId: v.id('people'), patient: saveArgs.patient, event: confirmedEvent, samePersonConfirmed: v.literal(true) },
   returns: v.id('healthEvents'),
   handler: async (ctx,args) => {
-    const caregiverId = await getAuthUserId(ctx);
+    const caregiverId = await getActiveUserId(ctx);
     if (!caregiverId) throw new Error('Sign in before saving this update.');
     const person = await ctx.db.get(args.patientId);
     const family = person ? await ctx.db.get(person.familyId) : null;

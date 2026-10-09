@@ -15,7 +15,7 @@ const captureDraft = { text: '', source: 'text', audio: null, interpretation: nu
 let disposeCapture = () => {};
 let disposeAccount = () => {};
 let session = { isLoading: true, isAuthenticated: false };
-let authResolved = false;
+let authResolved = false,accountDeleting=false,accountDeleted=false;
 // A non-sensitive routing hint, never identity or authorization.
 function returningRecord(){try{return localStorage.getItem('carenama.returning')==='1';}catch{return false;}}
 function rememberRecord(){try{localStorage.setItem('carenama.returning','1');}catch{}}
@@ -40,7 +40,7 @@ function render() {
         clearDraft();
         if(savedPatient){Object.assign(patient,savedPatient);captureDraft.existingPatient=true;location.hash='#capture';}
         else location.hash='#patient-setup';
-      }, () => { clearDraft(); location.hash = '#'; }, rememberRecord);
+      }, () => { clearDraft(); location.hash = '#'; }, rememberRecord,()=>{accountDeleting=false;accountDeleted=true;clearDraft();session={...session,isAuthenticated:false};try{localStorage.removeItem('carenama.returning');}catch{}location.hash='#';render();},busy=>{accountDeleting=busy;if(!busy&&!session.isAuthenticated){clearDraft();location.hash='#signin';}});
     return;
   }
   const setup = location.hash === '#patient-setup';
@@ -95,7 +95,7 @@ function render() {
       </div>
     </section>` : `
     <section class="screen welcome" aria-labelledby="title">
-      <div class="intro">
+      ${accountDeleted?'<p role="status">Your account and health record have been permanently deleted.</p>':''}<div class="intro">
         <h1 id="title" tabindex="-1">A place for the details you want to remember.</h1>
         <p>Health notes for someone you care for, in your own words.</p>
       </div>
@@ -180,6 +180,7 @@ startSession(next => {
   const becameSignedIn = !session.isAuthenticated && next.isAuthenticated;
   const signedOut = session.isAuthenticated && !next.isAuthenticated;
   session = next;
+  if(accountDeleting)return;
   if (signedOut) { clearDraft(); location.hash = '#'; }
   else if (becameSignedIn) {
     if (location.hash === '#record') render();

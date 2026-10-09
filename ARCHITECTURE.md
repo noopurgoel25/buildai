@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification, stored-type Summary and concise sharing (Milestones 16-18) are built and awaiting builder testing; later milestones remain pending. Future-proofing work is listed in ROADMAP.md.
+Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) are built and awaiting builder testing; later milestones remain pending. Future-proofing work is listed in ROADMAP.md.
 
 ## 1. Stack
 
@@ -44,7 +44,7 @@ Every read and write is checked against the signed-in account's ownership of the
 
 ## 4. Summary and sharing
 
-**Current implementation (Milestone 17; frontend awaiting builder confirmation):**
+**Current implementation (Milestones 17-18; frontend awaiting builder confirmation):**
 1. Owner-checked, indexed timeline reads in pages of 50 records, up to 200 KB per page. Only the selected occurrence dates are retained; undated facts captured in the period stay separate. The inclusive period is at most 90 days. There is no 40-observation, 8,000-character or 20-page cutoff.
 2. Group all dated facts by their stored type in code: Symptoms, Measurements, Medication changes, Doctor visits, Daily wellbeing, Appetite and Other. Pending, missing or uncertain labels remain Other; never guess from words or ask AI to group them.
 3. Compute overview candidates from any stored symptom name across multiple dated captures. Deduplicate recorded days; explicit absence describes its dated note only. Explicit reported better/worse wording may be linked to an earlier dated note on the same topic and evidence source. An isolated change never becomes an overview.
@@ -62,7 +62,7 @@ Every read and write is checked against the signed-in account's ownership of the
 - Auth state is "pending" until both client credentials and server confirmation settle; the UI keeps the current screen during checks and routes only on settled identity changes.
 - Returning-user hint: browser storage holds only the value `1` after a saved timeline loads — never identity or health data; storage failure is tolerated and grants nothing.
 - Same-person append: account-scoped name + relationship match (case/whitespace-insensitive) plus explicit confirmation, rechecked server-side at save.
-- **[V1.1] Account deletion:** requires a fresh code; deletes Account, Family, Person, Record, Timeline, Captures, Observations, auth records and usage rows; requests deletion of the Mixpanel profile. Immediate, no grace period.
+- **[V1.1] Account deletion (Milestone 19):** a separate six-digit deletion code is sent only to the signed-in user email. `accountDeletions` stores a salted hash, 15-minute expiry and at most five failed attempts per rolling hour, retained across resends. It shares the login email sending allowance. Verification atomically consumes the challenge and locks the account; all record reads/writes and Summary source reads reject locked or missing users, including still-valid old credentials. Indexed internal transactions remove captures/snapshots, Family, Person, Record, Timeline, auth sessions/refresh tokens/verifiers/accounts/codes/rate limits, own email usage and the user. Shared AI usage and other accounts remain untouched. A scheduled worker continues if the page closes; interrupted work is safely resumable. Completion is returned only after all owned rows are gone, then the client clears its sign-in and returning hint. Immediate, no grace period. Mixpanel profile cleanup is added with tracking in Milestone 20, before any profiles are sent.
 
 ## 6. Limits
 

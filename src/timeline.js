@@ -1,13 +1,14 @@
+import { mountAccountDeletion } from './account-deletion.js';
 import { escape, savedObservationDetails, occurrenceLabel } from './observation-display.js';
 import { mountObservationReview } from './observation-review.js';
 import { createRecordId } from './record-id.js';
 import { mountPeriodSummary } from './summary.js';
 
-export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut, onOpened=()=>{}) {
+export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut, onOpened=()=>{},onDeleted=onSignOut,onDeleting=()=>{}) {
   let disposed=false, busy=false, entries=[], patient=null, cursor=null, isDone=true, loaded=false, error='', errorKind='load', saved=false;
   let confirmedMatch=null, savingPending=false;
   const openedEntries=new Set();
-  let disposeSummary=()=>{};
+  let disposeSummary=()=>{},disposeDeletion=()=>{};
   function shell(content) { if(!disposed) root.innerHTML=`<section class="screen timeline-screen" aria-labelledby="title">${content}</section>`; }
   function draw() {
     shell(`<h1 id="title" tabindex="-1">${patient ? `${escape(patient.name)}’s health story` : 'Your health story starts here.'}</h1>
@@ -20,13 +21,14 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
       <ol class="timeline-list">${entries.map((entry,index)=>timelineEntry(entry,index,openedEntries.has(entry.id))).join('')}</ol>
       ${error ? `<p class="error" role="alert">${escape(error)}</p><button class="secondary" id="retry-page" type="button">Try again</button>` : ''}
       ${!isDone && !error ? `<button class="secondary" id="load-more" type="button" ${busy?'disabled':''}>${busy?'Loading older updates…':'Load older updates'}</button>` : ''}
-      <button class="text-action timeline-signout" id="signout" type="button">Sign out</button>`);
+      <details class="timeline-account"><summary>Account</summary><button class="text-action timeline-signout" id="signout" type="button">Sign out</button><button class="text-action remove-action account-link" id="delete-account" type="button">Delete account and record</button></details>`);
     root.querySelectorAll('.timeline-disclosure').forEach(details=>details.addEventListener('toggle',()=>{if(details.open)openedEntries.add(details.dataset.entry);else openedEntries.delete(details.dataset.entry);}));
     root.querySelector('#add-update').onclick=()=>onAdd(patient);
     root.querySelector('#period-summary')?.addEventListener('click',()=>{disposeSummary=mountPeriodSummary(root,session,patient,()=>{disposeSummary();loadPage(true);});});
     root.querySelector('#load-more')?.addEventListener('click',()=>loadPage(false));
     root.querySelector('#retry-page')?.addEventListener('click',()=>errorKind==='signout'?signOut():loadPage(!loaded));
     root.querySelector('#signout').onclick=signOut;
+    root.querySelector('#delete-account').onclick=()=>{disposeDeletion=mountAccountDeletion(root,session,patient,()=>{disposeDeletion();draw();root.querySelector('h1').focus();},onDeleted,onDeleting);};
     root.querySelectorAll('[data-change]').forEach(button=>button.onclick=()=>changeUpdate(entries[Number(button.dataset.change)]));
     root.querySelectorAll('[data-delete]').forEach(button=>button.onclick=()=>confirmDelete(entries[Number(button.dataset.delete)]));
   }
@@ -65,6 +67,7 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
       if(first)root.querySelector('h1').focus();
     } catch {
       if(disposed)return;
+      if(session.getAccountState){try{const state=await session.getAccountState();if(disposed)return;if(state==='deleting'){busy=false;disposeDeletion=mountAccountDeletion(root,session,patient,()=>{},onDeleted,onDeleting,true);return;}if(state==='deleted'){await session.signOut();if(!disposed)onDeleted();return;}}catch{}}
       busy=false;error='We couldn’t load the timeline. Your saved notes are still there. Try again.';
       if(loaded)draw();else{shell(`<h1 id="title" tabindex="-1">We couldn’t open your timeline.</h1><p class="error" role="alert">${escape(error)}</p><button class="primary account-start" id="retry-load">Try again</button>`);root.querySelector('#retry-load').onclick=()=>loadPage(true);}
     }
@@ -108,7 +111,7 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
     }
   }
   if(pending)savePending();else loadPage(true);
-  return()=>{disposed=true;disposeSummary();};
+  return()=>{disposed=true;disposeSummary();disposeDeletion();};
 }
 
 function recordedDate(event) {
