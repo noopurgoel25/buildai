@@ -148,3 +148,7 @@ Remove the duplicate visible step count, move setup reassurance beside the headi
 ### 2026-10-09 - Publish V1.1 and setup refinements
 Published Milestones 16-20 together with the approved compact progress, contextual setup and detail-entry changes using npm run deploy. The code remains on milestone-16-fact-labels.
 *Why:* the builder confirmed scenario testing and explicitly requested publishing. Live verification used fictional input and real interpretation, with no login emails or saved records. The builder phone/mobile-data launch check remains separate.
+
+### 2026-10-09 - Complete Milestone 21
+Mark the launch check complete and V1 scope ready to share.
+*Why:* the builder confirmed that all functionality works in production and explicitly requested completion of Milestone 21. This records builder confirmation; no new application changes or deployment are needed.

@@ -1,6 +1,6 @@
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-20 and the approved setup/progress/detail-entry refinements are live; the builder phone launch check (Milestone 21) remains pending.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-20 and the approved setup/progress/detail-entry refinements are live; the builder confirmed production functionality and Milestone 21 is complete.
 
 ## 1. Feeling
 
