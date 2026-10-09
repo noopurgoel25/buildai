@@ -270,3 +270,5 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #24302d; outl
 .journey .hint { margin-top: 16px; }
 .journey-preview { padding: 18px; margin-top: 24px; background: #edf1eb; border-radius: 14px; color: #24302d; }
 .setup:has(.journey) > .back { margin-bottom: 24px; }
+.add-detail-context { margin: 20px 0 24px; }
+.add-detail-context blockquote { white-space: pre-wrap; overflow-wrap: anywhere; }

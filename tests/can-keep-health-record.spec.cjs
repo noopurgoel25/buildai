@@ -196,6 +196,7 @@ test('one confirmation approves all visible facts, preserves explicit negatives 
   await page.getByRole('button',{name:'Today',exact:true}).click();
   await page.getByRole('button',{name:'I’m not sure',exact:true}).click();
   await expect(page.locator('.fact-text')).toHaveText(['BP 142/88 this morning','she did not feel dizzy']);
+  await page.getByRole('button',{name:'Change detail 1'}).click();await expect(page.getByLabel('What happened',{exact:true})).toHaveValue('BP 142/88 this morning');await expect(page.getByLabel('Timing words',{exact:true})).toHaveValue('this morning');await page.getByRole('button',{name:'Cancel editing',exact:true}).click();
   await expect(page.getByRole('button',{name:/Confirm observation/})).toHaveCount(0);
   await expect(page.getByRole('button',{name:'Yes, continue'})).toHaveCount(1);
   await expect(page.getByText('Explicitly absent',{exact:true})).not.toBeVisible();
@@ -257,11 +258,18 @@ test('manual recovery can add an explicitly negative detail and approve the whol
   await page.getByLabel('What happened',{exact:true}).fill('BP 142/88 this morning');
   await page.getByRole('button',{name:'Apply changes'}).click();
   await page.getByRole('button',{name:'Add a detail from your update'}).click();
-  await page.getByLabel('What happened',{exact:true}).fill('she did not feel dizzy');
+  await expect(page.getByRole('heading',{name:'Add a detail',exact:true})).toBeVisible();
+  await expect(page.locator('.add-detail-context blockquote')).toHaveText(multiText);
+  await expect(page.getByLabel('What else would you like to add?',{exact:true})).toHaveValue('');
+  await page.getByRole('button',{name:'Cancel editing',exact:true}).click();await expect(page.locator('.fact-text')).toHaveCount(1);
+  await page.getByRole('button',{name:'Add a detail from your update'}).click();
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/add-detail-context-${width}.png`,fullPage:true});}
+  await page.getByLabel('What else would you like to add?',{exact:true}).fill('she did not feel dizzy');
   await page.getByText('Source and meaning',{exact:true}).click();
   await page.getByLabel('What was explicitly stated?').selectOption('absent');
   await page.getByRole('button',{name:'Apply changes'}).click();
   await expect(page.locator('.fact-text')).toHaveText(['BP 142/88 this morning','she did not feel dizzy']);
+  await page.getByRole('button',{name:'Change detail 1'}).click();await expect(page.getByLabel('What happened',{exact:true})).toHaveValue('BP 142/88 this morning');await expect(page.getByLabel('Timing words',{exact:true})).toHaveValue('Not specified');await page.getByRole('button',{name:'Cancel editing',exact:true}).click();
   await page.getByRole('button',{name:'Yes, continue'}).click();await login(page);
   await expect(page.getByText('Saved to Mira Example’s record.')).toBeVisible();
   expect(mock.state().record.event.observations).toHaveLength(2);
@@ -385,22 +393,25 @@ test('a signed-in empty account sets up a person and saves once without another 
   await expect(page.getByRole('button',{name:'Set up a health record'})).toBeVisible();
   await page.getByRole('button',{name:'Set up a health record'}).click();
   await expect(page.getByRole('link',{name:'Already have a record? Sign in'})).toHaveCount(0);
-  await expect(page.getByText('Step 1 of 3', {exact:false})).toBeVisible();
+  await expect(page.getByRole('navigation',{name:'Update progress'}).locator('[aria-current="step"]')).toHaveText(/Person/);
+  await expect(page.getByText(/Step [0-9] of/)).toHaveCount(0);
+  expect(await page.locator('h1 + p').textContent()).toBe('A name and your relationship are enough to start.');
   for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/first-record-setup-${width}.png`,fullPage:true});}
   await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Mother');
   await page.getByRole('button',{name:'Continue',exact:true}).click();
-  await expect(page.getByText('Step 2 of 3',{exact:false})).toBeVisible();
+  await expect(page.getByRole('navigation',{name:'Update progress'}).locator('[aria-current="step"]')).toHaveText(/Update/);
   for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/first-record-capture-${width}.png`,fullPage:true});}
   await page.getByRole('link',{name:'Back to person details'}).click();await expect(page.getByLabel('Their name')).toHaveValue('Mira Example');
   await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByRole('button',{name:'Type instead'}).click();
-  await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();
-  await expect(page.getByText('Step 3 of 3',{exact:false})).toBeVisible();
+  await expect(page.locator('#capture-draft-note')).toBeHidden();
+  await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await expect(page.locator('#capture-draft-note')).toBeVisible();await expect(page.locator('#capture-draft-note')).toHaveText('Unsaved draft \u00b7 Refreshing clears it');await page.getByRole('button',{name:'Continue with text'}).click();
+  await expect(page.getByRole('navigation',{name:'Update progress'}).locator('[aria-current="step"]')).toHaveText(/Review/);
   for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/first-record-review-${width}.png`,fullPage:true});}
   await page.getByRole('button',{name:'Save update',exact:true}).focus();await expect(page.getByRole('button',{name:'Save update',exact:true})).toBeFocused();await page.keyboard.press('Enter');
   await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(1);expect(mock.state().codeRequests).toBe(1);
-  await page.getByRole('button',{name:'Add update'}).click();await expect(page.getByText('Step 1 of 2',{exact:false})).toBeVisible();
-  await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();await expect(page.getByText('Step 2 of 2',{exact:false})).toBeVisible();
-  await page.getByRole('button',{name:'Return to capture',exact:true}).click();await expect(page.getByText('Step 1 of 2',{exact:false})).toBeVisible();await expect(page.getByLabel('Or type your update')).toHaveValue('Mira Example said she felt tired today.');
+  await page.getByRole('button',{name:'Add update'}).click();await expect(page.getByRole('navigation',{name:'Update progress'}).locator('[aria-current="step"]')).toHaveText(/Update/);
+  await page.getByRole('button',{name:'Type instead'}).click();await page.getByLabel('Or type your update').fill('Mira Example said she felt tired today.');await page.getByRole('button',{name:'Continue with text'}).click();await expect(page.getByRole('navigation',{name:'Update progress'}).locator('[aria-current="step"]')).toHaveText(/Review/);
+  await page.getByRole('button',{name:'Return to capture',exact:true}).click();await expect(page.getByRole('navigation',{name:'Update progress'}).locator('[aria-current="step"]')).toHaveText(/Update/);await expect(page.getByLabel('Or type your update')).toHaveValue('Mira Example said she felt tired today.');
 });
 
 test('back from a failed confirmed save does not silently retry saving when opening the timeline (services mocked)',async({page})=>{

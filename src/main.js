@@ -89,11 +89,11 @@ function render() {
       ${journeyProgress(['Person','Update','Review'],0)}
       <div class="intro">
         <h1 id="title" tabindex="-1">Who are you caring for?</h1>
-        ${session.isAuthenticated ? '<p>No medical profile needed.</p>' : '<p class="hint">For now, each account keeps notes for one person. If you already have a record, sign in to continue their timeline.</p><a class="text-action" href="#signin">Already have a record? Sign in</a><p class="hint">Person, update, then review. An email code is needed to save your first update.</p>'}
+        ${session.isAuthenticated ? '<p>A name and your relationship are enough to start.</p>' : '<p class="hint">For now, each account keeps notes for one person. If you already have a record, sign in to continue their timeline.</p><a class="text-action" href="#signin">Already have a record? Sign in</a><p class="hint">Person, update, then review. An email code is needed to save your first update.</p>'}
         <form id="patient-form" novalidate>
           <div class="field"><label for="patient-name">Their name</label><input id="patient-name" name="name" autocomplete="off" value="${escapeHtml(patient.name)}" aria-describedby="name-error" required><p id="name-error" class="error" hidden></p></div>
           <div class="field"><label for="relationship">Your relationship to them</label><input id="relationship" name="relationship" autocomplete="off" value="${escapeHtml(patient.relationship)}" aria-describedby="relationship-hint relationship-error" required><p id="relationship-hint" class="hint">For example, daughter, son or partner.</p><p id="relationship-error" class="error" hidden></p></div>
-          <p class="reassurance">A name and your relationship are enough to start.</p>
+          <p class="reassurance">${session.isAuthenticated ? 'No medical profile needed.' : 'A name and your relationship are enough to start.'}</p>
           <p class="hint temporary">These details will be saved with your first update. Until then, refreshing this page will clear them.</p>
           <button class="primary" type="submit">Continue</button>
         </form>

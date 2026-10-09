@@ -53,7 +53,7 @@ test('typed update goes through capture validation into interpretation, without 
   expect(calls.map(call => call.endpoint)).toEqual(['/api/capture-text', '/api/interpret']);
   expect(JSON.parse(calls[1].body.toString()).text).toBe(update);
   expect(JSON.parse(calls[1].body.toString()).patient.name).toBe('Mira Example');
-  await expect(page.getByText('Nothing has been saved yet.')).toBeVisible();
+  await expect(page.getByText('This update hasn\u2019t been saved yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Yes, continue' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Save|Log in/i })).toHaveCount(0);
   await page.getByRole('button', { name: 'Return to capture' }).click();
@@ -185,7 +185,7 @@ test('LIVE: typed health update reaches actual Convex and Sarvam interpretation'
   expect(response.status()).toBe(200);
   expect((await response.json()).evidence).toBe('Not specified');
   await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible({ timeout: 90000 });
-  await expect(page.getByText('Nothing has been saved yet.')).toBeVisible();
+  await expect(page.getByText('This update hasn\u2019t been saved yet.')).toBeVisible();
   await page.screenshot({ path: '.impeccable/review/capture-live-text.png', fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -251,7 +251,7 @@ test('LIVE: Sarvam asks about unclear patient/timing, rejects off-topic input, a
       expect(result.question.trim().length).toBeGreaterThan(0);
       expect(result.event).toBe('');
     }
-    await expect(page.getByText(/Nothing has been saved\./)).toBeVisible();
+    await expect(page.getByText(/Your changes haven.+t been saved yet/)).toBeVisible();
     await page.getByRole('button', { name: 'Return to capture' }).click();
   }
 });
@@ -327,7 +327,7 @@ test('empty edits preserve entered timing, and failed AI offers manual editing',
   await expect(page.getByText('Edited by you.')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Does this look right/ })).toBeVisible();
   await page.screenshot({ path: '.impeccable/review/review-manual-mobile.png', fullPage: true });
-  await expect(page.getByText('Nothing has been saved yet.')).toBeVisible();
+  await expect(page.getByText('This update hasn\u2019t been saved yet.')).toBeVisible();
 });
 
 test('clarification requires an answer and retains the original update when interpretation is retried', async ({ page }) => {

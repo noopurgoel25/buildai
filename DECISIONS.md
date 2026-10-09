@@ -140,3 +140,7 @@ Users reach first value before sign-in; email + code only (no password, no phone
 ### 2026-10-09 ? Contextual setup and update progress
 Signed-in empty accounts receive a person-first introduction and no repeated sign-in invitation. Setup, capture and review share a three-step progress indicator; existing-person updates use two steps. Signed-in review saves directly, while signed-out visitors retain first value followed by email-code saving, explained upfront. Back navigation preserves in-page drafts.
 *Why:* after deletion and fresh sign-in, unconditional first-time sign-in messaging sent caregivers back to the empty timeline and obscured who the next update was for. The builder approved screen mockups before implementation.
+
+### 2026-10-09 ? Less repetitive guidance and contextual detail entry
+Remove the duplicate visible step count, move setup reassurance beside the heading, shorten draft guidance and show it after input starts, and scope unsaved messages to the current update or correction. New-detail editing shows the original capture without prefilling a duplicate fact, while existing-detail editing remains populated.
+*Why:* builder phone testing found wasted space, ambiguous messages about previously saved records, and a blank Add form incorrectly presented as Change.

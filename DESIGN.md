@@ -65,7 +65,7 @@ Avoid cheerful celebration, clinical good/bad colour coding, and assumptions abo
 
 - **First use:** Welcome → Setup → Capture → (Timing question) → Review → First value → Email → Code → Timeline
 - **Signed-in first record:** Empty record introduction ? Setup ? Capture ? Review ? Save update ? Timeline; no additional sign-in.
-- **Progress:** Setup/capture/review show Person ? Update ? Review, with the current step and step count. Existing-person updates show Update ? Review. Timing and corrections remain within Review; returning to capture restores Update and preserves text. Saved-update corrections use their existing focused editing screen.
+- **Progress:** Setup/capture/review show Person ? Update ? Review, with the current step marked visually and through aria-current; no duplicate Step X of Y line. Existing-person updates show Update ? Review. Timing and corrections remain within Review; returning to capture restores Update and preserves text. Saved-update corrections use their existing focused editing screen.
 - **Returning:** Open link → (Email → Code if expired) → Timeline → Add update / Summary
 - **Before a visit:** Timeline → Summary → Review & share → Share / Copy
 
@@ -150,3 +150,8 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 ### Signed-in account without a person
 - Headline: **Who are you caring for?** Supporting copy explains name/relationship, then update and review. Quiet Person ? Update ? Review preview; primary **Set up a health record** opens Setup. Account controls remain available.
 - Signed-in review uses **Save update** and saves directly to the current account. The signed-out first-value and email-code journey remain available.
+
+### Draft guidance and detail editing
+- Signed-in Setup places name/relationship reassurance beneath the heading and No medical profile needed beneath the fields.
+- Capture shows a short Unsaved draft / Refreshing clears it notice only after typing or recording starts. Review messages refer to this update or these changes, never the entire health record.
+- Add a detail is titled distinctly, shows the original update as read-only context, and uses What else would you like to add? for the blank new-detail field. Change a detail retains the existing description and timing. Cancelling a new detail leaves the original facts intact.

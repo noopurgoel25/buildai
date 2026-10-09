@@ -30,7 +30,7 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
       ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
       ${details}
       ${draft.interpretation.manual ? `<button class="text-action" id="add-observation" type="button" ${items.length >= 20 ? 'disabled' : ''}>Add a detail from your update</button>` : ''}
-      <div class="flow-actions"><button class="primary" id="confirm-update" type="button" ${!items.length ? 'disabled' : ''}>${draft.savedEdit ? 'Save changes' : (draft.saveDirectly || draft.existingPatient) ? 'Save update' : 'Yes, continue'}</button><p class="hint">${draft.savedEdit ? 'Your saved update stays as it is until you save changes.' : 'Nothing has been saved yet.'}</p><button class="text-action" id="return-capture" type="button">${draft.savedEdit ? 'Cancel changes' : 'Return to capture'}</button></div></div>`;
+      <div class="flow-actions"><button class="primary" id="confirm-update" type="button" ${!items.length ? 'disabled' : ''}>${draft.savedEdit ? 'Save changes' : (draft.saveDirectly || draft.existingPatient) ? 'Save update' : 'Yes, continue'}</button><p class="hint">${draft.savedEdit ? 'Your changes haven&#8217;t been saved yet.' : 'This update hasn&#8217;t been saved yet.'}</p><button class="text-action" id="return-capture" type="button">${draft.savedEdit ? 'Cancel changes' : 'Return to capture'}</button></div></div>`;
     if (first) {
       root.querySelector('#shared-date')?.addEventListener('change', event => { draft.sharedDateForId=first.id; draft.sharedDateSelected=event.target.checked; });
       function setDate(date) {
@@ -56,7 +56,7 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
     root.querySelector('#return-capture').onclick=onReturn;
     root.querySelector('#add-observation')?.addEventListener('click',()=>{
       const item={id:createRecordId(),event:'',when:'Not specified',supportingWords:draft.originalText || draft.text,evidence:'Not specified',polarity:'uncertain',timing:{date:null,time:null,precision:'unknown',resolved:true},confirmed:false,edited:true};
-      items.push(item);draft.confirmed=null;edit(item);
+      items.push(item);draft.confirmed=null;draft.addingObservationId=item.id;edit(item);
     });
   }
   function recordAnswer(item, question, answer) {
@@ -65,8 +65,9 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
   function edit(item) {
     const saved = draft.observationEdit?.id === item.id ? draft.observationEdit : structuredClone(item);
     draft.observationEdit=saved;
-    root.innerHTML = `<div class="capture-result"><h2 tabindex="-1">Change a detail</h2><form novalidate>
-      <label for="observation-text">What happened</label><textarea id="observation-text" maxlength="5000">${escape(saved.event)}</textarea>
+    const adding=draft.addingObservationId===item.id;
+    root.innerHTML = `<div class="capture-result"><h2 tabindex="-1">${adding ? 'Add a detail' : 'Change a detail'}</h2>${adding ? `<div class="add-detail-context"><p class="hint">Your original update</p><blockquote>${escape(draft.originalText || draft.text || item.supportingWords || '')}</blockquote></div>` : ''}<form novalidate>
+      <label for="observation-text">${adding ? 'What else would you like to add?' : 'What happened'}</label><textarea id="observation-text" maxlength="5000">${escape(saved.event)}</textarea>
       <label for="observation-when">Timing words</label><input id="observation-when" maxlength="5000" value="${escape(saved.when)}">
       <label for="observation-date">Event date</label><input id="observation-date" type="date" value="${escape(saved.timing.date || '')}">
       <label for="observation-time">Exact time, if known</label><input id="observation-time" type="time" value="${escape(saved.timing.time || '')}">
@@ -82,14 +83,14 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
       if (!saved.event.trim() || (t.date && !validDate(t.date)) || (t.precision==='exact' && (!t.date || !t.time)) || (t.precision==='date' && !t.date) || (t.precision==='approximate' && !saved.when.trim())) {error='Check the description and timing before applying changes.'; edit(item); return;}
       if(t.precision==='unknown') {t.date=null;t.time=null;} if(t.precision==='date') t.time=null;
       if(item.event!==saved.event){delete saved.symptomName;delete saved.measurement;delete item.symptomName;delete item.measurement;saved.type='pending';}
-      Object.assign(item,saved,{confirmed:false,edited:true}); draft.confirmed=null; draft.observationEdit=null; error=''; draw(); };
+      Object.assign(item,saved,{confirmed:false,edited:true}); draft.confirmed=null; draft.observationEdit=null;delete draft.addingObservationId; error=''; draw(); };
     root.querySelector('#remove-detail').onclick=()=>{
       if(draft.savedEdit && items.length===1){error='Keep one detail here. To remove the whole update, return to the timeline and choose Delete update.';edit(item);return;}
       const removed=structuredClone(item);delete removed.choosingDate;delete removed.dayDraft;
-      (draft.removedObservations ||= []).push(removed);items.splice(items.indexOf(item),1);draft.confirmed=null;draft.observationEdit=null;
+      (draft.removedObservations ||= []).push(removed);items.splice(items.indexOf(item),1);draft.confirmed=null;draft.observationEdit=null;delete draft.addingObservationId;
       if(!items.length){draft.interpretation=null;onReturn();}else{error='';draw();}
     };
-    root.querySelector('#cancel').onclick=()=>{if(!item.event.trim()) items.splice(items.indexOf(item),1);draft.observationEdit=null;error='';draw();};
+    root.querySelector('#cancel').onclick=()=>{if(!item.event.trim()) items.splice(items.indexOf(item),1);draft.observationEdit=null;delete draft.addingObservationId;error='';draw();};
     root.querySelector('h2').focus();
   }
   if (draft.observationEdit) edit(items.find(o => o.id === draft.observationEdit.id)); else draw();

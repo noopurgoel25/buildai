@@ -185,7 +185,7 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
           <button class="primary" type="submit">Apply changes</button>
           <button class="secondary" id="cancel-edit" type="button">Cancel editing</button>
         </form>
-        <p class="hint">These changes stay in this open page. Nothing has been saved.</p>
+        <p class="hint">Your changes haven&#8217;t been saved yet.</p>
       </div>`;
       root.querySelector('#event-description').oninput = event => { editDraft.event = event.target.value; };
       root.querySelector('#event-time').oninput = event => { editDraft.when = event.target.value; };
@@ -212,7 +212,7 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
         <h2 tabindex="-1">${result.status === 'ready' ? 'Does this look right?' : 'A little more detail'}</h2>
         ${result.status === 'ready' ? `<div class="review-surface">${updateFacts(result)}</div>` : `<p>${escape(result.question || result.message)}</p>`}
         ${recordDetails({...draft,...result})}
-        <p class="hint">Nothing has been saved yet.</p>
+        <p class="hint">This update hasn&#8217;t been saved yet.</p>
         ${result.status === 'ready' ? `<button class="primary" id="confirm" type="button">${draft.saveDirectly ? 'Save update' : 'Yes, continue'}</button><button class="secondary" id="edit" type="button">Change</button>` : result.status === 'clarification' ? `<form id="clarify" novalidate><label for="clarification-answer">Your answer</label><textarea id="clarification-answer" rows="2" maxlength="1000">${escape(draft.clarificationAnswer || '')}</textarea>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}<button class="primary" type="submit">Update interpretation</button></form>` : ''}
         <button class="secondary" id="revise" type="button">Return to capture</button>
       </div>`;
@@ -248,7 +248,7 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
         <textarea id="health-update" rows="4" maxlength="5000" ${busy || recording || permission ? 'disabled' : ''} aria-describedby="capture-draft-note">${escape(draft.text)}</textarea>
         <button class="primary" type="submit" ${busy || recording || permission ? 'disabled' : ''}>Continue with text</button>
       </form>
-      <p id="capture-draft-note" class="hint">Your update stays in this open page. Refreshing clears it. Nothing is saved yet.</p>
+      <p id="capture-draft-note" class="hint" ${draft.text.trim() || draft.audio || recording ? '' : 'hidden'}>Unsaved draft &middot; Refreshing clears it</p>
     </div>`;
     root.querySelector('#voice').onclick = () => {
       if (recording) {
@@ -258,7 +258,7 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
     };
     root.querySelector('#switch-text')?.addEventListener('click', () => { cancelRecording(); state = 'idle'; draft.textMode=true; error = ''; draw(); root.querySelector('textarea').focus(); });
     root.querySelector('#type-instead')?.addEventListener('click',()=>{draft.textMode=true;draw();root.querySelector('textarea').focus();});
-    root.querySelector('textarea').oninput = (event) => { draft.text = event.target.value; retryStep = ''; };
+    root.querySelector('textarea').oninput = (event) => { draft.text = event.target.value; retryStep = ''; root.querySelector('#capture-draft-note').hidden=!draft.text.trim() && !draft.audio; };
     root.querySelector('form').onsubmit = submitText;
     root.querySelector('#retry')?.addEventListener('click', () => {
       error = '';
