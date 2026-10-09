@@ -2,7 +2,7 @@
 
 **CareNama** — a calm place to leave health notes about someone you care for, so you can tell the doctor what actually happened since the last visit.
 
-Status: V1 and V1.1 Milestones 16-20 are live, including contextual setup, compact progress and detail-entry refinements. The builder confirmed production functionality and Milestone 21 is complete; V1 scope is complete and ready to share (see PLAN.md). Later versions: ROADMAP.md. Reasons behind rules: DECISIONS.md.
+Status: V1 and V1.1 are live; Milestone 21 is complete. V1.2 caregiver-feedback improvements are approved and Milestone 22 is being built, not yet published. One person per account remains the release scope; family switching stays V2. Active work: PLAN.md. Future versions: ROADMAP.md. Reasons: DECISIONS.md.
 
 ---
 

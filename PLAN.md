@@ -1,10 +1,29 @@
 # PLAN.md
 
-Current version: **V1.1 — complete V1 scope.** Milestones 1–15 are live (see PROGRESS.md). Work one milestone at a time, in order; each needs scope confirmation before code and builder confirmation before publishing (AGENTS.md).
+Current version: **V1.2 - caregiver feedback improvements.** V1/V1.1 Milestones 1-21 are complete and live. Each milestone needs builder testing before publishing.
 
-Current work: **Milestones 1-21 are complete; V1 and V1.1 are live and ready to share.** The builder confirmed that all functionality works in production and requested completion of Milestone 21. No further milestone is scheduled in this version; future scope lives in ROADMAP.md.
+Current work: **Milestone 22 - identity and shared navigation is built and checked, awaiting builder review; not published.** Scope, sequence and designs are approved. The initial photo was rejected; the builder chose an original daughter-and-father caricature, prepared for Milestone 23. Work on Milestone 23 starts after Milestone 22 is confirmed.
 
-## V1.1 milestones
+## V1.2 - caregiver feedback improvements
+
+**Approved scope; implementation is one milestone at a time.** Keep one person per account in this release, as confirmed by the builder. Family switching remains V2. Candidate screen designs and interaction rules: [Desert Dusk proposal](design/desert-dusk-proposal.md).
+
+Scope: Desert Dusk identity and original Indian daughter-and-father editorial caricature; clearer Welcome and embedded onboarding guidance; common menu and visual back navigation; visible person context; DD/MM/YYYY throughout; compact editing and record details; context-aware, source-grounded interpretation with related facts shown together; useful Summary category highlights and notable symptoms; unchanged 1,500-character Summary/share limits and deeper full measurements. Preserve all existing live records, including those entered during testing.
+
+| Milestone | End-to-end outcome |
+|---|---|
+| 22 - Identity and shared navigation | New logo/palette, header, accessible menu/back controls and person context across existing journeys; fewer repeated account links; drafts preserved |
+| 23 - Welcome and onboarding | Original Indian family caricature, clear input examples and Say / Check / Keep guidance; correct first-time, signed-in empty and returning flows, without extra sign-in or compulsory tour screens |
+| 24 - Timing and context integrity | Consistent DD/MM/YYYY display/input and local capture time; today resolved automatically; separate date/time certainty; context-aware presence and classification, including heartburn; safe optional grouping with fictional regression cases |
+| 25 - Compact connected records | Related observations retain individual dates inside one update; shorter populated editor and on-demand provenance; understandable review, timeline and detail screens |
+| 26 - Useful Summary and sharing | Notable symptoms and category highlights visible, supported patterns distinct from one-off facts; meaningful share text, 1,500-character server limit and full details one click deeper |
+| 27 - Release checks | Existing and new journeys pass simulated-provider tests and responsive/accessibility checks; caregiver phone review, then authorised deploy and live check |
+
+Build and confirm one milestone at a time. Grouping presentation for same-capture related observations is pulled forward from V2; broader family/cross-record linking is not included. Versioned interpretation checks required for this work are pulled forward only as needed; do not expand into a general AI platform. Existing-label correction requires a concrete migration scope and recoverable backup, never silent rewriting of recorded facts.
+
+Out of this release: multiple family members, second caregivers, languages, reminders, PDF export, a separate doctor-brief destination, clinical diagnosis/causation or automatic learning from real health notes. The rest of the roadmap remains unchanged.
+
+## Completed V1.1 milestones
 
 | # | Milestone | Done when |
 |---|---|---|

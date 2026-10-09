@@ -1,6 +1,6 @@
 # CareNama: Desert Dusk design proposal
 
-**Proposed, awaiting scope, plan and visual approval.** This document describes the candidate design, not current product behaviour. Proposed release scope and sequence are in ROADMAP.md. Current PRODUCT.md, DESIGN.md and ARCHITECTURE.md remain authoritative until approval.
+**Approved design direction; implementation proceeds one milestone at a time.** The user approved the scope, sequence and screens, rejected the initial photograph and chose an original daughter-and-father caricature. This is the visual review reference, not a claim that every screen is implemented. Active milestones live in PLAN.md; current product rules remain in the owning product, design and architecture documents.
 
 ## Findings
 
@@ -12,7 +12,7 @@ The heartburn classified as daily wellbeing in the screenshot needs a fictional 
 
 ## Visual world
 
-Warm support, clear reading and quiet confidence. The **held-light** logo is a small rising light held by two curved forms: simple geometry, not a character. Use real Indian family photography on Welcome, consistent SVG icons elsewhere, and restrained supportive motifs. No health scores, streaks or clinical good/bad colours.
+Warm support, clear reading and quiet confidence. The **held-light** logo is a small rising light held by two curved forms: simple geometry, not a character. Use original Indian family editorial caricature on Welcome, consistent SVG icons elsewhere, and restrained supportive motifs. No health scores, streaks or clinical good/bad colours.
 
 | Role | Colour | Usage |
 |---|---|---|
@@ -25,13 +25,13 @@ Warm support, clear reading and quiet confidence. The **held-light** logo is a s
 
 Orange and rose do not support small white text. Keep the app's self-hosted Inter, clear heading scale and readable body text. Category colour never communicates severity.
 
-The photographic proposal uses [Michael Takahashi's South Indian mother-and-daughter portrait](https://www.pexels.com/photo/traditional-south-indian-mother-and-daughter-portrait-34610185/) under the [Pexels licence](https://www.pexels.com/license/). It demonstrates direction, not a customer testimonial or patient portrait. Never attach health examples to the photographed subjects; record avatars remain initials. Optimise a locally hosted licensed image during implementation.
+The approved emotional reference is [the daughter embracing her mature father](https://www.istockphoto.com/photo/young-daughter-embracing-her-mature-father-stock-photo-gm1308614549-398542974). The user has no licensed download and chose an original caricature. Generated artwork uses fictional Indian adults and a warm painted treatment, without copying the stock subjects. Patient avatars remain initials; no health note or testimonial is attributed to the illustrated people. Style authority: design/style-anchor.md. The rejected Pexels photograph is excluded.
 
 ## Screen specification
 
 | Screen | Proposed experience |
 |---|---|
-| Welcome | Explain the job; actual family photograph; examples of what to record; Say / Check / Keep orientation; one Start a health note action and visible returning Sign in. No compulsory tour. |
+| Welcome | Explain the job; original family caricature; examples of what to record; Say / Check / Keep orientation; one Start a health note action and visible returning Sign in. No compulsory tour. |
 | Person setup | Name and relationship only; approved Person / Update / Review tracker; Continue to your update explains the next step. Signed-in empty accounts never sign in again. |
 | Capture | Person visible; voice and text immediately available; first-use examples for symptoms, readings and everyday changes. No category selection. Explicit recording, stop and processing states; Review available after input. Short draft warning only after input starts. |
 | Review | One capture container, related details together, individual dates retained. Source-grounded sequence, never invented causation. One Change action, primary Save, quiet Add something else. Signed-out saving explains verification; signed-in saving is direct. |

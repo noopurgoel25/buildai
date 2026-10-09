@@ -10,6 +10,8 @@ import { savedObservationDetails } from './observation-display.js';
 import { createRecordId } from './record-id.js';
 import { mountPrivacy } from './privacy.js';
 import { configureAnalytics,resetAnalytics,track } from './analytics.js';
+import { mountNavigation } from './navigation.js';
+import { mountAccountDeletion } from './account-deletion.js';
 
 const app = document.querySelector('#app');
 // Unsaved capture details stay only in this open page.
@@ -19,6 +21,7 @@ let disposeCapture = () => {};
 let disposeAccount = () => {};
 let session = { isLoading: true, isAuthenticated: false };
 let authResolved = false,accountDeleting=false,accountDeleted=false;
+let privacyReturn = null, deletionReturn = '#record';
 // A non-sensitive routing hint, never identity or authorization.
 function returningRecord(){try{return localStorage.getItem('carenama.returning')==='1';}catch{return false;}}
 function rememberRecord(){try{localStorage.setItem('carenama.returning','1');}catch{}}
@@ -29,7 +32,11 @@ function render() {
   disposeCapture();
   disposeAccount();
   if(!authResolved){app.innerHTML='<section class="screen"><h1>Opening CareNama</h1><p role="status">Checking your sign-in.</p></section>';return;}
-  if(location.hash==='#privacy'){disposeAccount=mountPrivacy(app,session,()=>{location.hash=session.isAuthenticated?'#record':'#';});return;}
+  if(location.hash==='#privacy'){disposeAccount=mountPrivacy(app,session,()=>{location.hash=privacyReturn || (session.isAuthenticated?'#record':'#');},privacyReturn==='#capture'?'Back to your update':undefined);return;}
+  if(location.hash==='#delete-account'){
+    if(!session.isAuthenticated){location.replace('#signin');return;}
+    disposeAccount=mountAccountDeletion(app,session,null,()=>{location.hash=deletionReturn;},()=>{accountDeleting=false;accountDeleted=true;clearDraft();session={...session,isAuthenticated:false};try{localStorage.removeItem('carenama.returning');}catch{}location.hash='#';render();},busy=>{accountDeleting=busy;});return;
+  }
   if (location.hash === '#signin') {
     if (session.isAuthenticated) { location.replace('#record'); return; }
     disposeAccount = mountSignIn(app, loginDraft, session, Boolean(captureDraft.confirmed));
@@ -106,7 +113,7 @@ function render() {
       </div>
       <div class="folded-note" aria-hidden="true"><span class="note-fold"></span><span class="note-stroke"></span><span class="note-stroke short"></span><span class="note-stroke last"></span></div>
       <a class="primary" href="#patient-setup">Get started</a>
-      <a class="returning-signin" href="#signin">Already started? Sign in</a><a class="text-action privacy-link" href="#privacy">Privacy &amp; your choices</a>
+      <a class="returning-signin" href="#signin">Already started? Sign in</a>
     </section>`;
   if (setup || capture || firstValue) document.querySelector('h1').focus();
   if(capture) captureDraft.saveDirectly=session.isAuthenticated;
@@ -168,6 +175,16 @@ function render() {
 }
 
 window.addEventListener('hashchange', render);
+function canLeaveScreen() { return app.dispatchEvent(new CustomEvent('carenama:before-navigate',{cancelable:true})); }
+mountNavigation(app, {
+  getSession:()=>session,
+  isLocked:()=>!authResolved || accountDeleting,
+  isRecording:()=>app.querySelector('#voice')?.textContent === 'Stop recording',
+  onPrivacy:()=>{if(!canLeaveScreen())return;privacyReturn=location.hash || '#';location.hash='#privacy';},
+  onDelete:()=>{if(!canLeaveScreen())return;deletionReturn=location.hash || '#record';location.hash='#delete-account';},
+  onTimeline:()=>{if(!canLeaveScreen())return false;if(location.hash==='#record'){app.dispatchEvent(new CustomEvent('carenama:open-timeline'));return true;}if(location.hash==='#capture' && captureDraft.text && !captureDraft.persisted && !confirm('Leave this unsaved update and return to the timeline? Adding another update will replace this draft.'))return false;location.hash='#record';return true;},
+  onSignOut:async()=>{if(!canLeaveScreen())return false;if((captureDraft.text || captureDraft.audio || captureDraft.confirmed) && !captureDraft.persisted && !confirm('Sign out and discard your unsaved update?'))return false;await session.signOut();return true;},
+});
 render();
 function clearDraft() {
   patient.name = ''; patient.relationship = '';

@@ -1,6 +1,73 @@
+---
+name: CareNama
+description: Warm, grounded notes for someone you care for.
+colors:
+  paper: "#FFF9F5"
+  ink: "#352A2B"
+  terracotta: "#A2574F"
+  terracotta-hover: "#874840"
+  terracotta-active: "#743C35"
+  plum: "#993A8B"
+  orange: "#E68057"
+  support-surface: "#F4DBD0"
+  rose-surface: "#F3DCE4"
+  soft-surface: "#F3E7DE"
+  surface: "#FFFFFF"
+  secondary-text: "#6F5B5B"
+  field-border: "#B6A298"
+  divider: "#EADAD0"
+  icon-warm: "#F6E7DC"
+  icon-orange: "#F9E0C9"
+  icon-plum: "#743968"
+  error: "#B54747"
+typography:
+  headline:
+    fontFamily: "Inter, sans-serif"
+    fontSize: "32px"
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: "-0.025em"
+  body:
+    fontFamily: "Inter, sans-serif"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.65
+  metadata:
+    fontFamily: "Inter, sans-serif"
+    fontSize: "13px"
+    lineHeight: 1.5
+rounded:
+  field: "12px"
+  action: "14px"
+  dialog: "16px"
+  circle: "50%"
+spacing:
+  compact: "8px"
+  control: "12px"
+  surface: "16px"
+  section: "24px"
+  generous: "32px"
+components:
+  button-primary:
+    backgroundColor: "{colors.terracotta}"
+    textColor: "{colors.surface}"
+    rounded: "{rounded.action}"
+    height: "56px"
+  button-primary-hover:
+    backgroundColor: "{colors.terracotta-hover}"
+  button-primary-active:
+    backgroundColor: "{colors.terracotta-active}"
+  navigation-icon:
+    backgroundColor: "{colors.soft-surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.circle}"
+    size: "44px"
+    padding: "11px"
+---
+
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-20 and the approved setup/progress/detail-entry refinements are live; the builder confirmed production functionality and Milestone 21 is complete.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 1-21 are live. Milestone 22 identity and shared navigation are implemented locally and await builder confirmation; they have not been deployed. The approved [Desert Dusk proposal](design/desert-dusk-proposal.md) is a future screen-review reference, not a description of implemented Milestones 23-26.
 
 ## 1. Feeling
 
@@ -22,31 +89,45 @@ Avoid cheerful celebration, clinical good/bad colour coding, and assumptions abo
 
 ## 3. Visual system
 
-**Identity:** CareNama wordmark and folded-note geometry on every primary screen.
+**Creative North Star: Desert Dusk.** Calm reassurance, warm trust and quiet intelligence: a grounded, supportive place to remember, with matte paper surfaces and restrained accents.
 
-**Type:** Inter — 32 px screen headline · 22 px section/person/summary heading · 16 px body, inputs, buttons · 13 px metadata.
+**Identity:** CareNama wordmark with the held-light geometric SVG: an orange circle held by two terracotta arcs. The common header carries the identity on every primary screen; logo and interface icons remain simple SVG geometry.
+
+**Type:** self-hosted Inter 400/600, deliberately retained. Screen headline 32 px / 1.2, section and summary headings 22 px, compact person heading 18 px, body/inputs/buttons 16 px, metadata 13 px. Small-screen Welcome retains its existing 34 px headline override. Do not introduce an external font request.
 
 **Colour**
 
 | Role | Value |
 |---|---|
-| Text / background | #24302D on #F8F7F3 |
-| Surface / secondary surface | #FFFFFF / #F1F0EA |
-| Accent (main action, selected states only) | #2F7D72 |
-| Error | #B54747 |
-| Secondary text | #68736F (avoid at 13 px on the secondary surface: below AA contrast) |
+| Text / background | #352A2B on #FFF9F5 |
+| Surface / quiet secondary surface | #FFFFFF / #F3E7DE |
+| Main action / hover / pressed | #A2574F / #874840 / #743C35 |
+| Current journey step and keyboard focus | #993A8B |
+| Logo light | #E68057 |
+| Warm support / person context | #F4DBD0 / #F3DCE4 |
+| Secondary text / field border / divider | #6F5B5B / #B6A298 / #EADAD0 |
+| Error / destructive menu action | #B54747 / #993E3B |
+
+Rose and orange are supporting identity colours, never a health assessment. The illustration anchor also includes rose #BF7587; it is an asset-direction colour, not an implemented UI token.
 
 **Fact-type icons (decorative only, never severity)**
 
-| Type | Icon |
+| Type | Icon and palette |
 |---|---|
-| Symptom, other | Muted sage note |
-| Measurement | Lavender |
-| Medication change, doctor visit | Warm sand (care) |
-| Daily wellbeing, appetite | Muted blue moon |
-| Mixed update (timeline) | Neutral note |
+| Symptom, other, mixed update | Neutral note, terracotta #874840 on warm #F6E7DC |
+| Measurement | Measurement icon, muted plum #743968 on rose #F3DCE4 |
+| Medication change, doctor visit | Care icon, terracotta #874840 on orange-tinted #F9E0C9 |
+| Daily wellbeing, appetite | Moon, muted plum #743968 on rose #F3DCE4 |
 
-**Layout:** phone first; works at 320 px with no horizontal scroll; tap targets ≥ 44 px; visible keyboard focus; low visual density.
+**Layout:** phone first; content column at most 480 px, shared header at most 520 px. Standard screen gutters 28 px, narrowed to 20 px at 360 px and below; retained timeline/summary overrides use 18 px below 350 px. Shared screen top padding is 16 px. Check 320, 390, 768 and 1440 px with no horizontal scroll, targets at least 44 px and visible keyboard focus.
+
+**Surfaces and states:** controls use 12 px corners, primary buttons 14 px, the menu dialog 16 px. Tonal surfaces convey most depth; only the menu uses the structural shadow `0 12px 40px #352a2b33` with backdrop `#352a2b55`. Action colour transitions take 160 ms ease-out; respect reduced motion. Keyboard focus uses a 3 px plum outline with space around the control.
+
+**Illustration medium:** original Indian daughter-and-father editorial caricature, softly painted 2D, mature proportions, matte texture and diffuse late-afternoon light. No photography mixed into the interface, childish proportions, medical equipment, glossy 3D or helpless patient framing. See [style anchor](design/style-anchor.md). The prepared `public/images/welcome-family-caricature.png` belongs to Milestone 23 and is not on the current Welcome screen.
+
+**Shared navigation:** one header menu opens a native modal dialog without unmounting the current screen, so text, review, correction and sharing drafts remain in place. Signed-out users see Sign in; signed-in users see Your timeline and account actions. Support contains What can I record? and Privacy & your choices. Menu help is optional, not an extra onboarding screen. Closing returns focus to the menu button. Recording blocks departures and asks the caregiver to finish recording; draft-discard and in-progress action guards apply when actually leaving.
+
+**Back and person context:** existing back actions become 44 px circular arrow controls while retaining their original accessible labels and destinations. The compact rose context surface shows the current person's name and relationship where the existing journey uses it; it does not add family switching. Repeated footer privacy/account controls are replaced by the shared menu.
 
 ## 4. Principles
 
@@ -76,7 +157,7 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 ### Welcome
 - Headline: **"A place for the details you want to remember."**
 - Supporting line: **"Health notes for someone you care for, in your own words."**
-- Subtle folded-note visual. Button: **Get started** → Setup.
+- Existing subtle note/timeline visual (the new family illustration is Milestone 23). Button: **Get started** → Setup.
 - Never lead with "AI", "tracking", "health records", "medical data" or "Family Health OS". Lead with the outcome: not having to remember everything alone.
 
 ### Setup
@@ -116,10 +197,10 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 - Same-person check (pre-sign-in update vs existing record, name + relationship match): **"Is this update for [Name]?"** showing existing name/relationship and the prepared facts — **Yes, save to this record** / **No, back to my update**. Failed check/save keeps the update. Mismatch: explain one person per account, offer **Open existing timeline** and **Back to your update** (no futile retry).
 
 ### Timeline
-- Heading with person's name. Primary: **Add update**. Secondary: **Summary**. Account menu: **Sign out**, **Privacy**, **Delete account and record [V1.1]**.
+- Heading with person's name. Primary: **Add update**. Secondary: **Summary**. Shared header menu: **Your timeline**, support/help, **Privacy & your choices**, **Sign out**, **Delete account and record [V1.1]**.
 - Connected vertical rail, newest **Recorded** first (the date label is "Recorded" so it's never mistaken for symptom timing).
 - Collapsed note: recorded date, first fact (max two lines), its timing, "+N details" when several.
-- Note icon: **[V1.1]** taken from the stored labels (§3 icon table). One label → that icon (so appetite and wellbeing notes show the blue moon here too); several labels or a pending label → neutral note icon.
+- Note icon: **[V1.1]** taken from the stored labels (§3 icon table). One label → that icon (so appetite and wellbeing notes use the warm plum moon here too); several labels or a pending label → neutral note icon.
 - **View update** opens all facts, timing and evidence; original words and clarifications are optional disclosures. **Change update** inside; **Delete update** separated below, with confirmation naming the person and saying it can't be undone.
 - Change: whole-update review; **Save changes** / **Cancel changes**. **[V1.1]** A wrong label is fixed by correcting the fact's words; facts whose words changed are relabelled on save. No label dropdown or extra fields. The screen looks exactly as today. A note changed elsewhere must be reopened, not overwritten. Failed save keeps the draft; failed delete keeps the note. Opened notes stay open after cancelling.
 - Older notes load in pages; a failed page keeps what's shown. Loading: skeleton. Broken: "We couldn't load the timeline. Try again." Empty: explain nothing is saved yet, with Add update.
@@ -144,7 +225,7 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 - Once verified, deletion cannot be cancelled. If interrupted, **Finish deleting my account** resumes cleanup. Completion clears the current device sign-in and returning-record hint, then opens Welcome with a short confirmation; signing in again starts with an empty record.
 
 ### Privacy [V1.1]
-- Welcome and the timeline Account menu link to Privacy. A dedicated reading page uses the existing calm colours and type, with clear headings and a keyboard-accessible Usage tracking switch. It explains account-wide choices after sign-in and browser choices before sign-in, failures preserve the previous choice, and reopening stays on Privacy.
+- The common header menu links to Privacy from every journey. A dedicated reading page uses the existing calm colours and type, with clear headings and a keyboard-accessible Usage tracking switch. It explains account-wide choices after sign-in and browser choices before sign-in, failures preserve the previous choice, and reopening stays on Privacy.
 - Plain-language page: what is stored (Convex), who processes it (Sarvam for AI, Resend for sign-in and account-deletion codes, Mixpanel analytics in the EU without health content), deletion, and an **analytics on/off** switch (on by default). Turning it off stops new events without changing health-record features; previously sent events are not removed by the switch. Profile deletion and shared copies are explained separately.
 
 ### Signed-in account without a person

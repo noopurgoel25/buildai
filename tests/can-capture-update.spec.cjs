@@ -22,6 +22,17 @@ async function openCapture(page) {
   await expect(page.getByText('Voice and text capture are coming next.')).toHaveCount(0);
 }
 
+test('opening the common menu keeps recording active and prevents leaving before stop',async({page})=>{
+ const calls=await mockCapture(page);await openCapture(page);
+ await page.getByRole('button',{name:'Speak an update',exact:true}).click();await expect(page.getByRole('button',{name:'Stop recording',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Open menu',exact:true}).click();
+ await expect(page.getByText('Finish your recording before leaving this screen.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('link',{name:'Privacy & your choices',exact:true})).toHaveAttribute('aria-disabled','true');
+ await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'Stop recording',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Stop recording',exact:true}).click();
+ await expect.poll(()=>calls.length).toBeGreaterThan(0);
+});
+
 async function mockCapture(page, { transcriptionFailure = false, interpretationFailure = false } = {}) {
   const calls = [];
   await page.route('**/api/**', async route => {

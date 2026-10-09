@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-09T20:29:31.775741+00:00",
+  "title": "Design System: CareNama",
+  "extensions": {
+    "colorMeta": {
+      "terracotta": {
+        "role": "primary",
+        "displayName": "Desert terracotta"
+      },
+      "plum": {
+        "role": "secondary",
+        "displayName": "Dusk plum"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Warm paper"
+      }
+    },
+    "shadows": [
+      {
+        "name": "menu-dialog",
+        "value": "0 12px 40px #352a2b33",
+        "purpose": "Structural elevation for the common modal menu."
+      }
+    ],
+    "motion": [
+      {
+        "name": "action-colour",
+        "value": "background-color 160ms ease-out, color 160ms ease-out",
+        "purpose": "Primary, secondary and text actions; disabled under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "shared-small",
+        "value": "360px"
+      },
+      {
+        "name": "timeline-summary-small",
+        "value": "350px"
+      },
+      {
+        "name": "retained-wide",
+        "value": "700px"
+      }
+    ],
+    "focus": {
+      "value": "3px solid var(--plum)",
+      "offset": "5px",
+      "purpose": "Visible keyboard focus; sharing textarea retains its 3px offset."
+    },
+    "backdrop": {
+      "value": "#352a2b55",
+      "purpose": "Native menu dialog backdrop."
+    }
+  },
+  "components": [
+    {
+      "name": "Menu/back control",
+      "kind": "nav",
+      "refersTo": "navigation-icon",
+      "description": "44px circular control with an accessible action label.",
+      "html": "<button class=\"ds-navigation\" aria-label=\"Back to your record\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m14 5-7 7 7 7M7 12h14\"/></svg></button>",
+      "css": ".ds-navigation{width:44px;height:44px;border:0;border-radius:50%;padding:11px;background:#f3e7de;color:var(--ink);display:grid;place-items:center;cursor:pointer}.ds-navigation svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.ds-navigation:hover{background:#eadad0}.ds-navigation:focus-visible{outline:3px solid var(--plum);outline-offset:5px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Desert Dusk",
+    "overview": "Warm, grounded and reassuring. Held-light geometry, paper surfaces and restrained terracotta actions support the existing caregiver journey. Milestone 22 is implemented locally for builder review, not yet deployed. Later screen proposals remain future work.",
+    "keyCharacteristics": [
+      "Calm reassurance",
+      "Warm trust",
+      "Quiet intelligence",
+      "Evidence clarity",
+      "Phone-first capture"
+    ],
+    "rules": [
+      {
+        "name": "Colour is not a verdict",
+        "body": "Palette and fact icons never encode health as good or bad.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do retain self-hosted Inter 400/600.",
+      "Do preserve accessible back labels, focus and drafts.",
+      "Do preserve the 1,500-character Summary/share limit and complete details one click deeper."
+    ],
+    "donts": [
+      "Don't present the prepared family illustration or later screen proposals as implemented.",
+      "Don't introduce clinical verdict colours, compulsory tours or family switching.",
+      "Don't rewrite existing live facts."
+    ]
+  }
+}

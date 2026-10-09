@@ -10,8 +10,14 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
   let confirmedMatch=null, savingPending=false;
   const openedEntries=new Set();
   let disposeSummary=()=>{},disposeDeletion=()=>{};
+  let correctionOpen=false;
+  const beforeNavigate=event=>{if(correctionOpen && !window.confirm('Leave these unsaved changes? Your saved update will stay unchanged.'))event.preventDefault();};
+  const openTimeline=()=>{if(disposed)return;disposeSummary();draw();root.querySelector('h1').focus();};
+  root.addEventListener('carenama:before-navigate',beforeNavigate);
+  root.addEventListener('carenama:open-timeline',openTimeline);
   function shell(content) { if(!disposed) root.innerHTML=`<section class="screen timeline-screen" aria-labelledby="title">${content}</section>`; }
   function draw() {
+    correctionOpen=false;
     shell(`<h1 id="title" tabindex="-1">${patient ? `${escape(patient.name)}’s health story` : 'Who are you caring for?'}</h1>
       ${patient ? `<p>${escape(patient.relationship)}</p>` : '<p>Start with their name and your relationship. Then add a health update and check it before saving.</p><p class="journey-preview">Person &rarr; Update &rarr; Review</p>'}
       ${saved ? `<p class="saved-message" role="status">Saved to ${escape(patient.name)}’s record.</p>` : ''}
@@ -22,18 +28,17 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
       <ol class="timeline-list">${entries.map((entry,index)=>timelineEntry(entry,index,openedEntries.has(entry.id))).join('')}</ol>
       ${error ? `<p class="error" role="alert">${escape(error)}</p><button class="secondary" id="retry-page" type="button">Try again</button>` : ''}
       ${!isDone && !error ? `<button class="secondary" id="load-more" type="button" ${busy?'disabled':''}>${busy?'Loading older updates…':'Load older updates'}</button>` : ''}
-      <details class="timeline-account"><summary>Account</summary><button class="text-action timeline-signout" id="signout" type="button">Sign out</button><a class="text-action account-link" href="#privacy">Privacy &amp; your choices</a><button class="text-action remove-action account-link" id="delete-account" type="button">Delete account and record</button></details>`);
+      `);
     root.querySelectorAll('.timeline-disclosure').forEach(details=>details.addEventListener('toggle',()=>{if(details.open)openedEntries.add(details.dataset.entry);else openedEntries.delete(details.dataset.entry);}));
     root.querySelector('#add-update').onclick=()=>onAdd(patient);
     root.querySelector('#period-summary')?.addEventListener('click',()=>{disposeSummary=mountPeriodSummary(root,session,patient,()=>{disposeSummary();loadPage(true);});});
     root.querySelector('#load-more')?.addEventListener('click',()=>loadPage(false));
     root.querySelector('#retry-page')?.addEventListener('click',()=>errorKind==='signout'?signOut():loadPage(!loaded));
-    root.querySelector('#signout').onclick=signOut;
-    root.querySelector('#delete-account').onclick=()=>{disposeDeletion=mountAccountDeletion(root,session,patient,()=>{disposeDeletion();draw();root.querySelector('h1').focus();},onDeleted,onDeleting);};
     root.querySelectorAll('[data-change]').forEach(button=>button.onclick=()=>changeUpdate(entries[Number(button.dataset.change)]));
     root.querySelectorAll('[data-delete]').forEach(button=>button.onclick=()=>confirmDelete(entries[Number(button.dataset.delete)]));
   }
   function changeUpdate(entry) {
+    correctionOpen=true;
     const base=structuredClone(entry.details);let changeId=createRecordId();
     const observations=base.observations ?? [{id:'legacy',event:base.event,when:base.when,supportingWords:base.originalText,evidence:base.evidence,polarity:'uncertain',timing:{date:null,time:null,precision:'approximate',resolved:true},confirmed:true,edited:false}];
     const draft={...base,savedEdit:true,interpretation:{observations},removedObservations:base.removedObservations || []};
@@ -113,7 +118,7 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
     }
   }
   if(pending)savePending();else loadPage(true);
-  return()=>{disposed=true;disposeSummary();disposeDeletion();};
+  return()=>{disposed=true;disposeSummary();disposeDeletion();root.removeEventListener('carenama:before-navigate',beforeNavigate);root.removeEventListener('carenama:open-timeline',openTimeline);};
 }
 
 function recordedDate(event) {

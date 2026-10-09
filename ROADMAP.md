@@ -2,24 +2,9 @@
 
 Everything beyond V1. **V2 is the next to be defined in detail; V3–V5 are tentative** and will be revisited using V1 tracking data and caregiver feedback. Every version extends the same Family → Person → Record → Timeline model; none becomes a separate product.
 
-## Proposed V1.2 - caregiver feedback improvements
+## V1.2 - caregiver feedback improvements
 
-**Awaiting scope, plan and design approval; not scheduled implementation.** Keep one person per account in this release, as confirmed by the builder. Family switching remains V2. Candidate screen designs and interaction rules: [Desert Dusk proposal](design/desert-dusk-proposal.md).
-
-Scope: Desert Dusk identity and actual Indian family photography; clearer Welcome and embedded onboarding guidance; common menu and visual back navigation; visible person context; DD/MM/YYYY throughout; compact editing and record details; context-aware, source-grounded interpretation with related facts shown together; useful Summary category highlights and notable symptoms; unchanged 1,500-character Summary/share limits and deeper full measurements. Preserve all existing live records, including those entered during testing.
-
-| Proposed milestone | End-to-end outcome |
-|---|---|
-| 22 - Identity and shared navigation | New logo/palette, header, accessible menu/back controls and person context across existing journeys; fewer repeated account links; drafts preserved |
-| 23 - Welcome and onboarding | Real family imagery, clear input examples and Say / Check / Keep guidance; correct first-time, signed-in empty and returning flows, without extra sign-in or compulsory tour screens |
-| 24 - Timing and context integrity | Consistent DD/MM/YYYY display/input and local capture time; today resolved automatically; separate date/time certainty; context-aware presence and classification, including heartburn; safe optional grouping with fictional regression cases |
-| 25 - Compact connected records | Related observations retain individual dates inside one update; shorter populated editor and on-demand provenance; understandable review, timeline and detail screens |
-| 26 - Useful Summary and sharing | Notable symptoms and category highlights visible, supported patterns distinct from one-off facts; meaningful share text, 1,500-character server limit and full details one click deeper |
-| 27 - Release checks | Existing and new journeys pass simulated-provider tests and responsive/accessibility checks; caregiver phone review, then authorised deploy and live check |
-
-Build and confirm one milestone at a time. Grouping presentation for same-capture related observations is pulled forward from V2; broader family/cross-record linking is not included. Versioned interpretation checks required for this work are pulled forward only as needed; do not expand into a general AI platform. Existing-label correction requires a concrete migration scope and recoverable backup, never silent rewriting of recorded facts.
-
-Out of this release: multiple family members, second caregivers, languages, reminders, PDF export, a separate doctor-brief destination, clinical diagnosis/causation or automatic learning from real health notes. The rest of the roadmap remains unchanged.
+The approved release is now active in PLAN.md. Family switching remains V2; related observations within a capture are addressed in V1.2. Other future-version scope remains below.
 
 ## Launch sequence (from the original plan)
 
@@ -43,7 +28,6 @@ Long-term questions the record should eventually answer: what happened over six 
 - Hindi/Hinglish capture; summary language choice; keep original-language transcript plus English.
 - Next appointment date with one optional "prepare your summary" reminder (no daily check-ins).
 - Recording countdown and auto-stop at 30 s that keeps what was said, instead of refusing.
-- Group linked observations into one entry (e.g. BP with explicit "no dizziness"), with caregiver review; never infer causes.
 - Evaluate a separate doctor-brief view vs the single Summary.
 - PDF export of the summary; evaluate a short-lived read-only link for doctors.
 - Data export for the caregiver.

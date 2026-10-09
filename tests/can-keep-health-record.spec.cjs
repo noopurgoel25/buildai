@@ -136,7 +136,7 @@ test('sign-in follows first value, incorrect code preserves the update, and save
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Mira Example’s health story', exact: true })).toBeVisible();
   expect(mock.state().savedCalls).toBe(1);
-  await page.getByText('Account',{exact:true}).click();await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Already started? Sign in' })).toBeVisible();
   await page.getByRole('link', { name: 'Already started? Sign in' }).click();
   await page.getByLabel('Your email').fill('caregiver@example.test');
@@ -622,7 +622,7 @@ test('checking an existing sign-in never signs out or clears a typed update, and
   await page.getByRole('link',{name:'Back to timeline'}).click();await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();await expect(page.locator('.period-result')).toBeVisible();
   const reads=mock.state().timelineCalls;
   await page.evaluate(()=>window.__testSessionChange({isLoading:false,isAuthenticated:true}));await expect(page.locator('.period-result')).toBeVisible();expect(mock.state().timelineCalls).toBe(reads);
-  await page.getByRole('button',{name:'Back to timeline'}).click();await page.getByText('Account',{exact:true}).click();await page.getByRole('button',{name:'Sign out'}).click();await expect(page.getByRole('link',{name:'Already started? Sign in'})).toBeVisible();
+  await page.getByRole('button',{name:'Back to timeline'}).click();await page.getByRole('button',{name:'Open menu',exact:true}).click();page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Sign out'}).click();await expect(page.getByRole('link',{name:'Already started? Sign in'})).toBeVisible();
 });
 
 const briefFixture=()=>{
@@ -737,7 +737,7 @@ test('expired returning session reopens at sign-in and returns to the same notes
  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],signedOutInitially:true});await page.addInitScript(()=>localStorage.setItem('carenama.returning','1'));await page.goto('/');
  await expect(page.getByRole('heading',{name:'Welcome back.',exact:true})).toBeVisible();expect(mock.state().timelineCalls).toBe(0);
  await page.getByLabel('Your email').fill('caregiver@example.test');await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('Email code').fill('123456');await page.getByRole('button',{name:'Verify code'}).click();
- await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);await page.getByText('Account',{exact:true}).click();await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();
+ await expect(page.locator('.timeline-entry')).toHaveCount(1);expect(mock.state().savedCalls).toBe(0);await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('button',{name:'Sign out',exact:true}).click();await expect(page.getByRole('link',{name:'Get started',exact:true})).toBeVisible();
 });
 
 test('reopening waits for sign-in verification and retries timeline failure without creating records (services mocked)',async({page})=>{
@@ -767,9 +767,9 @@ test('concise sharing keeps edits through one-click full details, enforces 1500 
 
 
 test('account deletion requires a fresh code, allows cancellation, retains invalid input, and returns to a fresh start',async({page})=>{
- const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],failDeletionCode:true,failAccountDeletion:true});await page.goto('/#record');await page.getByText('Account',{exact:true}).click();await page.getByRole('button',{name:'Delete account and record',exact:true}).click();
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],failDeletionCode:true,failAccountDeletion:true});await page.goto('/#record');await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('button',{name:'Delete account and record',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Delete account and record?',exact:true})).toBeVisible();await expect(page.getByText(/This cannot be undone/)).toBeVisible();expect(mock.state().deletionCodeCalls).toBe(0);await page.getByRole('button',{name:'Keep my account',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);
- await page.getByText('Account',{exact:true}).click();await page.getByRole('button',{name:'Delete account and record',exact:true}).click();await page.getByRole('button',{name:'Send deletion code',exact:true}).click();await expect(page.getByRole('alert')).toContainText('couldn');expect(mock.state().entries).toHaveLength(1);
+ await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('button',{name:'Delete account and record',exact:true}).click();await page.getByRole('button',{name:'Send deletion code',exact:true}).click();await expect(page.getByRole('alert')).toContainText('couldn');expect(mock.state().entries).toHaveLength(1);
  await page.getByRole('button',{name:'Send deletion code',exact:true}).click();await expect(page.getByLabel('Deletion code')).toBeFocused();await page.getByRole('button',{name:'Send a new code',exact:true}).click();await expect(page.getByRole('alert')).toContainText('wait a minute');expect(mock.state().deletionCodeCalls).toBe(2);
  await page.getByLabel('Deletion code').fill('123456');await page.getByRole('button',{name:'Permanently delete account and record',exact:true}).click();await expect(page.getByRole('alert')).toContainText('not correct');await expect(page.getByLabel('Deletion code')).toHaveValue('123456');expect(mock.state().entries).toHaveLength(1);
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/delete-account-${width}.png`,fullPage:true});}
@@ -785,8 +785,61 @@ test('reopening an already verified deletion resumes cleanup without exposing no
 });
 
 
+test('pending sign-out cannot replace the menu with help or throw on completion',async({page})=>{
+ await mockSession(page,{initialEvents:[legacyEvent(1)]});let release;const errors=[];
+ page.on('pageerror',error=>errors.push(error.message));
+ await page.route('**/__test/signout',async route=>{await new Promise(resolve=>{release=resolve;});await route.fulfill({json:null});});
+ await page.goto('/#record');await expect(page.locator('.timeline-entry')).toHaveCount(1);
+ await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('button',{name:'Sign out',exact:true}).click();
+ await expect(page.getByRole('button',{name:'What can I record?',exact:true})).toBeDisabled();
+ await expect.poll(()=>typeof release).toBe('function');release();
+ await expect(page.getByRole('link',{name:'Already started? Sign in',exact:true})).toBeVisible();expect(errors).toEqual([]);
+});
+
+test('common menu cannot bypass protection for edited sharing text',async({page})=>{
+ await openSharing(page);const changed=sharingFixtureText+' A fictional caregiver edit.';
+ await page.getByLabel('Text to share').fill(changed);await page.getByRole('button',{name:'Open menu',exact:true}).click();
+ page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();
+ await expect(page.getByLabel('Text to share')).toHaveValue(changed);await expect(page).toHaveURL(/#record$/);
+});
+
+test('menu preserves an unsaved update through help, Escape and privacy',async({page})=>{
+ await mockSession(page,{initialEvents:[legacyEvent(1)]});
+ await page.goto('/#record');await page.getByRole('button',{name:'Add update',exact:true}).click();
+ await page.getByRole('button',{name:'Type instead',exact:true}).click();
+ await page.locator('#health-update').fill('Mira Example felt tired after lunch today.');
+ const menu=page.getByRole('button',{name:'Open menu',exact:true});
+ await menu.click();await expect(menu).toHaveAttribute('aria-expanded','true');
+ await page.keyboard.press('Escape');await expect(menu).toBeFocused();await expect(menu).toHaveAttribute('aria-expanded','false');
+ await menu.click();await page.getByRole('button',{name:'What can I record?',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'A small note is enough.',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Back to menu',exact:true}).click();await expect(page.getByRole('button',{name:'What can I record?',exact:true})).toBeFocused();
+ await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();
+ await page.getByRole('button',{name:'Back to your update',exact:true}).click();
+ await expect(page.locator('#health-update')).toHaveValue('Mira Example felt tired after lunch today.');
+ await expect(page.getByRole('link',{name:'Back to timeline',exact:true})).toHaveAttribute('aria-label','Back to timeline');
+});
+
+test('account deletion cancellation from the common menu restores the current draft',async({page})=>{
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)]});await page.goto('/#record');
+ await page.getByRole('button',{name:'Add update',exact:true}).click();await page.getByRole('button',{name:'Type instead',exact:true}).click();
+ await page.locator('#health-update').fill('Mira Example slept better last night.');
+ await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('button',{name:'Delete account and record',exact:true}).click();
+ await page.getByRole('button',{name:'Keep my account',exact:true}).click();
+ await expect(page.locator('#health-update')).toHaveValue('Mira Example slept better last night.');
+ expect(mock.state().deletionCodeCalls).toBe(0);expect(mock.state().entries).toHaveLength(1);
+});
+
+test('signed-out menu hides account controls and preserves a partially entered email',async({page})=>{
+ await mockSession(page,{signedOutInitially:true});await page.goto('/#signin');
+ await page.locator('#signin-email').fill('fictional@example.com');await page.getByRole('button',{name:'Open menu',exact:true}).click();
+ await expect(page.getByRole('dialog').getByRole('button',{name:'Sign out',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('dialog').getByRole('button',{name:'Delete account and record',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Close menu',exact:true}).click();await expect(page.locator('#signin-email')).toHaveValue('fictional@example.com');
+});
+
 test('privacy is reachable before sign-in, explains processing, and keeps browser opt-out after reopening',async({page})=>{
- const mock=await mockSession(page);await page.goto('/');await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();
+ const mock=await mockSession(page);await page.goto('/');await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Your notes. Your choice.',exact:true})).toBeVisible();await expect(page.getByText('Mixpanel, in the EU',{exact:true})).toBeVisible();await expect(page.getByRole('switch',{name:'Usage tracking On',exact:true})).toHaveAttribute('aria-checked','true');
  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/privacy-${width}.png`,fullPage:true});}
  await page.keyboard.press('Tab');await page.getByRole('switch').focus();expect(await page.getByRole('switch').evaluate(el=>getComputedStyle(el).outlineStyle)).not.toBe('none');
@@ -796,9 +849,9 @@ test('privacy is reachable before sign-in, explains processing, and keeps browse
 });
 
 test('account privacy saves across reopening, recovers from failure and never sends health details',async({page})=>{
- const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],failPrivacy:true});await page.goto('/#record');await page.locator('.timeline-account > summary').click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();await expect(page.getByRole('switch')).toBeEnabled();await page.getByRole('switch').click();await expect(page.getByRole('alert')).toContainText('save your choice');await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');expect(mock.state().entries).toHaveLength(1);
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],failPrivacy:true});await page.goto('/#record');await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();await expect(page.getByRole('switch')).toBeEnabled();await page.getByRole('switch').click();await expect(page.getByRole('alert')).toContainText('save your choice');await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');expect(mock.state().entries).toHaveLength(1);
  await page.getByRole('switch').click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');const count=mock.state().analyticsEvents.length;
- await page.getByRole('button',{name:'Back to timeline',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);await page.locator('.timeline-account > summary').click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');expect(mock.state().analyticsEvents).toHaveLength(count);
+ await page.getByRole('button',{name:'Back to timeline',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');expect(mock.state().analyticsEvents).toHaveLength(count);
  await page.reload();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');expect(mock.state().analyticsEvents).toHaveLength(count);
  await page.getByRole('switch').click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');await page.getByRole('button',{name:'Back to timeline',exact:true}).click();await expect.poll(()=>mock.state().analyticsEvents.length).toBeGreaterThan(count);
  for(const entry of mock.state().analyticsEvents){expect(Object.keys(entry)).toEqual(['anonymousId','event','properties']);expect(JSON.stringify(entry)).not.toContain('Mira');expect(JSON.stringify(entry)).not.toContain('tired');expect(JSON.stringify(entry)).not.toContain('@');}
@@ -808,7 +861,7 @@ test('account privacy saves across reopening, recovers from failure and never se
 test('a tracking preference changed on another device is authoritative when this account reopens',async({page})=>{
  await page.addInitScript(()=>{localStorage.setItem('carenama.analytics','off');localStorage.setItem('carenama.analytics-scope','account');});
  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],analyticsInitially:true});await page.goto('/#record');await expect(page.locator('.timeline-entry')).toHaveCount(1);await expect.poll(()=>mock.state().analyticsEvents.length).toBeGreaterThan(0);expect(mock.state().privacyCalls).toBe(0);expect(mock.state().analytics).toBe(true);
- await page.locator('.timeline-account > summary').click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');
+ await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');
 });
 
 test('usage events count successful copying and edited drafts without counting a cancelled share or sending draft text',async({page})=>{

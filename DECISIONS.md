@@ -1,5 +1,13 @@
 # DECISIONS.md
 
+### 2026-10-10 - Shared menu preserves work and protects exits
+Move account/privacy actions into the common menu, retain visible core actions, and use labelled arrow back controls. Opening help/menu leaves the current screen mounted. Privacy returns to the originating draft; after refresh it falls back to the appropriate home. Leaving saved corrections or edited sharing text retains their existing discard protection. Active recording blocks navigation away; pending sign-out cannot replace menu contents.
+*Why:* Milestone 22 needs simpler navigation without losing the capture, correction and sharing protections. Browser regression checks and independent design review verified these cases before builder review; deployment remains pending confirmation.
+
+### 2026-10-10 - Approve Desert Dusk and original family caricature
+Adopt the proposed V1.2 scope, milestone sequence and screen direction. Replace the rejected mother/daughter photo with original, warm editorial caricature of an Indian adult daughter embracing her mature father, using the user's iStock link as an emotional reference rather than copying its subjects. Keep one person per account; family switching remains V2. Milestone 22 implements identity and shared navigation; other approved changes follow in order.
+*Why:* the builder approved the proposal apart from its photo, explicitly chose original caricature over an unlicensed stock download, and instructed continuing the milestone. Existing live records and the 1,500-character Summary/share limit remain protected.
+
 ### 2026-10-10 - Feedback redesign scope remains single-person
 Keep one person per account for the proposed caregiver-feedback release; working family switching stays in V2. Prepare scope, milestone sequence and visual designs before app implementation. The proposed presentation keeps related observations together without deleting their separate dates or inferring medical causes.
 *Why:* the builder explicitly selected single-person scope and requested sign-off on scope, plan and designs before building. Existing records entered during testing remain live data; summaries retain the 1,500-character limit with full measurements and source details deeper.
