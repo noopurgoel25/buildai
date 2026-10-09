@@ -73,7 +73,7 @@ test.describe('Milestone 24 date and context review',()=>{
  });
 });
 
-async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0, pendingSession = false, failDeletionCode = false, failAccountDeletion = false, deletingInitially = false,analyticsInitially=true,failPrivacy=false } = {}) {
+async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, shareDraftText = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0, pendingSession = false, failDeletionCode = false, failAccountDeletion = false, deletingInitially = false,analyticsInitially=true,failPrivacy=false } = {}) {
   let analytics=analyticsInitially,privacyCalls=0;const analyticsEvents=[];
   let deletionStarted=deletingInitially;
   let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0, shareCheckCalls=0,deletionCodeCalls=0,accountDeletionCalls=0;
@@ -127,7 +127,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     }
     if(path.endsWith('share-check')) {
       shareCheckCalls++;if(shareCheckCalls===failShareCheckAt)return route.fulfill({status:503,body:'Unavailable'});if(shareCheckCalls===staleShareAt)return route.fulfill({json:{status:'stale',title:'Mira Example health summary',text:'',message:'A saved note changed. Go back and prepare Summary again before sharing. Your draft is still here.'}});
-      const input=route.request().postDataJSON();return route.fulfill({json:{status:'ready',title:'Mira Example health summary',text:input.text===null?sharingFixtureText:input.text,message:''}});
+      const input=route.request().postDataJSON();return route.fulfill({json:{status:'ready',title:'Mira Example health summary',text:input.text===null?(shareDraftText??sharingFixtureText):input.text,message:''}});
     }
     if(path.endsWith('summary')) {
       summaryCalls++;if(failSummary && summaryCalls===1)return route.fulfill({status:503,body:'Busy'});
@@ -950,4 +950,31 @@ test('usage events count successful copying and edited drafts without counting a
  await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();await expect.poll(()=>mock.state().analyticsEvents.filter(item=>item.event==='summary_shared').length).toBe(1);
  expect(mock.state().analyticsEvents.find(item=>item.event==='summary_shared').properties).toEqual({method:'copy',version:'concise'});expect(mock.state().analyticsEvents.find(item=>item.event==='share_draft_edited').properties).toEqual({edit_size:'small'});expect(mock.state().analyticsEvents.filter(item=>item.event==='share_draft_edited')).toHaveLength(1);
  expect(JSON.stringify(mock.state().analyticsEvents)).not.toContain('caregiver edit');expect(JSON.stringify(mock.state().analyticsEvents)).not.toContain('Mira Example');expect(mock.state().analyticsEvents.find(item=>item.event==='summary_prepared').properties.result).toBe('ok');
+});
+
+const milestone26Fixture=()=>{
+ const result=summaryFixture();result.overview=[];result.undated=[];result.undatedCount=0;
+ result.sources=[['1','symptom','Mira Example said she might have heartburn, but no chest pain.','heartburn'],['2','medication_change','Doctor said to reduce fictional medicine from 10 mg to 5 mg.'],['3','doctor_visit','A fictional doctor visit was recorded.'],['4','measurement','BP 142/88'],['5','daily_wellbeing','She said her sleep was not improving.']].map(([key,type,event,symptomName])=>({...result.sources[0],key,recordId:key,event,supportingWords:event,type,...(symptomName?{symptomName}:{}),polarity:key==='1'?'uncertain':'present'}));
+ result.groups=[['Symptoms','1'],['Medication changes','2'],['Doctor visits','3'],['Measurements','4'],['Daily wellbeing','5']].map(([title,key])=>({title,keys:[key]}));result.recordCount=5;return result;
+};
+async function milestone26Helpers(){
+ const {stripTypeScriptTypes}=await import('node:module');const {readFileSync}=require('node:fs');
+ const source=stripTypeScriptTypes(readFileSync('convex/lib/summaryShare.ts','utf8'));
+ return import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+}
+async function milestone26Draft(result){
+ const {formatSharingDraft}=await milestone26Helpers();
+ return formatSharingDraft(result,'2026-10-01','2026-10-06');
+}
+test('M26 shows one-off heartburn, care and category highlights while readings stay one click deeper (services mocked)',async({page})=>{
+ const result=milestone26Fixture(),errors=[];result.presentation=(await milestone26Helpers()).summaryPresentation(result);page.on('pageerror',error=>errors.push(error.message));const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],summaryReply:result});
+ await page.goto('/#record');await page.getByRole('button',{name:'Summary for a period'}).click();await page.getByRole('button',{name:'Prepare summary'}).click();
+ await expect(page.getByRole('heading',{name:'What stands out',exact:true})).toBeVisible();await expect(page.locator('.summary-notable')).toContainText(result.sources[0].event);await expect(page.locator('.summary-notable')).toContainText('10 mg to 5 mg');await expect(page.locator('.summary-narrative')).toContainText('not enough information');await expect(page.locator('.summary-category-highlights')).toContainText('sleep was not improving');await expect(page.locator('.period-result')).not.toContainText('142/88');
+ for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/m26-summary-${width}.png`,fullPage:true});}
+ const action=page.getByRole('button',{name:'View Measurements details',exact:true});await page.keyboard.press('Tab');await action.focus();expect(await action.evaluate(element=>getComputedStyle(element).outlineStyle)).not.toBe('none');await page.keyboard.press('Enter');await expect(page.getByRole('heading',{name:'All recorded details'})).toBeVisible();await expect(page.locator('[data-category="Measurements"] > summary')).toBeFocused();await expect(page.locator('.summary-categories')).toContainText('BP 142/88');await expect(page.locator('.summary-categories')).toContainText(result.sources[0].event);await page.getByRole('button',{name:'Back to summary',exact:true}).click();await expect(page.getByRole('heading',{name:'What stands out',exact:true})).toBeVisible();expect(mock.state().savedCalls+mock.state().correctionCalls+mock.state().deleteCalls).toBe(0);expect(errors).toEqual([]);
+});
+test('M26 meaningful checked sharing keeps exact doses and uncertainty, copies and retains edits through details (services mocked)',async({page})=>{
+ const result=milestone26Fixture(),draft=await milestone26Draft(result);await sharingDevice(page);const mock=await openSharing(page,{summaryReply:result,shareDraftText:draft});
+ await expect(page.getByLabel('Text to share')).toHaveValue(draft);expect(draft.length).toBeLessThanOrEqual(1500);expect(draft).toContain(result.sources[0].event);expect(draft).toContain('10 mg to 5 mg');expect(draft).toContain('One-off notes do not establish a pattern');expect(draft).not.toContain('142/88');
+ const edit=draft+'\nMy fictional question for the visit.';await page.getByLabel('Text to share').fill(edit);await page.getByRole('button',{name:'View all details',exact:true}).click();await expect(page.locator('.summary-categories')).toContainText('BP 142/88');await page.getByRole('button',{name:'Back to sharing draft',exact:true}).click();await expect(page.getByLabel('Text to share')).toHaveValue(edit);await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();expect(await page.evaluate(()=>window.__deviceCopies.at(-1))).toBe(edit);expect(mock.state().savedCalls+mock.state().correctionCalls).toBe(0);
 });

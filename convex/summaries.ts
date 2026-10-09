@@ -5,7 +5,7 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 import { paginationOptsValidator } from 'convex/server';
 import { v, type Infer } from 'convex/values';
 import type { Id } from './_generated/dataModel';
-import { summaryNarrative } from './lib/summaryShare';
+import { summaryPresentation, SHARE_TEXT_LIMIT } from './lib/summaryShare';
 import { accountIsActive } from './lib/accountAccess';
 import { confirmedEvent } from './lib/healthEvent';
 import { checkPeriod, selectSources, summarySource, summaryGroup, summaryInsight, periodResult, groupSources, overviewCandidates, validateOverview, wordingOptions, numberSources, periodHash } from './lib/summary';
@@ -87,5 +87,8 @@ export async function preparePeriod(ctx:ActionCtx,args:{patientId:Id<'people'>;s
   if(candidates.length){try{overview=await ctx.runAction(internal.summaries.organize,{candidates});}catch{/* A provider failure must not discard the prepared facts. */}}
   const current=await loadPeriod(ctx,{...args,caregiverId});
   if(current.snapshotHash!==snapshotHash)throw new Error('A saved note changed. Prepare Summary again.');
-  return {...base,status:'ready',overview,conciseOverview:summaryNarrative({overview}),generatedAt:Date.now()};
+  const presentation=summaryPresentation({...base,overview});
+  const conciseText=[presentation.narrative,...presentation.notable.map(note=>note.text),...presentation.categories.flatMap(category=>category.notes.map(note=>note.text))].join('\n\n');
+  if(conciseText.length>SHARE_TEXT_LIMIT)throw new Error('The summary is too long. Prepare Summary again.');
+  return {...base,status:'ready',overview,presentation,conciseOverview:presentation.narrative,generatedAt:Date.now()};
 }

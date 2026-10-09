@@ -157,10 +157,42 @@ test('one reported change cannot replace the period overview, even alongside unr
 });
 
 const sharingHelper=data(read('lib/summaryShare.ts'));
-const {formatSharingDraft}=await import(sharingHelper);
+const {formatSharingDraft,summaryHighlights,summaryPresentation}=await import(sharingHelper);
 const sharingSource=read('summarySharing.ts').replace("'./_generated/server'",JSON.stringify(server)).replace("'./_generated/api'",JSON.stringify(api)).replace("'@convex-dev/auth/server'",JSON.stringify(import.meta.resolve('@convex-dev/auth/server'))).replace("'convex/values'",values).replace("'./summaries'",JSON.stringify(data(source))).replace("'./lib/healthEvent'",JSON.stringify(health)).replace("'./lib/summary'",JSON.stringify(helper)).replace("'./lib/summaryShare'",JSON.stringify(sharingHelper));
 const {prepare:prepareShare}=await import(data(sharingSource));
 const shareRequest=period=>({patientId:patient._id,start:'2026-10-01',end:'2026-10-06',records:[...new Map([...period.sources,...period.undated].map(source=>[source.recordId,{id:source.recordId,revision:source.revision}])).values()],snapshotHash:period.snapshotHash,overview:period.overview||[],datedCount:period.sources.length,undatedCount:period.undatedCount,groups:period.groups,overviewIds:(period.overview||[]).map(item=>item.id),text:null});
+
+test('one-off symptoms and care instructions appear verbatim in highlights and checked sharing without becoming patterns',async()=>{
+ const facts=[{...observation('1','Mira Example said she might have heartburn, but no chest pain.','2026-10-06'),symptomName:'heartburn',polarity:'uncertain'}, {...observation('2','Doctor said to reduce fictional medicine from 10 mg to 5 mg.','2026-10-06'),type:'medication_change'}, {...observation('3','A fictional doctor visit was recorded.','2026-10-05'),type:'doctor_visit'}, {...observation('4','BP 142/88','2026-10-06'),type:'measurement'}];
+ const rows=[{id:'healthEvents:highlight',revision:0,details:capture(facts)}],before=structuredClone(rows),c=context(rows);
+ const period=await generate._handler(c.ctx,{patientId:patient._id,start:'2026-10-01',end:'2026-10-06'});
+ assert.deepEqual(period.overview,[]);assert.equal(c.calls(),0);assert.deepEqual(period.presentation,summaryPresentation(period));assert.deepEqual(composeBrief(period,'2026-10-01','2026-10-06').presentation,period.presentation);
+ const highlights=summaryHighlights(period);assert.equal(highlights.notable.length,3);assert.match(highlights.notable[0].text,/06\/10\/2026 · Patient-reported: "Mira Example said she might have heartburn, but no chest pain\."/);
+ assert.equal(highlights.categories.find(item=>item.title==='Measurements').notes.length,0);
+ const shared=await prepareShare._handler(c.ctx,shareRequest(period));assert.equal(shared.status,'ready');assert.ok(shared.text.length<=1500);
+ for(const fact of facts.slice(0,3))assert.ok(shared.text.includes(fact.event));assert.match(shared.text,/One-off notes do not establish a pattern/);assert.ok(!shared.text.includes('142/88'));assert.deepEqual(rows,before);
+});
+
+test('symptom patterns take priority over alphabetically earlier wellbeing and appetite patterns',()=>{
+ const rows=['appetite','daily_wellbeing','symptom'].flatMap((type,index)=>['2026-10-01','2026-10-03'].map((date,day)=>({key:`${index}-${day}`,recordId:`record-${day}`,type,symptomName:type==='symptom'?'swelling':undefined,event:'A fictional note.',date,evidence:'Patient-reported',polarity:'present'})));
+ assert.equal(overviewCandidates(rows)[0].id,'repeat:swelling');
+});
+
+test('visible concise highlights and patterns fit 1500 characters without repeating or cutting facts',()=>{
+ const types=['symptom','medication_change','doctor_visit','daily_wellbeing','appetite','other'];
+ const sources=types.flatMap((type,index)=>[0,1].map(day=>({...selectSources(records,'2026-10-01','2026-10-06').dated[0],key:`${index}-${day}`,type,symptomName:type==='symptom'?`symptom ${day}`:undefined,event:'Fictional complete fact. '.repeat(8)+`Final qualifier ${index}-${day}.`,date:`2026-10-0${day+1}`})));
+ const period={sources,groups:groupSources(sources),overview:[{id:'repeat:x',text:'A supported pattern. '.repeat(20),keys:['0-0','0-1']}]},view=summaryPresentation(period),notes=[...view.notable,...view.categories.flatMap(category=>category.notes)];
+ assert.ok([view.narrative,...notes.map(note=>note.text)].join('\n\n').length<=1500);assert.equal(new Set(notes.map(note=>note.key)).size,notes.length);
+ for(const note of notes)assert.ok(note.text.includes(sources.find(source=>source.key===note.key).event));assert.equal(view.categories.length,types.length);
+});
+
+test('highlights keep unknown timing and pending labels out of dated symptom claims and never cut long fact wording',()=>{
+ const source=selectSources(records,'2026-10-01','2026-10-06').dated[0],long='Fictional wording with a final negation. '.repeat(30);
+ const sources=[{...source,key:'1',event:long},{...source,key:'2',type:'pending',event:'Maybe heartburn.'},{...source,key:'3',date:null,event:'Unknown date heartburn.'}];
+ const period={status:'ready',name:'X'.repeat(500),sources,groups:groupSources(sources),overview:[],undated:[],undatedCount:0,recordCount:3,message:'',generatedAt:1};
+ const before=structuredClone(period),highlights=summaryHighlights(period),text=formatSharingDraft(period,'2026-10-01','2026-10-06');
+ assert.equal(highlights.notable.length,1);assert.match(highlights.notable[0].text,/longer recorded note/);assert.ok(!text.includes('Unknown date heartburn'));assert.ok(!text.includes('Fictional wording'));assert.ok(text.length<=1500);assert.match(text,/View all details/);assert.deepEqual(period,before);
+});
 
 test('concise sharing discloses full details while preserving exact facts and unknown timing',async()=>{
  const c=context();const period=await generate._handler(c.ctx,{patientId:patient._id,start:'2026-10-01',end:'2026-10-06'});const before=structuredClone(records);const prepared=await prepareShare._handler(c.ctx,shareRequest(period));

@@ -211,6 +211,17 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #352a2b; outl
 .summary-narrative { color: #352a2b; overflow-wrap: anywhere; }
 .summary-overview .summary-limited { background: none; padding: 0; font-size: 13px; line-height: 1.5; margin-top: 8px; }
 .summary-categories { display: grid; gap: 12px; }
+.summary-highlights, .summary-category-highlights { margin: 28px 0; }
+.summary-highlights h2, .summary-category-highlights h2 { font-size: 20px; line-height: 1.4; margin: 0 0 12px; }
+.summary-notable { padding-left: 20px; margin: 12px 0; }
+.summary-notable li + li { margin-top: 16px; }
+.summary-notable p { margin: 0; overflow-wrap: anywhere; }
+.summary-highlight-row { display: flex; align-items: flex-start; gap: 12px; padding: 20px 0; border-bottom: 1px solid #d9c9bd; }
+.summary-highlight-row > div { flex: 1; min-width: 0; }
+.summary-highlight-row h3 { font-size: 16px; line-height: 1.5; margin: 0; }
+.summary-highlight-row p { margin: 8px 0; overflow-wrap: anywhere; }
+.summary-highlight-row .hint { margin-top: 2px; }
+.summary-highlight-row button { min-height: 44px; text-align: left; }
 .summary-category { background: #fff; border-radius: 14px; min-width: 0; }
 .summary-category > summary { display: flex; align-items: center; gap: 12px; padding: 16px; cursor: pointer; list-style: none; border-radius: 14px; }
 .summary-category > summary::-webkit-details-marker { display: none; }

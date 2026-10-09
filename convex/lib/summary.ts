@@ -8,7 +8,9 @@ export const summarySource = v.object({...classificationFields,observationId:v.o
 export const summaryTitle = v.union(v.literal('Symptoms and observations'),v.literal('Measurements'),v.literal('Care and visits'),v.literal('Appetite, sleep and energy'),v.literal('Other'),v.literal('Symptoms'),v.literal('Medication changes'),v.literal('Doctor visits'),v.literal('Daily wellbeing'),v.literal('Appetite'));
 export const summaryGroup = v.object({title:summaryTitle,keys:v.array(v.string())});
 export const summaryInsight = v.object({id:v.string(),text:v.string(),keys:v.array(v.string())});
-export const periodResult = v.object({conciseOverview:v.optional(v.string()),snapshotHash:v.optional(v.string()),status:v.union(v.literal('ready'),v.literal('empty'),v.literal('too_many')),name:v.string(),groups:v.array(summaryGroup),overview:v.optional(v.array(summaryInsight)),sources:v.array(summarySource),undated:v.array(summarySource),undatedCount:v.number(),recordCount:v.number(),message:v.string(),generatedAt:v.number()});
+const highlightedNote=v.object({key:v.string(),text:v.string()});
+export const summaryPresentationResult=v.object({notable:v.array(v.object({key:v.string(),text:v.string(),title:summaryTitle})),categories:v.array(v.object({title:summaryTitle,count:v.number(),notes:v.array(highlightedNote),highlighted:v.boolean()})),narrative:v.string()});
+export const periodResult = v.object({presentation:v.optional(summaryPresentationResult),conciseOverview:v.optional(v.string()),snapshotHash:v.optional(v.string()),status:v.union(v.literal('ready'),v.literal('empty'),v.literal('too_many')),name:v.string(),groups:v.array(summaryGroup),overview:v.optional(v.array(summaryInsight)),sources:v.array(summarySource),undated:v.array(summarySource),undatedCount:v.number(),recordCount:v.number(),message:v.string(),generatedAt:v.number()});
 export type SummarySource = Infer<typeof summarySource>;
 export function checkPeriod(start:string,end:string) {
   if(!validDate(start) || !validDate(end) || start>end) throw new Error('Choose valid dates, with the start before the end.');
@@ -85,7 +87,8 @@ export function overviewCandidates(sources:(Pick<SummarySource,'key'|'event'|'da
     const mentioned=notes,days=[...new Set(mentioned.map(note=>note.date!))];
     if(days.length>=2)candidates.push({id:`repeat:${name}`,text:`${label} was mentioned in saved updates on ${days.length} different days: ${days.slice(0,4).map(day).join(', ')}${days.length>4?` and ${days.length-4} other recorded days`:''}. This counts recorded days, not separate episodes.`,keys:mentioned.map(note=>note.key)});
   }
-  return candidates.sort((a,b)=>(a.id.startsWith('repeat:')?1:0)-(b.id.startsWith('repeat:')?1:0));
+  const priority=(candidate:Infer<typeof summaryInsight>)=>candidate.keys.some(key=>sources.some(source=>source.key===key&&source.type==='symptom'))?0:1;
+  return candidates.sort((a,b)=>priority(a)-priority(b)||(a.id.startsWith('repeat:')?1:0)-(b.id.startsWith('repeat:')?1:0));
 }
 export function selectOverview(ids:unknown,candidates:Infer<typeof summaryInsight>[]) {
   if(!Array.isArray(ids)||ids.length>2||new Set(ids).size!==ids.length||ids.some(id=>typeof id!=='string'||!candidates.some(candidate=>candidate.id===id)))throw new Error('ungrounded-overview');
