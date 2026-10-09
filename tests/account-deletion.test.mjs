@@ -84,3 +84,14 @@ test('deletion delivery uses only the signed-in email, stores only a salted hash
     const anonymous=fixture(1,null);await assert.rejects(functions.requestCode._handler(anonymous.ctx,{}),/Sign in/);await assert.rejects(functions.confirm._handler(anonymous.ctx,{challengeId:'',code:''}),/Sign in/);
   }finally{globalThis.fetch=originalFetch;if(key===undefined)delete process.env.AUTH_RESEND_KEY;else process.env.AUTH_RESEND_KEY=key;if(from===undefined)delete process.env.AUTH_EMAIL_FROM;else process.env.AUTH_EMAIL_FROM=from;}
 });
+
+
+test('account deletion removes analytics identities and leaves only a random profile-cleanup job, even after opt-out',async()=>{
+ for(const enabled of [true,false]){
+  const f=fixture(1);f.rows.push({_id:'analyticsAccounts:owner',userId:'users:owner',distinctId:'12345678-1234-4234-9234-123456789abc',enabled},...Array.from({length:25},(_,i)=>({_id:'analyticsAnonymous:'+i,userId:'users:owner',anonymousId:'fictional-device-'+i})),{_id:'analyticsAccounts:other',userId:'users:other',distinctId:'other-random-id',enabled:true});
+  const protectedRows=structuredClone(f.rows.filter(row=>row._id.includes('other')||row._id.includes('global')));
+  await functions.saveChallenge._handler(f.ctx,f.challenge);await functions.confirm._handler(f.ctx,{challengeId:f.challenge.challengeId,code:f.code});
+  assert.deepEqual(f.rows.filter(row=>!row._id.startsWith('analyticsCleanup:')),protectedRows);
+  const cleanup=f.rows.find(row=>row._id.startsWith('analyticsCleanup:'));assert.equal(cleanup.reportDeletion,enabled);assert.equal(cleanup.distinctId,'12345678-1234-4234-9234-123456789abc');assert.deepEqual(Object.keys(cleanup).sort(),['_id','createdAt','distinctId','reportDeletion']);assert.ok(f.scheduled.some(job=>job.ref==='analytics:removeProfile'));
+ }
+});

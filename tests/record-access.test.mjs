@@ -1,3 +1,4 @@
+import {getFunctionName} from 'convex/server';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -174,4 +175,16 @@ test('a deleted account or one being deleted cannot save a new record using its 
  const db=database(),owner=ctx(db,'users:owner'),input={patient:{name:'Mira Example',relationship:'Daughter'},event};
  await db.insert('accountDeletions',{userId:'users:owner',deleting:true});await assert.rejects(saveFirstRecord._handler(owner,input),/Sign in/);assert.equal(db.count('healthEvents'),0);
  await db.delete('users:owner');await assert.rejects(saveFirstRecord._handler(owner,input),/Sign in/);assert.equal(db.count('families'),0);
+});
+
+
+test('saved update tracking is emitted once by the server, uses the previous save time and stops after opt-out',async()=>{
+ const db=database(),owner=ctx(db,'users:owner'),scheduled=[];owner.scheduler.runAfter=async(_delay,ref,args)=>scheduled.push({name:getFunctionName(ref),args});
+ const preferenceId=await db.insert('analyticsAccounts',{userId:'users:owner',enabled:true});
+ const input={patient:{name:'Mira Example',relationship:'Daughter'},event:{...event,observations:[observation('1',event.originalText)]}};
+ const first=await saveCapture._handler(owner,input);await saveCapture._handler(owner,input);assert.equal(scheduled.filter(item=>item.name==='analytics:recordEvent').length,1);
+ await db.patch(first,{confirmedAt:Date.now()-3*86400_000});const timeline=await timelinePage._handler(owner,{paginationOpts:{numItems:10,cursor:null}});
+ const next={...input.event,confirmationId:'00000000-0000-4000-8000-000000000007'};await addUpdate._handler(owner,{patientId:timeline.patient.id,event:next});await addUpdate._handler(owner,{patientId:timeline.patient.id,event:next});
+ const saves=scheduled.filter(item=>item.name==='analytics:recordEvent');assert.equal(saves.length,2);assert.deepEqual(saves[1].args.properties,{fact_count:1,days_since_last_save:3});assert.equal(JSON.stringify(saves).includes('Mira Example'),false);
+ await db.patch(preferenceId,{enabled:false});await addUpdate._handler(owner,{patientId:timeline.patient.id,event:{...next,confirmationId:'00000000-0000-4000-8000-000000000008'}});assert.equal(scheduled.filter(item=>item.name==='analytics:recordEvent').length,2);
 });

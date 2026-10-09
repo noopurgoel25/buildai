@@ -1,6 +1,6 @@
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-19 labels, timeline icons, stored-type Summary, concise sharing and account deletion are built and awaiting builder testing; later milestones remain pending.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 16-19 labels, timeline icons, stored-type Summary, concise sharing and account deletion are built and awaiting builder testing; Milestone 20 Privacy and tracking are implemented, with live EU Mixpanel verification awaiting project setup; Milestone 21 remains pending.
 
 ## 1. Feeling
 
@@ -142,4 +142,5 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 - Once verified, deletion cannot be cancelled. If interrupted, **Finish deleting my account** resumes cleanup. Completion clears the current device sign-in and returning-record hint, then opens Welcome with a short confirmation; signing in again starts with an empty record.
 
 ### Privacy [V1.1]
-- Plain-language page: what is stored (Convex), who processes it (Sarvam for AI, Resend for login emails only, Mixpanel analytics in the EU without health content), deletion, and an **analytics on/off** switch (on by default).
+- Welcome and the timeline Account menu link to Privacy. A dedicated reading page uses the existing calm colours and type, with clear headings and a keyboard-accessible Usage tracking switch. It explains account-wide choices after sign-in and browser choices before sign-in, failures preserve the previous choice, and reopening stays on Privacy.
+- Plain-language page: what is stored (Convex), who processes it (Sarvam for AI, Resend for sign-in and account-deletion codes, Mixpanel analytics in the EU without health content), deletion, and an **analytics on/off** switch (on by default). Turning it off stops new events without changing health-record features; previously sent events are not removed by the switch. Profile deletion and shared copies are explained separately.

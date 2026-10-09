@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) are built and awaiting builder testing; later milestones remain pending. Future-proofing work is listed in ROADMAP.md.
+Technical source of truth. Items marked **[V1.1]** belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) are built and awaiting builder testing; Milestone 20 Privacy and tracking are implemented, with live EU Mixpanel verification awaiting project setup; Milestone 21 remains pending. Future-proofing work is listed in ROADMAP.md.
 
 ## 1. Stack
 
@@ -9,7 +9,7 @@ Technical source of truth. Items marked **[V1.1]** belong to that version. Fact 
 | App | Mobile-first React (Vite) web app | Served by Convex static hosting (root exact routes + `registerStaticRoutes` fallback so auth discovery works; capture APIs under `/api`) |
 | Backend | Convex | Database, queries/mutations/actions, HTTP routes, secrets, limits, hosting |
 | Auth | Convex Auth, email + 6-digit code | Sessions and verification |
-| Login email | Resend | Delivers sign-in codes only. Sender: `Carenama <login@carenama.digitalsideup.in>` (verified domain) |
+| Login email | Resend | Delivers sign-in and fresh account-deletion codes. Sender: `Carenama <login@carenama.digitalsideup.in>` (verified domain) |
 | Speech-to-text | Sarvam Saaras (`saaras:v3`, transcribe mode) | Real-time REST, max 30 s audio |
 | Language model | Sarvam `sarvam-105b` | Interpretation, summary overview wording |
 | Product analytics **[V1.1]** | Mixpanel, **EU data residency** project | Behaviour events only, no health content |
@@ -62,7 +62,7 @@ Every read and write is checked against the signed-in account's ownership of the
 - Auth state is "pending" until both client credentials and server confirmation settle; the UI keeps the current screen during checks and routes only on settled identity changes.
 - Returning-user hint: browser storage holds only the value `1` after a saved timeline loads — never identity or health data; storage failure is tolerated and grants nothing.
 - Same-person append: account-scoped name + relationship match (case/whitespace-insensitive) plus explicit confirmation, rechecked server-side at save.
-- **[V1.1] Account deletion (Milestone 19):** a separate six-digit deletion code is sent only to the signed-in user email. `accountDeletions` stores a salted hash, 15-minute expiry and at most five failed attempts per rolling hour, retained across resends. It shares the login email sending allowance. Verification atomically consumes the challenge and locks the account; all record reads/writes and Summary source reads reject locked or missing users, including still-valid old credentials. Indexed internal transactions remove captures/snapshots, Family, Person, Record, Timeline, auth sessions/refresh tokens/verifiers/accounts/codes/rate limits, own email usage and the user. Shared AI usage and other accounts remain untouched. A scheduled worker continues if the page closes; interrupted work is safely resumable. Completion is returned only after all owned rows are gone, then the client clears its sign-in and returning hint. Immediate, no grace period. Mixpanel profile cleanup is added with tracking in Milestone 20, before any profiles are sent.
+- **[V1.1] Account deletion (Milestone 19):** a separate six-digit deletion code is sent only to the signed-in user email. `accountDeletions` stores a salted hash, 15-minute expiry and at most five failed attempts per rolling hour, retained across resends. It shares the login email sending allowance. Verification atomically consumes the challenge and locks the account; all record reads/writes and Summary source reads reject locked or missing users, including still-valid old credentials. Indexed internal transactions remove captures/snapshots, Family, Person, Record, Timeline, auth sessions/refresh tokens/verifiers/accounts/codes/rate limits, own email usage and the user. Shared AI usage and other accounts remain untouched. A scheduled worker continues if the page closes; interrupted work is safely resumable. Completion is returned only after all owned rows are gone, then the client clears its sign-in and returning hint. Immediate, no grace period. Account-linked analytics identities are also removed, with separate retrying EU profile cleanup as described in section 8.
 
 ## 6. Limits
 
@@ -83,7 +83,10 @@ Every read and write is checked against the signed-in account's ownership of the
 
 - One Convex tracking function sends events to Mixpanel's **EU** ingestion endpoint. No browser SDK, no autocapture, no session replay (it would record typed health notes).
 - `distinct_id` = random internal ID per account (anonymous ID before sign-in, merged on sign-in). Never email, names or IP-based location.
-- Respect the account's analytics opt-out (default on, disclosed in Privacy). Delete the Mixpanel profile on account deletion.
+- Respect the account's analytics opt-out (default on, disclosed in Privacy). An explicit anonymous browser opt-out carries into the account once on sign-in; subsequent visits use the account choice, including changes made on another device. Sign-out or an expired sign-in rotates the anonymous ID.
+- `analyticsAccounts` stores only the account link, random analytics ID, preference and rate window. `analyticsAnonymous` stores random browser IDs, their preference and optional account link; inactive IDs expire after 90 days. The older live frontend does not activate account tracking until the account uses the frontend with Privacy.
+- The server allows only the events and literal properties below, with at most 60 events per identity per minute. It derives save counts and days since the preceding server save, and timeline count buckets, from owned records. Duplicate-safe saves, corrections and deletes emit only once. Queued delivery rechecks the current account choice and deletion status. No health payload or provider response is logged.
+- Account deletion removes account-linked analytics rows and schedules EU profile deletion. A durable `analyticsCleanup` row retains only the random analytics ID, deletion-event preference and creation time; hourly retries remove it after success. An opted-out account emits no account-deleted event. Profile deletion removes the profile, not previously ingested behaviour events. Analytics outages never delay health-record deletion. The same EU project token supports tracking and profile deletion.
 - **Never send:** names, emails, symptoms, readings, medicine names, note text, or anything a person could be identified from.
 
 | Event | Properties |
@@ -96,11 +99,11 @@ Every read and write is checked against the signed-in account's ownership of the
 | update_confirmed | fact_count, was_edited |
 | signin_completed | is_returning |
 | update_saved | fact_count, days_since_last_save |
-| timeline_opened | note_count bucket |
+| timeline_opened | note_count (0 / 1-2 / 3-10 / 11-50 / 51+) |
 | update_changed / update_deleted | — |
-| summary_prepared | period_days, source_count bucket, result (ok/empty/too_long/failed) |
-| share_draft_edited | edit size bucket |
-| summary_shared | method (share/copy), version (concise/full) |
+| summary_prepared | period_days, source_count (same buckets as note_count), result (ok/empty/too_long/failed) |
+| share_draft_edited | edit_size (small: up to 100 changed characters / medium: 101-500 / large: over 500) |
+| summary_shared | method (share/copy), version (concise) |
 | account_deleted | — |
 
 Dashboards map to PRODUCT.md §5: activation (first save), second capture within 7 days, captures per active week, summary → share rate, edit-vs-rewrite, second summary 3+ weeks after the first.
@@ -110,11 +113,12 @@ Dashboards map to PRODUCT.md §5: activation (first save), second capture within
 | Variable | Purpose |
 |---|---|
 | `SARVAM_API_KEY` | Transcription and language model |
-| `AUTH_RESEND_KEY` | Sending login codes |
+| `AUTH_RESEND_KEY` | Sending sign-in and account-deletion codes |
 | `AUTH_EMAIL_FROM` | Sender address |
 | Auth signing keys | Set via `npm run setup:auth` |
 | `MIXPANEL_TOKEN` **[V1.1]** | EU project token |
-| Mixpanel deletion credential **[V1.1]** | For profile deletion (name chosen at build time) |
+
+Mixpanel setup: create an EU-residency project using Simplified ID Merge. Copy its Project Token from Project settings / Access Keys directly into the Convex dashboard Settings / Environment variables as `MIXPANEL_TOKEN`; never paste it in chat or a repository file. The current public site uses `aware-starfish-233`; configure that deployment. If a separate production deployment is used later, configure its token there too. The same token handles EU profile deletion; no separate deletion credential is required. Do not enable autocapture or session replay. Live verification requires seeing fictional usage events in the EU project, checking their properties and checking that opt-out stops them.
 
 ## 10. Testing
 

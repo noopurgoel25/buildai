@@ -1,6 +1,7 @@
 import { escape, updateFacts, recordDetails } from './observation-display.js';
 import { validDate, resolveTiming } from '../convex/lib/observationTiming.ts';
 import { createRecordId } from './record-id.js';
+import { track } from './analytics.js';
 
 export function mountObservationReview(root, draft, onConfirm, onReturn) {
   const items = draft.interpretation.observations;
@@ -8,6 +9,7 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
   function changed(item) { item.confirmed = false; draft.confirmed = null; }
   function draw() {
     const first = items.find(item => !item.timing.resolved);
+    if(first && !draft.savedEdit && !draft.analyticsClarifications?.includes(first.id)){(draft.analyticsClarifications ||= []).push(first.id);track('clarification_asked');}
     const shared = items.filter(item => !item.timing.resolved && !/\b(or|not sure|unsure)\b/i.test(item.when));
     const details = recordDetails({...draft, observations:items});
     root.innerHTML = first ? `<div class="capture-result timing-question">

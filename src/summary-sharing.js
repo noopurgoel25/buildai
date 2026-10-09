@@ -1,4 +1,5 @@
 import { SHARE_TEXT_LIMIT } from '../convex/lib/summaryShare.ts';
+import { track } from './analytics.js';
 import { escape } from './observation-display.js';
 
 export function mountSummarySharing(root,session,patient,period,result,draft,onDetails) {
@@ -6,6 +7,8 @@ export function mountSummarySharing(root,session,patient,period,result,draft,onD
   const records=[...new Map([...result.sources,...result.undated].map(source=>[source.recordId,{id:source.recordId,revision:source.revision}])).values()];
   const request=()=>({...result.snapshotHash?{snapshotHash:result.snapshotHash,overview:result.overview??[]}:{},patientId:patient.id,...period,records,datedCount:result.sources.length,undatedCount:result.undatedCount,groups:result.groups,overviewIds:(result.overview||[]).map(item=>item.id),text:draft.text});
   const canShare=()=>window.isSecureContext && typeof navigator.share==='function';
+  function reportEdit(){if(draft.text===null||draft.text===draft.originalText)return;const a=draft.text,b=draft.originalText||'';let prefix=0,suffix=0,hash=0;for(let i=0;i<a.length;i++)hash=(hash*31+a.charCodeAt(i))|0;const signature=a.length+':'+hash;if(draft.analyticsEditSignature===signature)return;draft.analyticsEditSignature=signature;while(prefix<Math.min(a.length,b.length)&&a[prefix]===b[prefix])prefix++;while(suffix<Math.min(a.length,b.length)-prefix&&a[a.length-1-suffix]===b[b.length-1-suffix])suffix++;const changed=Math.max(a.length,b.length)-prefix-suffix;track('share_draft_edited',{edit_size:changed<=100?'small':changed<=500?'medium':'large'});}
+  function reportShare(method){reportEdit();track('summary_shared',{method,version:'concise'});}
   function controls(){
     const editor=root.querySelector('#sharing-text');if(editor)editor.disabled=busy;
     root.querySelectorAll('[data-send]').forEach(button=>button.disabled=busy||blocked||draft.text===null||!draft.text.trim()||draft.text.length>SHARE_TEXT_LIMIT);
@@ -18,6 +21,7 @@ export function mountSummarySharing(root,session,patient,period,result,draft,onD
     root.innerHTML=`<section class="sharing-review" aria-labelledby="sharing-title"><h2 id="sharing-title" tabindex="-1">Make it yours before sharing</h2><p>Read through and change anything you’d like. Your saved health notes stay as they are.</p>${draft.text===null?'<p role="status">Opening your sharing draft…</p>':`<label for="sharing-text">Text to share</label><textarea id="sharing-text" rows="12" maxlength="1500" aria-describedby="sharing-help sharing-count">${escape(draft.text)}</textarea><p class="hint" id="sharing-count"></p><button class="secondary" id="sharing-details" type="button">View all details</button><p class="hint" id="sharing-help">Full measurements and notes stay one click away. This draft stays only in this open page. Changes won’t be saved to the health record.</p>${canShare()?'': '<p class="hint">Use Copy text to paste this into the app you choose.</p>'}<div class="sharing-actions">${canShare()?'<button class="primary" type="button" data-send="share">Share</button>':''}<button class="${canShare()?'secondary':'primary'}" type="button" data-send="copy">Copy text</button></div><p class="hint" id="manual-copy" hidden>Automatic copying isn’t available here. Touch and hold the text, choose Select all, then Copy.</p>`}<p class="hint" id="sharing-status" role="status" hidden></p><p class="error" id="sharing-error" role="alert" hidden></p>${draft.text===null?'<button class="secondary" id="sharing-retry" type="button" hidden>Try again</button>':''}</section>`;
     root.querySelector('#sharing-retry')?.addEventListener('click',open);
     root.querySelector('#sharing-details')?.addEventListener('click',onDetails);
+    root.querySelector('#sharing-text')?.addEventListener('blur',reportEdit);
     root.querySelector('#sharing-text')?.addEventListener('input',event=>{draft.text=event.target.value;pendingHandoff=null;error=draft.text.length>SHARE_TEXT_LIMIT?'Keep your draft within 1,500 characters.':'';notice='';manualCopy=false;controls();});
     root.querySelectorAll('[data-send]').forEach(button=>button.onclick=()=>send(button.dataset.send));
     controls();
@@ -34,11 +38,11 @@ export function mountSummarySharing(root,session,patient,period,result,draft,onD
       if(kind==='share'){
         if(!canShare() || (navigator.canShare && !navigator.canShare(payload))){notice='Sharing isn’t available here. Use Copy text instead.';return;}
         if(navigator.userActivation && !navigator.userActivation.isActive){pendingHandoff={...response,kind,checkedAt:Date.now()};notice='Your draft is checked. Tap Share to open your device’s menu.';return;}
-        await navigator.share(payload);if(disposed)return;notice='Sharing completed on this device. Your draft is still here.';
+        await navigator.share(payload);if(disposed)return;reportShare('share');notice='Sharing completed on this device. Your draft is still here.';
       }else{
         if(navigator.userActivation && !navigator.userActivation.isActive){pendingHandoff={...response,kind,checkedAt:Date.now()};notice='Your draft is checked. Tap Copy text again to copy it.';return;}
         if(!window.isSecureContext || !navigator.clipboard?.writeText){copySelectedText();return;}
-        try{await navigator.clipboard.writeText(response.text);if(disposed)return;notice='Copied. Paste it into the app you choose.';}catch{if(disposed)return;copySelectedText();}
+        try{await navigator.clipboard.writeText(response.text);if(disposed)return;reportShare('copy');notice='Copied. Paste it into the app you choose.';}catch{if(disposed)return;copySelectedText();}
       }
     }catch(cause){if(disposed)return;if(kind==='share' && cause.name==='AbortError')notice='Sharing cancelled. Your draft is still here.';
       else error=kind==='share' && checked?'We couldn’t open sharing. Your draft is still here. Try again or use Copy text.':'We couldn’t check the saved notes. Your draft is still here. Try again.';
@@ -50,11 +54,11 @@ export function mountSummarySharing(root,session,patient,period,result,draft,onD
     // through the browser selection command, with the editor enabled.
     editor.disabled=false;editor.readOnly=true;
     try{editor.focus({preventScroll:true});editor.select();editor.setSelectionRange(0,editor.value.length);
-      if(document.execCommand('copy')){notice='Copied. Paste it into the app you choose.';return;}
+      if(document.execCommand('copy')){reportShare('copy');notice='Copied. Paste it into the app you choose.';return;}
     }catch{}finally{editor.readOnly=false;}
     selectText();
   }
   function selectText(){manualCopy=true;notice='';const editor=root.querySelector('#sharing-text');if(editor){editor.focus();editor.select();}}
   draw();if(draft.text===null)open();else root.querySelector('#sharing-title').focus();
-  return()=>{disposed=true;};
+  return()=>{reportEdit();disposed=true;};
 }

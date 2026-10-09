@@ -2,6 +2,7 @@ import { toWav } from './audio.js';
 import { mountObservationReview } from './observation-review.js';
 import { createRecordId } from './record-id.js';
 import { updateFacts, recordDetails } from './observation-display.js';
+import { track } from './analytics.js';
 
 const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const BUSY = 'Busy right now. Try again in a few minutes.';
@@ -44,6 +45,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
     state = 'idle';
     error = cause instanceof Error ? cause.message : BUSY;
     if (error === 'Failed to fetch' || /abort|timeout/i.test(error)) error = BUSY;
+    track('capture_failed',{reason:/microphone permission/i.test(error)?'mic_denied':/too long|limit|shorter/i.test(error)?'too_long':/hear anything|Type what happened|Nothing was captured/i.test(error)?'empty':'busy'});
     if (/microphone|Type your update|type your update/i.test(error)) draft.textMode = true;
     draw();
   }
@@ -86,6 +88,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
   }
 
   async function startRecording() {
+    track('capture_started',{method:'voice',is_first:!draft.existingPatient});
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
       fail(new Error('Voice recording is unavailable in this browser. Type your update instead.'));
       return;
@@ -139,6 +142,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
 
   async function submitText(event) {
     event.preventDefault();
+    track('capture_started',{method:'text',is_first:!draft.existingPatient});
     draft.text = root.querySelector('textarea').value;
     if (!draft.text.trim()) { fail(new Error('Type what happened before continuing.')); root.querySelector('textarea').focus(); return; }
     draft.source = 'text'; draft.interpretation = null;
@@ -167,6 +171,7 @@ export function mountCapture(root, patient, draft, onConfirm) {
     const recording = state === 'recording';
     const permission = state === 'permission';
     const result = draft.interpretation;
+    if(result?.status==='clarification'&&!draft.analyticsLegacyClarification){draft.analyticsLegacyClarification=true;track('clarification_asked');}
     if (state === 'editing') {
       root.innerHTML = `<div class="capture-result">
         <h2 tabindex="-1">Edit what happened</h2>

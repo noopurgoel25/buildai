@@ -7,6 +7,8 @@ import { mountSignIn } from './account.js';
 import { mountTimeline } from './timeline.js';
 import { savedObservationDetails } from './observation-display.js';
 import { createRecordId } from './record-id.js';
+import { mountPrivacy } from './privacy.js';
+import { configureAnalytics,resetAnalytics,track } from './analytics.js';
 
 const app = document.querySelector('#app');
 // Unsaved capture details stay only in this open page.
@@ -26,6 +28,7 @@ function render() {
   disposeCapture();
   disposeAccount();
   if(!authResolved){app.innerHTML='<section class="screen"><h1>Opening CareNama</h1><p role="status">Checking your sign-in.</p></section>';return;}
+  if(location.hash==='#privacy'){disposeAccount=mountPrivacy(app,session,()=>{location.hash=session.isAuthenticated?'#record':'#';});return;}
   if (location.hash === '#signin') {
     if (session.isAuthenticated) { location.replace('#record'); return; }
     disposeAccount = mountSignIn(app, loginDraft, session, Boolean(captureDraft.confirmed));
@@ -101,7 +104,7 @@ function render() {
       </div>
       <div class="folded-note" aria-hidden="true"><span class="note-fold"></span><span class="note-stroke"></span><span class="note-stroke short"></span><span class="note-stroke last"></span></div>
       <a class="primary" href="#patient-setup">Get started</a>
-      <a class="returning-signin" href="#signin">Already started? Sign in</a>
+      <a class="returning-signin" href="#signin">Already started? Sign in</a><a class="text-action privacy-link" href="#privacy">Privacy &amp; your choices</a>
     </section>`;
   if (setup || capture || firstValue) document.querySelector('h1').focus();
   if (capture) disposeCapture = mountCapture(document.querySelector('#capture-controls'), patient, captureDraft, () => {
@@ -119,6 +122,7 @@ function render() {
       clarifications: captureDraft.clarifications || [],
       ...(result.observations ? {observations:result.observations,removedObservations:captureDraft.removedObservations || []} : {}),
     });
+    track('update_confirmed',{fact_count:result.observations?.length??1,was_edited:captureDraft.confirmed.edited});
     if(captureDraft.existingPatient && session.isAuthenticated){captureDraft.saveRequested=true;location.hash='#record';}
     else location.hash = '#first-value';
   });
@@ -154,6 +158,7 @@ function render() {
       if (firstInvalid) { firstInvalid.focus(); return; }
       patient.name = patient.name.trim();
       patient.relationship = patient.relationship.trim();
+      track('setup_completed');
       location.hash = '#capture';
     });
   }
@@ -180,9 +185,14 @@ startSession(next => {
   const becameSignedIn = !session.isAuthenticated && next.isAuthenticated;
   const signedOut = session.isAuthenticated && !next.isAuthenticated;
   session = next;
+  if(signedOut)resetAnalytics();
+  configureAnalytics(next);
+  if(firstResolved&&!next.isAuthenticated&&!returningRecord())track('landing_viewed');
+  if(becameSignedIn)track('signin_completed',{is_returning:returningRecord()});
   if(accountDeleting)return;
   if (signedOut) { clearDraft(); location.hash = '#'; }
   else if (becameSignedIn) {
+    if(location.hash==='#privacy'){render();return;}
     if (location.hash === '#record') render();
     else location.hash = '#record';
   }

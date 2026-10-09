@@ -1,6 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
-async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0, pendingSession = false, failDeletionCode = false, failAccountDeletion = false, deletingInitially = false } = {}) {
+async function mockSession(page, { failSave = false, interpretation = null, initialEvents = [], failTimelineAt = 0, failAppend = false, failCorrection = false, failDelete = false, staleCorrection = false, signedOutInitially = false, failMatch = false, summaryReply = null, failSummary = false, failShareCheckAt = 0, staleShareAt = 0, pendingSession = false, failDeletionCode = false, failAccountDeletion = false, deletingInitially = false,analyticsInitially=true,failPrivacy=false } = {}) {
+  let analytics=analyticsInitially,privacyCalls=0;const analyticsEvents=[];
   let deletionStarted=deletingInitially;
   let signed = initialEvents.length>0 && !signedOutInitially, record = initialEvents.length ? {name:'Mira Example',relationship:'Daughter',event:initialEvents[0]} : null, savedCalls = 0, codeRequests = 0, timelineCalls=0, appendCalls=0, correctionCalls=0, deleteCalls=0, matchCalls=0, summaryCalls=0, shareCheckCalls=0,deletionCodeCalls=0,accountDeletionCalls=0;
   const entries=initialEvents.map((details,index)=>({id:String(index+1),details}));
@@ -14,6 +15,9 @@ async function mockSession(page, { failSave = false, interpretation = null, init
           if (params.code) { state.isAuthenticated = true; onChange({ ...state }); }
         },
         async getAccountState() {return (await fetch('/__test/account-state')).json();},
+        async getAnalyticsPreference(){return (await fetch('/__test/privacy')).json();},
+        async setAnalyticsPreference(value){const response=await fetch('/__test/privacy',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error('Unavailable');},
+        async trackAnalytics(value){await fetch('/__test/analytics',{method:'POST',body:JSON.stringify(value)});},
         async requestDeletionCode() {const response=await fetch('/__test/deletion-code');if(!response.ok)throw new Error('Delivery unavailable');return response.json();},
         async deleteAccount(value) {const response=await fetch('/__test/delete-account',{method:'POST',body:JSON.stringify(value)});if(!response.ok)throw new Error(await response.text());state.isAuthenticated=false;onChange({...state});},
         async signOut() { await fetch('/__test/signout'); state.isAuthenticated = false; onChange({ ...state }); },
@@ -31,6 +35,8 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     }` }));
   await page.route('**/__test/**', route => {
     const path = new URL(route.request().url()).pathname;
+    if(path.endsWith('privacy')){if(route.request().method()==='POST'){privacyCalls++;if(failPrivacy&&privacyCalls===1)return route.fulfill({status:503,body:'Unavailable'});analytics=route.request().postDataJSON().enabled;}return route.fulfill({json:analytics});}
+    if(path.endsWith('analytics')){if(analytics)analyticsEvents.push(route.request().postDataJSON());return route.fulfill({json:null});}
     if (path.endsWith('signin')) {
       const params = route.request().postDataJSON();
       if (!params.code) { codeRequests++; return route.fulfill({ json: {} }); }
@@ -89,7 +95,7 @@ async function mockSession(page, { failSave = false, interpretation = null, init
     if (route.request().url().endsWith('/capture-text')) return route.fulfill({ json: { text: route.request().postDataJSON().text, source: 'text' } });
     return route.fulfill({ json: interpretation || { status: 'ready', event: 'Mira Example said she felt tired today.', when: 'today', evidence: 'Patient-reported', question: '', message: '' } });
   });
-  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls, summaryCalls, shareCheckCalls, deletionCodeCalls, accountDeletionCalls }) };
+  return { state: () => ({ signed, record, savedCalls, codeRequests, savedIds, entries, timelineCalls, appendCalls, correctionCalls, deleteCalls, matchCalls, summaryCalls, shareCheckCalls, deletionCodeCalls, accountDeletionCalls,analytics,privacyCalls,analyticsEvents }) };
 }
 async function confirm(page) {
   await page.goto('/');
@@ -748,4 +754,39 @@ test('account deletion requires a fresh code, allows cancellation, retains inval
 test('reopening an already verified deletion resumes cleanup without exposing notes or sending another code',async({page})=>{
  const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],deletingInitially:true});await page.goto('/#record');await expect(page.getByRole('button',{name:'Finish deleting my account',exact:true})).toBeVisible();await expect(page.locator('.timeline-entry')).toHaveCount(0);await expect(page.getByRole('button',{name:'Keep my account',exact:true})).toHaveCount(0);expect(mock.state().deletionCodeCalls).toBe(0);
  await page.getByRole('button',{name:'Finish deleting my account',exact:true}).click();await expect(page.getByRole('status')).toHaveText('Your account and health record have been permanently deleted.');expect(mock.state().entries).toHaveLength(0);expect(mock.state().accountDeletionCalls).toBe(1);
+});
+
+
+test('privacy is reachable before sign-in, explains processing, and keeps browser opt-out after reopening',async({page})=>{
+ const mock=await mockSession(page);await page.goto('/');await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Your notes. Your choice.',exact:true})).toBeVisible();await expect(page.getByText('Mixpanel, in the EU',{exact:true})).toBeVisible();await expect(page.getByRole('switch',{name:'Usage tracking On',exact:true})).toHaveAttribute('aria-checked','true');
+ for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);if(width===390||width===1440)await page.screenshot({path:`.impeccable/review/privacy-${width}.png`,fullPage:true});}
+ await page.keyboard.press('Tab');await page.getByRole('switch').focus();expect(await page.getByRole('switch').evaluate(el=>getComputedStyle(el).outlineStyle)).not.toBe('none');
+ await page.getByRole('switch').click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');expect(mock.state().analytics).toBe(false);expect(await page.evaluate(()=>localStorage.getItem('carenama.analytics'))).toBe('off');
+ const count=mock.state().analyticsEvents.length;await page.getByRole('button',{name:'Back',exact:true}).click();await page.getByRole('link',{name:'Get started',exact:true}).click();await page.getByLabel('Their name').fill('Mira Example');await page.getByLabel('Your relationship to them').fill('Daughter');await page.getByRole('button',{name:'Continue',exact:true}).click();await expect(page.getByRole('button',{name:'Speak an update',exact:true})).toBeVisible();expect(mock.state().analyticsEvents).toHaveLength(count);
+ await page.goto('/#privacy');await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');await page.getByRole('switch').click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');expect(mock.state().analytics).toBe(true);
+});
+
+test('account privacy saves across reopening, recovers from failure and never sends health details',async({page})=>{
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],failPrivacy:true});await page.goto('/#record');await page.locator('.timeline-account > summary').click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();await expect(page.getByRole('switch')).toBeEnabled();await page.getByRole('switch').click();await expect(page.getByRole('alert')).toContainText('save your choice');await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');expect(mock.state().entries).toHaveLength(1);
+ await page.getByRole('switch').click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');const count=mock.state().analyticsEvents.length;
+ await page.getByRole('button',{name:'Back to timeline',exact:true}).click();await expect(page.locator('.timeline-entry')).toHaveCount(1);await page.locator('.timeline-account > summary').click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');expect(mock.state().analyticsEvents).toHaveLength(count);
+ await page.reload();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','false');expect(mock.state().analyticsEvents).toHaveLength(count);
+ await page.getByRole('switch').click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');await page.getByRole('button',{name:'Back to timeline',exact:true}).click();await expect.poll(()=>mock.state().analyticsEvents.length).toBeGreaterThan(count);
+ for(const entry of mock.state().analyticsEvents){expect(Object.keys(entry)).toEqual(['anonymousId','event','properties']);expect(JSON.stringify(entry)).not.toContain('Mira');expect(JSON.stringify(entry)).not.toContain('tired');expect(JSON.stringify(entry)).not.toContain('@');}
+});
+
+
+test('a tracking preference changed on another device is authoritative when this account reopens',async({page})=>{
+ await page.addInitScript(()=>{localStorage.setItem('carenama.analytics','off');localStorage.setItem('carenama.analytics-scope','account');});
+ const mock=await mockSession(page,{initialEvents:[legacyEvent(1)],analyticsInitially:true});await page.goto('/#record');await expect(page.locator('.timeline-entry')).toHaveCount(1);await expect.poll(()=>mock.state().analyticsEvents.length).toBeGreaterThan(0);expect(mock.state().privacyCalls).toBe(0);expect(mock.state().analytics).toBe(true);
+ await page.locator('.timeline-account > summary').click();await page.getByRole('link',{name:'Privacy & your choices',exact:true}).click();await expect(page.getByRole('switch')).toHaveAttribute('aria-checked','true');
+});
+
+test('usage events count successful copying and edited drafts without counting a cancelled share or sending draft text',async({page})=>{
+ await sharingDevice(page,{shareError:'AbortError'});const mock=await openSharing(page);await expect(page.getByLabel('Text to share')).toHaveValue(sharingFixtureText);await page.getByLabel('Text to share').fill(sharingFixtureText+' A fictional caregiver edit.');await page.getByRole('button',{name:'Share',exact:true}).click();await expect(page.getByText('Sharing cancelled. Your draft is still here.',{exact:true})).toBeVisible();
+ expect(mock.state().analyticsEvents.filter(item=>item.event==='summary_shared')).toHaveLength(0);await expect.poll(()=>mock.state().analyticsEvents.filter(item=>item.event==='share_draft_edited').length).toBe(1);
+ await page.getByRole('button',{name:'Copy text',exact:true}).click();await expect(page.getByText('Copied. Paste it into the app you choose.',{exact:true})).toBeVisible();await expect.poll(()=>mock.state().analyticsEvents.filter(item=>item.event==='summary_shared').length).toBe(1);
+ expect(mock.state().analyticsEvents.find(item=>item.event==='summary_shared').properties).toEqual({method:'copy',version:'concise'});expect(mock.state().analyticsEvents.find(item=>item.event==='share_draft_edited').properties).toEqual({edit_size:'small'});expect(mock.state().analyticsEvents.filter(item=>item.event==='share_draft_edited')).toHaveLength(1);
+ expect(JSON.stringify(mock.state().analyticsEvents)).not.toContain('caregiver edit');expect(JSON.stringify(mock.state().analyticsEvents)).not.toContain('Mira Example');expect(mock.state().analyticsEvents.find(item=>item.event==='summary_prepared').properties.result).toBe('ok');
 });

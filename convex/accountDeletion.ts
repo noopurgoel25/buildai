@@ -105,6 +105,14 @@ export const purge=internalMutation({args:{userId:v.id('users')},returns:v.boole
   }
   const usage=await ctx.db.query('loginEmailUsage').withIndex('by_email_time',q=>q.eq('emailHash',state.emailHash)).take(20);
   if(usage.length){for(const row of usage)await ctx.db.delete(row._id);return false;}
+  const anonymous=await ctx.db.query('analyticsAnonymous').withIndex('by_user',q=>q.eq('userId',userId)).take(20);
+  if(anonymous.length){for(const row of anonymous)await ctx.db.delete(row._id);return false;}
+  const analytics=await ctx.db.query('analyticsAccounts').withIndex('by_user',q=>q.eq('userId',userId)).unique();
+  if(analytics){
+    const id=await ctx.db.insert('analyticsCleanup',{distinctId:analytics.distinctId,reportDeletion:analytics.enabled,createdAt:Date.now()});
+    await ctx.scheduler.runAfter(0,internal.analytics.removeProfile,{id});
+    await ctx.db.delete(analytics._id);
+  }
   if(await ctx.db.get(userId))await ctx.db.delete(userId);
   await ctx.db.delete(state._id);
   return true;

@@ -3,6 +3,7 @@ import { escape, savedObservationDetails, occurrenceLabel } from './observation-
 import { mountObservationReview } from './observation-review.js';
 import { createRecordId } from './record-id.js';
 import { mountPeriodSummary } from './summary.js';
+import { track,bucket } from './analytics.js';
 
 export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut, onOpened=()=>{},onDeleted=onSignOut,onDeleting=()=>{}) {
   let disposed=false, busy=false, entries=[], patient=null, cursor=null, isDone=true, loaded=false, error='', errorKind='load', saved=false;
@@ -21,7 +22,7 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
       <ol class="timeline-list">${entries.map((entry,index)=>timelineEntry(entry,index,openedEntries.has(entry.id))).join('')}</ol>
       ${error ? `<p class="error" role="alert">${escape(error)}</p><button class="secondary" id="retry-page" type="button">Try again</button>` : ''}
       ${!isDone && !error ? `<button class="secondary" id="load-more" type="button" ${busy?'disabled':''}>${busy?'Loading older updates…':'Load older updates'}</button>` : ''}
-      <details class="timeline-account"><summary>Account</summary><button class="text-action timeline-signout" id="signout" type="button">Sign out</button><button class="text-action remove-action account-link" id="delete-account" type="button">Delete account and record</button></details>`);
+      <details class="timeline-account"><summary>Account</summary><button class="text-action timeline-signout" id="signout" type="button">Sign out</button><a class="text-action account-link" href="#privacy">Privacy &amp; your choices</a><button class="text-action remove-action account-link" id="delete-account" type="button">Delete account and record</button></details>`);
     root.querySelectorAll('.timeline-disclosure').forEach(details=>details.addEventListener('toggle',()=>{if(details.open)openedEntries.add(details.dataset.entry);else openedEntries.delete(details.dataset.entry);}));
     root.querySelector('#add-update').onclick=()=>onAdd(patient);
     root.querySelector('#period-summary')?.addEventListener('click',()=>{disposeSummary=mountPeriodSummary(root,session,patient,()=>{disposeSummary();loadPage(true);});});
@@ -64,6 +65,7 @@ export function mountTimeline(root, session, pending, onSaved, onAdd, onSignOut,
       if(disposed)return;
       patient=result.patient;if(patient)onOpened();entries=first?result.page:[...entries,...result.page.filter(next=>!entries.some(old=>old.id===next.id))];
       cursor=result.continueCursor;isDone=result.isDone;loaded=true;busy=false;draw();
+      if(first)track('timeline_opened',{note_count:bucket(result.isDone?result.page.length:11)});
       if(first)root.querySelector('h1').focus();
     } catch {
       if(disposed)return;

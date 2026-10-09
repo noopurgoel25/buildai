@@ -419,7 +419,11 @@ test('confirmation shows the corrected first event, preserves its evidence and o
   await page.getByText('Your original update', { exact: true }).click();
   await expect(page.locator('.original-update')).toHaveText(update);
   expect(calls.map(call => call.endpoint)).toEqual(['/api/capture-text', '/api/interpret']);
-  expect(await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length }))).toEqual({ local: 0, session: 0 });
+  const browserStorage=await page.evaluate(()=>({local:Object.fromEntries(Object.keys(localStorage).map(key=>[key,localStorage.getItem(key)])),session:sessionStorage.length}));
+  expect(browserStorage.session).toBe(0);
+  expect(Object.keys(browserStorage.local).every(key=>['carenama.analytics-id','carenama.analytics','carenama.analytics-scope'].includes(key))).toBe(true);
+  expect(JSON.stringify(browserStorage)).not.toContain(update);
+  if(browserStorage.local['carenama.analytics-id'])expect(browserStorage.local['carenama.analytics-id']).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: '.impeccable/review/first-value-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 900 });
