@@ -119,6 +119,25 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #352a2b; outl
 .record-details { color: #6f5b5b; font-size: 14px; }.record-details summary { min-height: 44px; padding: 12px 0; margin: 0; }
 .record-details p { font-size: 14px; }.detail-evidence { margin: 20px 0; }.detail-evidence h3 { font-size: 16px; }
 .record-details details { margin: 12px 0; }.record-details dd { font-size: 14px; }
+.capture-origin { margin-top: 16px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.update-facts > .connected-facts { display: block; }
+.connected-facts > section { min-width: 0; }
+.connection-heading { margin-bottom: 14px; }
+.connection-heading h3 { margin: 0 0 4px; color: var(--ink); font-size: 14px; line-height: 1.5; font-weight: 600; }
+.connection-heading p { font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.connected-detail-list { padding-left: 12px; border-left: 1px solid #bf7587; }
+.connected-detail-list > li { padding: 0 0 14px; }
+.connected-detail-list > li + li { border-top: 0; }
+.connected-detail-list > li:last-child { padding-bottom: 0; }
+.observation-editor form { margin-top: 20px; }
+.observation-editor textarea { min-height: 112px; }
+.editor-timing { margin-top: 20px; border-block: 1px solid #eadad0; }
+.editor-timing > summary { min-height: 64px; padding: 12px 0; cursor: pointer; overflow-wrap: anywhere; }
+.editor-timing > summary > span:first-child { font-size: 15px; font-weight: 600; color: var(--ink); }
+.editor-timing > summary > span:last-child { display: block; margin-top: 4px; color: #6f5b5b; font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+.timing-fields { padding: 4px 0 20px; }
+.observation-editor .editor-extra { margin-top: 12px; }
+.observation-editor .editor-extra > summary { display: list-item; min-height: 44px; padding: 12px 0; cursor: pointer; }
 .flow-actions { margin-top: 28px; }.flow-actions .hint { text-align: center; }.flow-actions .text-action { display: flex; margin: 8px auto 0; }
 .timing-question blockquote { margin: 24px 0; padding: 20px; background: #f4dbd0; color: #352a2b; border-radius: 16px; line-height: 1.6; overflow-wrap: anywhere; }
 .date-choices { display: flex; gap: 12px; margin-top: 16px; }.date-choices .secondary { margin: 0; }
@@ -160,6 +179,8 @@ textarea:focus-visible, summary:focus-visible { outline: 3px solid #352a2b; outl
 .timeline-expanded .record-details { margin-bottom: 0; }
 .timeline-expanded .detail-evidence h3 { font-size: 14px; margin: 16px 0 8px; }
 .timeline-expanded .note-actions { margin-top: 12px; }
+.timeline-expanded .note-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; }
+.timeline-expanded .note-actions .remove-action { margin: 0; }
 .timeline-delete { border-top: 1px solid #eadad0; margin-top: 12px; padding-top: 4px; }
 .timeline-screen h1 { overflow-wrap: anywhere; }
 @media (max-width: 350px) { .timeline-screen { padding-inline: 18px; } .timeline-list > li { padding-left: 44px; } .timeline-disclosure > summary, .timeline-expanded { padding-inline: 12px; } }

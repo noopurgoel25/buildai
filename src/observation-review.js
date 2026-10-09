@@ -1,4 +1,4 @@
-import { escape, updateFacts, recordDetails } from './observation-display.js';
+import { escape, updateFacts, recordDetails, occurrenceLabel } from './observation-display.js';
 import { validDate, resolveTiming, formatDate, parseDisplayDate, timingCertainty } from '../convex/lib/observationTiming.ts';
 import { dateInput, bindDateInput } from './date-input.js';
 import { createRecordId } from './record-id.js';
@@ -27,7 +27,7 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
       ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
       ${details}<button class="text-action" id="return-capture" type="button">Return to capture</button></div>` : `<div class="capture-result review-update">
       <h2 tabindex="-1">Does this look right?</h2><p class="review-intro">${draft.savedEdit ? 'Review your corrections before saving.' : 'Check the details before you continue.'}</p>
-      <div class="review-surface">${updateFacts({observations:items},true)}</div>
+      <div class="review-surface">${updateFacts({...draft,relatedGroups:draft.interpretation.relatedGroups ?? draft.relatedGroups,observations:items},true)}</div>
       ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
       ${details}
       ${draft.interpretation.manual ? `<button class="text-action" id="add-observation" type="button" ${items.length >= 20 ? 'disabled' : ''}>Add a detail from your update</button>` : ''}
@@ -67,13 +67,16 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
     const saved = draft.observationEdit?.id === item.id ? draft.observationEdit : structuredClone(item);
     draft.observationEdit=saved;
     const adding=draft.addingObservationId===item.id;
-    root.innerHTML = `<div class="capture-result"><h2 tabindex="-1">${adding ? 'Add a detail' : 'Change a detail'}</h2>${adding ? `<div class="add-detail-context"><p class="hint">Your original update</p><blockquote>${escape(draft.originalText || draft.text || item.supportingWords || '')}</blockquote></div>` : ''}<form novalidate>
-      <label for="observation-text">${adding ? 'What else would you like to add?' : 'What happened'}</label><textarea id="observation-text" maxlength="5000">${escape(saved.event)}</textarea>
+    if(draft.observationTimingForId!==item.id){draft.observationTimingForId=item.id;draft.observationTimingOpen=adding || !saved.timing.resolved;}
+    root.innerHTML = `<div class="capture-result observation-editor"><h2 tabindex="-1">${adding ? 'Add a detail' : 'Change a detail'}</h2>${adding ? `<div class="add-detail-context"><p class="hint">Your original update</p><blockquote>${escape(draft.originalText || draft.text || item.supportingWords || '')}</blockquote></div>` : ''}<form novalidate>
+      <label for="observation-text">${adding ? 'What else would you like to add?' : 'What happened'}</label><textarea id="observation-text" rows="3" maxlength="5000">${escape(saved.event)}</textarea>
+      <details class="editor-timing" ${draft.observationTimingOpen ? 'open' : ''}><summary><span>When this happened</span><span id="editor-timing-label">${escape(occurrenceLabel(saved))}</span></summary><div class="timing-fields">
       <label for="observation-when">Timing words</label><input id="observation-when" maxlength="5000" value="${escape(saved.when)}">
       <label for="observation-date">Event date</label>${dateInput('observation-date',saved.dateInput ?? (saved.timing.date ? formatDate(saved.timing.date) : ''))}
       <label for="observation-time">Clock time, if known</label><input id="observation-time" type="time" value="${escape(saved.timing.time || '')}">
       <label for="observation-date-precision">How certain is the day?</label><select id="observation-date-precision">${['exact','approximate','unknown'].map(p => `<option value="${p}" ${timingCertainty(saved.timing).datePrecision===p?'selected':''}>${{exact:'I know the day',approximate:'An approximate day',unknown:'I don’t remember the day'}[p]}</option>`).join('')}</select>
       <label for="observation-time-precision">How certain is the clock time?</label><select id="observation-time-precision">${['exact','approximate','unknown'].map(p => `<option value="${p}" ${timingCertainty(saved.timing).timePrecision===p?'selected':''}>${{exact:'I know the clock time',approximate:'An approximate time',unknown:'Clock time not known'}[p]}</option>`).join('')}</select>
+      </div></details>
       <details class="editor-extra"><summary>Source and meaning</summary><label for="observation-evidence">How do you know?</label><select id="observation-evidence">${['Not specified','Measured','Patient-reported','Caregiver-observed'].map(p => `<option ${p===saved.evidence?'selected':''}>${p}</option>`).join('')}</select>
       <label for="observation-polarity">What was explicitly stated?</label><select id="observation-polarity">${['present','absent','uncertain'].map(p => `<option value="${p}" ${p===saved.polarity?'selected':''}>${{present:'Present',absent:'Absent',uncertain:'Uncertain'}[p]}</option>`).join('')}</select></details>
       ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}<button class="primary" type="submit">Apply changes</button><button class="text-action" id="cancel" type="button">Cancel editing</button><button class="text-action remove-action" id="remove-detail" type="button">Remove this detail</button></form><p class="hint">You’ll review the whole update before saving.</p></div>`;
@@ -83,16 +86,18 @@ export function mountObservationReview(root, draft, onConfirm, onReturn) {
       const datePrecision=root.querySelector('#observation-date-precision').value,timePrecision=root.querySelector('#observation-time-precision').value;
       const date=parseDisplayDate(saved.dateInput),time=root.querySelector('#observation-time').value || null;
       saved.timing={date,time,datePrecision,timePrecision,precision:datePrecision==='exact'&&date&&timePrecision==='exact'&&time?'exact':datePrecision==='exact'&&date&&!time?'date':datePrecision==='unknown'&&timePrecision==='unknown'?'unknown':'approximate',resolved:true}; };
+    root.querySelector('.editor-timing').addEventListener('toggle',event=>{draft.observationTimingOpen=event.target.open;});
     bindDateInput(root.querySelector('#observation-date'));
     root.querySelector('form').oninput=event=>{
       if(event.target.id==='observation-date' && parseDisplayDate(event.target.value) && root.querySelector('#observation-date-precision').value==='unknown')root.querySelector('#observation-date-precision').value='exact';
       if(event.target.id==='observation-time' && event.target.value && root.querySelector('#observation-time-precision').value==='unknown')root.querySelector('#observation-time-precision').value='exact';
       read();
+      root.querySelector('#editor-timing-label').textContent=saved.dateInput.trim()&&!parseDisplayDate(saved.dateInput)?saved.dateInput:occurrenceLabel(saved);
     };
     root.querySelector('form').onsubmit=e => {e.preventDefault(); read(); const t=saved.timing;
       if (!saved.event.trim()) {error='Check the description and timing before applying changes.';edit(item);return;}
-      if ((saved.dateInput.trim()&&!parseDisplayDate(saved.dateInput)) || (t.datePrecision==='exact'&&!t.date)) {error='Enter a valid date as DD/MM/YYYY, or choose an approximate or unknown day.';edit(item);return;}
-      if ((t.timePrecision==='exact'&&!t.time) || (t.precision==='approximate' && !saved.when.trim())) {error='Enter a clock time, or choose an approximate or unknown time and keep the timing words.';edit(item);return;}
+      if ((saved.dateInput.trim()&&!parseDisplayDate(saved.dateInput)) || (t.datePrecision==='exact'&&!t.date)) {draft.observationTimingOpen=true;error='Enter a valid date as DD/MM/YYYY, or choose an approximate or unknown day.';edit(item);return;}
+      if ((t.timePrecision==='exact'&&!t.time) || (t.precision==='approximate' && !saved.when.trim())) {draft.observationTimingOpen=true;error='Enter a clock time, or choose an approximate or unknown time and keep the timing words.';edit(item);return;}
       if(t.datePrecision==='unknown')t.date=null;if(t.timePrecision==='unknown')t.time=null;delete saved.dateInput;
       if(item.event!==saved.event){delete saved.symptomName;delete saved.measurement;delete item.symptomName;delete item.measurement;saved.type='pending';}
       Object.assign(item,saved,{confirmed:false,edited:true}); draft.confirmed=null; draft.observationEdit=null;delete draft.addingObservationId; error=''; draw(); };

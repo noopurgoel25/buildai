@@ -1,4 +1,8 @@
 const { test, expect } = require('@playwright/test');
+async function openTiming(page) {
+  const timing=page.locator('.editor-timing');
+  if(!await timing.evaluate(node=>node.open))await timing.locator('summary').click();
+}
 const path = require('node:path');
 
 const live = process.env.CAPTURE_LIVE === '1';
@@ -226,7 +230,7 @@ test('LIVE: spoken fictional update reaches actual Sarvam transcription then int
   expect(calls.map(call => call.status)).toEqual([200, 200]);
   await page.screenshot({ path: '.impeccable/review/capture-live-voice.png', fullPage: true });
   await page.getByRole('button', { name: 'Change detail 1' }).click();
-  await page.getByLabel('Timing words', { exact: true }).fill('Today after lunch');
+  await openTiming(page);await page.getByLabel('Timing words', { exact: true }).fill('Today after lunch');
   await page.getByLabel('How certain is the day?').selectOption('approximate');
   await page.getByRole('button', { name: 'Apply changes' }).click();
   await expect(page.locator('.fact-time').filter({ hasText: 'Today after lunch' })).toBeVisible();
@@ -328,7 +332,7 @@ test('empty edits preserve entered timing, and failed AI offers manual editing',
   await page.getByRole('button', { name: 'Continue with text' }).click();
   await page.getByRole('button', { name: 'Edit manually' }).click();
   await page.getByLabel('What happened', { exact: true }).fill('');
-  await page.getByLabel('Timing words', { exact: true }).fill('Yesterday');
+  await openTiming(page);await page.getByLabel('Timing words', { exact: true }).fill('Yesterday');
   await page.getByRole('button', { name: 'Apply changes' }).click();
   await expect(page.getByRole('alert')).toHaveText('Check the description and timing before applying changes.');
   await expect(page.getByLabel('Timing words', { exact: true })).toHaveValue('Yesterday');

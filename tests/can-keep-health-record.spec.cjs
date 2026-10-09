@@ -1,5 +1,43 @@
 const { test, expect } = require('@playwright/test');
 
+async function openTiming(page) {
+ const timing=page.locator('.editor-timing');
+ if(await timing.count() && !await timing.evaluate(node=>node.open))await timing.locator('summary').click();
+}
+
+function connectedInterpretation() {
+ const text='She vomited today after dinner yesterday. She did not feel dizzy today.';
+ const observations=[['1','vomited today','today','2026-10-06','present'],['2','dinner yesterday','yesterday','2026-10-05','present'],['3','She did not feel dizzy today.','today','2026-10-06','absent']].map(([id,event,when,date,polarity])=>({id,event,when,supportingWords:event,evidence:'Not specified',polarity,timing:{date,time:null,precision:'date',datePrecision:'exact',timePrecision:'unknown',resolved:true},confirmed:false,edited:false}));
+ return {status:'ready',event:text,when:'Multiple observations',evidence:'Not specified',question:'',message:'',interpretationVersion:'capture-context-v2',relatedGroups:[{observationIds:['1','2'],supportingWords:'She vomited today after dinner yesterday.'}],observations};
+}
+
+test.describe('Milestone 25 connected records',()=>{
+ test('review and saved timeline keep a connection, individual dates and a negative; sources open only on request',async({page})=>{
+  const interpretation=connectedInterpretation(),mock=await mockSession(page,{interpretation});await openMulti(page,interpretation.event);
+  await expect(page.getByRole('region',{name:'Connected details',exact:true})).toBeVisible();await expect(page.locator('.connected-facts .fact-text')).toHaveText(['vomited today','dinner yesterday']);await expect(page.locator('.fact-time')).toHaveText(['06/10/2026','05/10/2026','06/10/2026']);
+  await expect(page.getByText('Explicitly absent',{exact:true})).not.toBeVisible();const captured=await page.getByText(/^Captured on /).textContent();await expect(page.getByText(captured,{exact:true})).toBeVisible();
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/m25-review-${width}.png`,fullPage:true});}
+  await page.getByRole('button',{name:'Yes, continue',exact:true}).click();await login(page);await expect(page.locator('.timeline-entry')).toHaveCount(1);await expect(page.locator('.timeline-preview-time')).toHaveText('05/10/2026 to 06/10/2026');
+  const toggle=page.locator('.timeline-disclosure > summary');await toggle.focus();await page.keyboard.press('Enter');await expect(toggle).toBeFocused();expect(await toggle.evaluate(node=>getComputedStyle(node).outlineStyle)).toBe('solid');
+  await expect(page.getByRole('region',{name:'Connected details',exact:true})).toBeVisible();await expect(page.locator('.fact-text')).toHaveCount(3);await expect(page.getByText('Explicitly absent',{exact:true})).not.toBeVisible();await expect(page.getByText(captured,{exact:true})).toBeVisible();
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/m25-timeline-${width}.png`,fullPage:true});}
+  await page.getByText('Record details',{exact:true}).click();await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();await page.getByText('Your original update',{exact:true}).click();await expect(page.locator('.original-update')).toHaveText(interpretation.event);await expect(page.getByText(captured,{exact:true})).toHaveCount(1);
+  await page.reload();await openTimelineNote(page);await expect(page.getByRole('region',{name:'Connected details',exact:true})).toBeVisible();expect(mock.state().record.event.relatedGroups).toEqual(interpretation.relatedGroups);expect(mock.state().savedCalls).toBe(1);
+ });
+ test('populated editor stays short; one timing edit keeps sibling dates, original interpretation and capture time',async({page})=>{
+  const interpretation=connectedInterpretation(),original={...legacyEvent(1),event:interpretation.event,originalText:interpretation.event,observations:interpretation.observations.map(item=>({...item,confirmed:true})),relatedGroups:interpretation.relatedGroups,interpretationVersion:interpretation.interpretationVersion,aiInterpretation:interpretation};
+  const mock=await mockSession(page,{initialEvents:[original]});await page.goto('/#record');await openTimelineNote(page);await page.getByRole('button',{name:'Change update',exact:true}).click();await page.getByRole('button',{name:'Change detail 2',exact:true}).click();
+  await expect(page.getByLabel('What happened',{exact:true})).toHaveValue('dinner yesterday');await expect(page.getByLabel('Event date',{exact:true})).not.toBeVisible();await expect(page.getByLabel('How do you know?',{exact:true})).not.toBeVisible();await expect(page.locator('#editor-timing-label')).toHaveText('05/10/2026');
+  for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await expect(page.getByRole('button',{name:'Apply changes',exact:true})).toBeInViewport();await page.screenshot({path:`.impeccable/review/m25-compact-editor-${width}.png`,fullPage:true});}
+  await openTiming(page);await openTiming(page);await page.getByLabel('Event date',{exact:true}).fill('30/02/2026');await page.getByRole('button',{name:'Apply changes',exact:true}).click();await expect(page.getByRole('alert')).toContainText('DD/MM/YYYY');await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('30/02/2026');await expect(page.getByLabel('Event date',{exact:true})).toBeVisible();
+  await openTiming(page);await page.getByLabel('Event date',{exact:true}).fill('04/10/2026');await page.getByRole('button',{name:'Apply changes',exact:true}).click();await expect(page.locator('.fact-time')).toHaveText(['06/10/2026','04/10/2026','06/10/2026']);await expect(page.getByRole('region',{name:'Connected details',exact:true})).toHaveCount(0);await page.getByRole('button',{name:'Save changes',exact:true}).click();await openTimelineNote(page);
+  const saved=mock.state().entries[0].details;expect(saved.capturedAt).toBe(original.capturedAt);expect(saved.timeZone).toBe(original.timeZone);expect(saved.originalText).toBe(original.originalText);expect(saved.aiInterpretation).toEqual(original.aiInterpretation);expect(saved.relatedGroups).toEqual([]);expect(saved.observations[0]).toEqual(original.observations[0]);expect(saved.observations[2]).toEqual(original.observations[2]);expect(mock.state().correctionCalls).toBe(1);
+ });
+ test('invalid connection metadata leaves every individually dated fact available without a date range',async({page})=>{
+  const interpretation=connectedInterpretation();interpretation.relatedGroups[0].observationIds[1]='missing';await mockSession(page,{interpretation});await openMulti(page,interpretation.event);await expect(page.getByRole('region',{name:'Connected details',exact:true})).toHaveCount(0);await expect(page.locator('.fact-text')).toHaveText(interpretation.observations.map(item=>item.event));await expect(page.locator('.fact-time')).toHaveText(['06/10/2026','05/10/2026','06/10/2026']);
+ });
+});
+
 test.describe('Milestone 24 date and context review',()=>{
  test.use({timezoneId:'Asia/Kolkata'});
  test('known day with approximate clock reaches review, corrects DD/MM/YYYY and saves with its capture time intact',async({page})=>{
@@ -12,8 +50,8 @@ test.describe('Milestone 24 date and context review',()=>{
   const deviceZone=await page.evaluate(()=>Intl.DateTimeFormat().resolvedOptions().timeZone);const captured=await page.getByText(/^Captured on /).textContent();expect(captured).toContain('06/10/2026, 00:30:00');expect(captured).toContain(deviceZone);
   await page.getByRole('button',{name:'Change detail 1',exact:true}).click();
   await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('06/10/2026');await expect(page.getByLabel('How certain is the day?',{exact:true})).toHaveValue('exact');await expect(page.getByLabel('How certain is the clock time?',{exact:true})).toHaveValue('approximate');
-  await page.getByLabel('Event date',{exact:true}).fill('30/02/2026');await page.getByRole('button',{name:'Apply changes',exact:true}).click();await expect(page.getByRole('alert')).toContainText('DD/MM/YYYY');await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('30/02/2026');
-  await page.getByLabel('Event date',{exact:true}).fill('');await page.getByLabel('Event date',{exact:true}).pressSequentially('07102026');await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('07/10/2026');
+  await openTiming(page);await page.getByLabel('Event date',{exact:true}).fill('30/02/2026');await page.getByRole('button',{name:'Apply changes',exact:true}).click();await expect(page.getByRole('alert')).toContainText('DD/MM/YYYY');await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('30/02/2026');
+  await openTiming(page);await page.getByLabel('Event date',{exact:true}).fill('');await page.getByLabel('Event date',{exact:true}).pressSequentially('07102026');await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('07/10/2026');
   for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:`.impeccable/review/m24-date-editor-${width}.png`,fullPage:true});}
   await page.getByRole('button',{name:'Apply changes',exact:true}).click();await expect(page.locator('.fact-time')).toHaveText('07/10/2026 · around 5 p.m.');await page.getByRole('button',{name:'Yes, continue',exact:true}).click();await login(page);await expect(page.locator('.timeline-entry')).toHaveCount(1);
   expect(mock.state().record.event.capturedAt).toBe(Date.parse('2026-10-05T19:00:00Z'));expect(mock.state().record.event.timeZone).toBe(deviceZone);expect(mock.state().record.event.observations[0].timing.date).toBe('2026-10-07');expect(mock.state().record.event.aiInterpretation.observations[0].timing.date).toBe('2026-10-06');expect(mock.state().codeRequests).toBe(1);
@@ -380,6 +418,7 @@ test('stored labels stay inside Record details, determine icons and refresh afte
   await expect(page.locator('.timeline-marker').nth(1)).toHaveClass(/marker-wellbeing/);
   await expect(page.locator('.timeline-entry').first().getByText('Recorded as',{exact:true}).first()).not.toBeVisible();
   await page.locator('.timeline-disclosure > summary').first().click();
+  await page.getByText('Record details',{exact:true}).first().click();
   await expect(page.getByText('Measurement · blood pressure 142/88',{exact:true})).toBeVisible();
   await expect(page.getByText('Symptom · dizziness',{exact:true})).toBeVisible();
   await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();
@@ -393,6 +432,7 @@ test('stored labels stay inside Record details, determine icons and refresh afte
   await page.getByLabel('What happened',{exact:true}).fill('She did not have a headache');
   await page.getByRole('button',{name:'Apply changes'}).click();
   await page.getByRole('button',{name:'Save changes'}).click();
+  await page.getByText('Record details',{exact:true}).first().click();
   await expect(page.getByText(/being sorted/)).toBeVisible();
   const stored=mock.state().entries[0].details;
   expect(stored.observations[1].type).toBe('pending');expect(stored.observations[1].symptomName).toBeUndefined();
@@ -625,13 +665,13 @@ test('compact timeline reveals complete notes in one tap, keeps negatives and wo
   }
   const summary=page.locator('.timeline-disclosure > summary').first();await summary.focus();await page.keyboard.press('Enter');
   await expect(page.locator('.timeline-expanded').first().getByText('She did not feel dizzy',{exact:true}).first()).toBeVisible();
-  await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();await expect(page.getByText(/^Captured on /).first()).toBeVisible();
+  await expect(page.getByText('Explicitly absent',{exact:true})).not.toBeVisible();await page.getByText('Record details',{exact:true}).first().click();await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();await expect(page.getByText(/^Captured on /).first()).toBeVisible();
   for(const width of [320,390,1440]){
     await page.setViewportSize({width,height:900});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     if(width===390)await page.screenshot({path:'.impeccable/review/compact-expanded-mobile.png',fullPage:true});
   }
   await page.getByRole('button',{name:'Change update',exact:true}).click();await page.getByRole('button',{name:'Cancel changes',exact:true}).click();
-  await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();
+  await page.getByText('Record details',{exact:true}).first().click();await expect(page.getByText('Explicitly absent',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Delete update',exact:true}).click();await page.getByRole('button',{name:'Keep update'}).click();
   expect(mock.state().deleteCalls).toBe(0);expect(mock.state().correctionCalls).toBe(0);
   await page.locator('.timeline-disclosure > summary').first().click();await expect(page.getByRole('button',{name:'Change update'})).toHaveCount(0);expect(errors).toEqual([]);

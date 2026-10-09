@@ -185,11 +185,11 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 - Shared-day checkbox: native 20 px checkbox beside **"Use the day I choose for these details"**, with the named facts stacked underneath in the same column; whole label tappable; starts unchecked. Each fact keeps its own clock time.
 
 ### Review
-- Heading: **"Does this look right?"** One quiet surface listing every fact with its timing.
+- Heading: **"Does this look right?"** One quiet surface listing every fact with its timing. Explicitly linked facts appear together under **Connected details**, with a known date/range and each fact's own date. Unrelated facts stay separate; missing, edited or invalid links fall back to individual facts. The display never adds a cause.
 - Primary: **Yes, continue** (first update) / **Save update** (returning). Approves all facts together.
-- The editor has an Event date field, Clock time if known, and separate **How certain is the day?** / **How certain is the clock time?** choices. An approximate clock or part of the day never requires an exact hour; an uncertain day does not erase a known clock.
+- The populated editor opens with **What happened** visible and a compact **When this happened** row showing the current timing. Tap that row to open only this detail's Event date, Clock time if known and separate **How certain is the day?** / **How certain is the clock time?** choices. Source and meaning stays collapsed. Invalid timing opens the row and preserves the typed entry; Back preserves unfinished fields and disclosure state. An approximate clock or part of the day never requires an exact hour; an uncertain day does not erase a known clock.
 - Quiet **Change** link per fact opens the editor; removal lives inside the editor. Source and meaning controls are disclosed only when wanted. Changes return to review. Removing every fact returns to Capture.
-- **Record details** (disclosure): exact capture time and zone, evidence, presence/absence/uncertainty, supporting words, original input, clarifications.
+- **Captured on** appears once beneath the facts, with the local timestamp and original zone. **Record details** starts collapsed: labels, evidence, presence/absence/uncertainty and supporting words; original input and clarifications open separately within it. Do not repeat the main fact description/date inside source fields.
 - **[V1.1] "Recorded as" line in Record details** per fact, in plain words: e.g. *Recorded as: Symptom · dizziness*, *Recorded as: Measurement · blood pressure 142/88 mmHg*, *Recorded as: Appetite*. While a label is being worked out: *Recorded as: being sorted — it will appear here shortly.* Never shown on the main review surface; there is no control to pick or change a label.
 - AI failure: retry or enter details manually (same flow, can add details from the original words). **[V1.1]** Manually entered facts are labelled automatically when saved, like any other fact. Back keeps review and unfinished edits; refresh clears them; screen says nothing is saved yet.
 
@@ -205,9 +205,9 @@ Every screen supports its loading, broken, empty and done states. Global AI-busy
 ### Timeline
 - Heading with person's name. Primary: **Add update**. Secondary: **Summary**. Shared header menu: **Your timeline**, support/help, **Privacy & your choices**, **Sign out**, **Delete account and record [V1.1]**.
 - Connected vertical rail, newest **Recorded** first (the date label is "Recorded" so it's never mistaken for symptom timing).
-- Collapsed note: recorded date, first fact (max two lines), its timing, "+N details" when several.
+- Collapsed note: recorded date, first fact (max two lines), its timing, "+N details" when several. An explicitly connected first group shows its known occurrence date/range, distinct from Recorded; uncertain days are stated rather than counted as known. No range is inferred across unrelated facts.
 - Note icon: **[V1.1]** taken from the stored labels (§3 icon table). One label → that icon (so appetite and wellbeing notes use the warm plum moon here too); several labels or a pending label → neutral note icon.
-- **View update** opens all facts, timing and evidence; original words and clarifications are optional disclosures. **Change update** inside; **Delete update** separated below, with confirmation naming the person and saying it can't be undone.
+- **View update** opens all facts with their individual timing and one capture timestamp. **Record details** keeps evidence, labels and original words optional. Quiet **Change update** and **Delete update** sit together in this context, wrapping on narrow phones; deletion retains confirmation naming the person and saying it can't be undone.
 - Change: whole-update review; **Save changes** / **Cancel changes**. **[V1.1]** A wrong label is fixed by correcting the fact's words; facts whose words changed are relabelled on save. No label dropdown or extra fields. The screen looks exactly as today. A note changed elsewhere must be reopened, not overwritten. Failed save keeps the draft; failed delete keeps the note. Opened notes stay open after cancelling.
 - Older notes load in pages; a failed page keeps what's shown. Loading: skeleton. Broken: "We couldn't load the timeline. Try again." Empty: explain nothing is saved yet, with Add update.
 

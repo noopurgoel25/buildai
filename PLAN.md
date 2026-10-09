@@ -2,7 +2,7 @@
 
 Current version: **V1.2 - caregiver feedback improvements.** V1/V1.1 Milestones 1-21 are complete and live. Each milestone needs builder testing before publishing.
 
-Current work: **Milestones 22 and 23 are combined for builder review; Milestone 24 is implemented locally, awaiting builder testing. None is published.** The stable combined branch is `milestone-22-23-combined` at `0b96d81`, with a separate local preview on port 5174. Original milestone branches remain available. Milestone 24 continues from the combined branch on `milestone-24-timing-context`: DD/MM/YYYY dates, independent day/clock certainty, capture-local timing, context-aware interpretation and validated optional related-fact metadata. Grouped presentation belongs to Milestone 25. Phone review remains required before publishing.
+Current work: **Milestones 22-24 are combined for builder review; Milestone 25 is implemented locally, awaiting builder testing. None is published.** At the builder's request, `milestone-23-welcome-onboarding` now includes Milestone 24 at `ee65269`. The stable combined branch is `milestone-22-24-combined`, with the separate preview on port 5174; earlier individual checkpoints remain in history. Milestone 25 continues from that build on `milestone-25-connected-records`: connected facts with individual dates, timeline date ranges for explicit links, a shorter populated editor and source details opened on request. Milestone 24's server changes are still local, so checking its real AI and saving behaviour requires an authorised backend publish. Phone review remains required before publishing.
 
 ## V1.2 - caregiver feedback improvements
 
