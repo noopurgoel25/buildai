@@ -144,3 +144,7 @@ Signed-in empty accounts receive a person-first introduction and no repeated sig
 ### 2026-10-09 ? Less repetitive guidance and contextual detail entry
 Remove the duplicate visible step count, move setup reassurance beside the heading, shorten draft guidance and show it after input starts, and scope unsaved messages to the current update or correction. New-detail editing shows the original capture without prefilling a duplicate fact, while existing-detail editing remains populated.
 *Why:* builder phone testing found wasted space, ambiguous messages about previously saved records, and a blank Add form incorrectly presented as Change.
+
+### 2026-10-09 - Publish V1.1 and setup refinements
+Published Milestones 16-20 together with the approved compact progress, contextual setup and detail-entry changes using npm run deploy. The code remains on milestone-16-fact-labels.
+*Why:* the builder confirmed scenario testing and explicitly requested publishing. Live verification used fictional input and real interpretation, with no login emails or saved records. The builder phone/mobile-data launch check remains separate.

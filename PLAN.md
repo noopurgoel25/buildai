@@ -2,7 +2,7 @@
 
 Current version: **V1.1 — complete V1 scope.** Milestones 1–15 are live (see PROGRESS.md). Work one milestone at a time, in order; each needs scope confirmation before code and builder confirmation before publishing (AGENTS.md).
 
-Current work: **The builder confirmed combined Milestones 16-20 testing; the signed-in setup/progress fix awaits a phone recheck before publishing** on `milestone-16-fact-labels`. The compatible backend is updated; the new frontend is available in local preview and has not been published. Milestone 17 groups stored fact types, accepts up to 90 days without the previous fact or page cutoffs, and falls back to a source-linked overview when AI is unavailable. Milestone 18 limits Summary and sharing drafts to 1,500 characters, with full facts and measurements one click deeper through View all details. Milestone 19 adds fresh-code account deletion with complete cleanup and safe recovery. Milestone 20 Privacy and EU tracking are implemented on the same branch; the EU project and Convex token are configured, the EU API accepted a fictional landing event and the Convex tracking action completed; the builder confirmed the fictional landing event in the EU Events view; the frontend awaits the setup/progress phone recheck. Milestone 21 follows after combined testing and publishing.
+Current work: **Milestones 16-20 and the approved setup/progress refinements are published** from `milestone-16-fact-labels`. The builder confirmed combined scenario testing and authorized publishing. The live site passed a fictional text-capture/real-interpretation/review check at 320, 390, 768 and 1440 px, including populated correction fields, without login emails or saved records. **Milestone 21 is next:** the builder opens the live link on a phone, logged out, on mobile data, and completes the core flow.
 
 ## V1.1 milestones
 
@@ -15,7 +15,7 @@ Current work: **The builder confirmed combined Milestones 16-20 testing; the sig
 | 20 | **Privacy notice + Mixpanel (EU) tracking** — server-side events, opt-out switch, profile deletion on account deletion | Events from §8 of ARCHITECTURE.md appear in the EU project with no health content; opt-out stops events |
 | 21 | **Launch check** — builder opens the live link on a phone, logged out, on mobile data, and completes the core flow | Builder confirms; V1 ready to share |
 
-Milestone 20 setup: the **EU** project and `MIXPANEL_TOKEN` in Convex are configured. The real EU API accepted a fictional `landing_viewed` event and the Convex tracking action completed without sending login emails or saving health notes. The builder confirmed its appearance in the EU Events view. Opt-out and cleanup checks pass with simulated providers; the builder confirmed combined frontend testing; publishing awaits the signed-in setup/progress phone recheck.
+Milestone 20 setup: the EU project and `MIXPANEL_TOKEN` in Convex are configured. The builder confirmed the fictional event in the EU Events view. Privacy and tracking are live; opt-out and cleanup checks passed with simulated providers.
 
 ## Parked
 Anything new goes into the right version in ROADMAP.md, not here.

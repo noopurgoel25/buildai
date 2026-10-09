@@ -2,7 +2,7 @@
 
 **CareNama** — a calm place to leave health notes about someone you care for, so you can tell the doctor what actually happened since the last visit.
 
-Status: V1 (milestones 1–15) is live. V1.1 completes V1 scope; items marked **[V1.1]** below belong to that version. Fact classification, stored-type Summary, concise sharing and account deletion (Milestones 16-19) have passed builder testing; the signed-in setup/progress fix awaits a phone recheck before publishing; Milestone 20 Privacy and tracking are implemented, with the EU project configured and the builder confirming a fictional event in its Events view; Milestone 21 remains pending (see PLAN.md). Later versions: ROADMAP.md. Reasons behind rules: DECISIONS.md.
+Status: V1 and V1.1 Milestones 16-20 are live, including contextual setup, compact progress and detail-entry refinements. Milestone 21, the builder phone launch check, remains pending (see PLAN.md). Later versions: ROADMAP.md. Reasons behind rules: DECISIONS.md.
 
 ---
 
