@@ -67,7 +67,7 @@ components:
 
 # DESIGN.md
 
-Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Milestones 1-21 are live. Milestones 22-26 are implemented locally and undergoing Milestone 27 release checks; they have not been deployed. The approved [Desert Dusk proposal](design/desert-dusk-proposal.md) remains the release-review reference.
+Read before building or changing any screen. If a choice isn't covered here, ask instead of guessing. Items marked **[V1.1]** belong to that version. Implementation and release state are in PLAN.md. The approved [Desert Dusk proposal](design/desert-dusk-proposal.md) remains the design reference.
 
 ## 1. Feeling
 

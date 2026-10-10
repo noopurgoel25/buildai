@@ -1,6 +1,6 @@
 # ARCHITECTURE.md
 
-Technical source of truth. V1/V1.1 are live. V1.2 Milestones 22-25 are implemented locally for builder review and remain unpublished. Future work is listed in ROADMAP.md; implementation state is in PLAN.md.
+Technical source of truth. Future work is listed in ROADMAP.md; implementation and release state are in PLAN.md.
 
 ## 1. Stack
 
