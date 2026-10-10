@@ -1,5 +1,9 @@
 # DECISIONS.md
 
+### 2026-10-10 - Publish the corrected combined release
+Publish Milestones 22-27 from `milestone-27-release-checks` using `npm run deploy`, releasing the matching Convex backend and approved screens together. Keep Relationship as a text box and existing saved records unchanged. Verify the hosted app at phone width with a fictional temporary note, without sending login emails or saving permanent test records.
+*Why:* the builder confirmed the restarted corrected preview is working and explicitly requested publishing. Publishing both parts resolves the older hosted backend's rejection of the new timing/grouping fields. Physical phone voice and native sharing checks remain separate from automated checks.
+
 ### 2026-10-10 - Match the approved boards and keep compact identity on every screen
 Use the board copy and components throughout Welcome, setup, capture, review, timeline/details, editing, Summary, menu and code verification. Relationship remains a text box, as the builder confirmed. Combine contextual Back, logo/wordmark and Menu in one header instead of a separate Back row; use initials person context and thin journey segments. Keep specific examples on Capture, reduce duplicate links and use whole-update editing with a visible difference review and preserved unchanged facts.
 *Why:* phone screenshots showed that earlier milestones kept old layouts and wording despite the new palette. Functional/layout tests did not prove board fidelity. Read-only hosted function metadata confirms that the local date-certainty/grouping fields are not accepted by the old backend; the local preview now explains this mismatch without losing the note. Matching frontend/backend publishing still requires explicit phone-testing approval.

@@ -24,5 +24,11 @@ One line per confirmed milestone. Detailed session notes up to 2026-10-08: `arch
 | 2026-10-09 | 16-20 - Combined preview testing and setup refinements | Builder confirmed scenarios and authorized publishing; live (3cf6ad5) |
 | 2026-10-09 | 20 - EU analytics event verification | Builder confirmed fictional landing event in EU Mixpanel; live |
 | 2026-10-09 | 21 - Launch check | Complete - builder confirmed all functionality works in production; V1 ready to share |
+| 2026-10-10 | 22 - Identity and shared navigation | Builder confirmed corrected preview; publishing approved |
+| 2026-10-10 | 23 - Welcome and onboarding | Builder confirmed corrected preview; publishing approved |
+| 2026-10-10 | 24 - Timing and context integrity | Builder confirmed corrected preview; publishing approved |
+| 2026-10-10 | 25 - Compact connected records | Builder confirmed corrected preview; publishing approved |
+| 2026-10-10 | 26 - Useful Summary and sharing | Builder confirmed corrected preview; publishing approved |
+| 2026-10-10 | 27 - Combined release checks | Builder confirmed corrected preview; publishing approved |
 
 Latest checks: all 71 unit/server and 68 browser scenarios verified; 9 optional live-provider browser tests skipped. One new timing assertion was corrected and passed its focused rerun. Build passed. After publishing, a fictional note reached real Sarvam interpretation and review on the live site, populated Change fields were retained, and layouts passed at 320, 390, 768 and 1440 px with no browser errors. No login emails were sent or health records saved during the live check. Milestones 16-20 and the approved setup/progress/detail-entry refinements are live; The builder confirmed production functionality; Milestone 21 is complete.
