@@ -1,5 +1,9 @@
 # DECISIONS.md
 
+### 2026-10-10 - Publish to the separate Convex production deployment
+Target `peaceful-marlin-311` for production. Make `npm run deploy` use the static-hosting production deployment command; retain the previous development publishing command as `npm run deploy:preview`. Allow sign-in setup to target production with `npm run setup:auth -- --prod`, generating separate signing keys. Configure the existing Sarvam, email and EU analytics services directly in Convex without exposing credentials. Do not copy accounts or health records between deployments.
+*Why:* the builder explicitly requested production publishing. Earlier publishing used `aware-starfish-233`, which Convex identifies as development; the existing production deployment had no environment settings. A separate production database means preview testing records remain at the development link.
+
 ### 2026-10-10 - Restore date formatting in the timing editor
 Import the existing date formatter in observation review. A reviewed note with a known day must open its timing editor with the date populated; cancelling a date change keeps the reviewed date. Add a browser check for that path.
 *Why:* the first live release check exposed a missing helper import that stopped the editor before it opened. The new check reproduced the failure, then passed with three related timing and edit checks after the fix. Republish under the builder's existing publishing approval.
