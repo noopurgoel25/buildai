@@ -118,10 +118,12 @@ Dashboards map to PRODUCT.md §5: activation (first save), second capture within
 | `SARVAM_API_KEY` | Transcription and language model |
 | `AUTH_RESEND_KEY` | Sending sign-in and account-deletion codes |
 | `AUTH_EMAIL_FROM` | Sender address |
-| Auth signing keys | Set via `npm run setup:auth` |
+| Auth signing keys | Development: `npm run setup:auth`; production: `npm run setup:auth -- --prod` |
 | `MIXPANEL_TOKEN` **[V1.1]** | EU project token |
 
-Mixpanel setup: create an EU-residency project using Simplified ID Merge. Copy its Project Token from Project settings / Access Keys directly into the Convex dashboard Settings / Environment variables as `MIXPANEL_TOKEN`; never paste it in chat or a repository file. The current public site uses `aware-starfish-233`; configure that deployment. If a separate production deployment is used later, configure its token there too. The same token handles EU profile deletion; no separate deletion credential is required. Do not enable autocapture or session replay. Live verification requires seeing fictional usage events in the EU project, checking their properties and checking that opt-out stops them.
+Production uses `peaceful-marlin-311`; development preview uses `aware-starfish-233`. Each has its own database, accounts, `SITE_URL`, signing keys and environment settings. Production service credentials are configured directly in Convex; signing keys were generated separately without saving them to disk. Setup preserves an existing signing-key pair and checks names without printing values. It sends new values to the CLI through standard input.
+
+Mixpanel setup: create an EU-residency project using Simplified ID Merge. Copy its Project Token from Project settings / Access Keys directly into the Convex dashboard Settings / Environment variables as `MIXPANEL_TOKEN`; never paste it in chat or a repository file. Both current deployments have the existing EU project's token configured. The same token handles EU profile deletion; no separate deletion credential is required. Do not enable autocapture or session replay. Live analytics verification requires seeing fictional usage events in the EU project, checking their properties and checking that opt-out stops them.
 
 ## 10. Testing
 

@@ -2,7 +2,7 @@
 
 **CareNama** — a calm place to leave health notes about someone you care for, so you can tell the doctor what actually happened since the last visit.
 
-Status: V1, V1.1 and the V1.2 caregiver-feedback improvements are live. The builder confirmed the corrected combined preview and authorised publishing Milestones 22-27. One person per account remains the release scope; family switching stays V2. Release checks: PLAN.md. Future versions: ROADMAP.md. Reasons: DECISIONS.md.
+Status: V1, V1.1 and the V1.2 caregiver-feedback improvements are live in Convex production. The builder confirmed the corrected combined preview and authorised production publishing. One person per account remains the release scope; family switching stays V2. Release checks and deployment addresses: PLAN.md. Future versions: ROADMAP.md. Reasons: DECISIONS.md.
 
 ---
 

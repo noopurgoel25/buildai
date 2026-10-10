@@ -37,9 +37,10 @@ Never append "Approved … (date)" paragraphs to PRODUCT.md, DESIGN.md or PLAN.m
 
 ## 4. Shipping
 
-- Live link: https://aware-starfish-233.convex.site
+- Production link: https://peaceful-marlin-311.convex.site
+- Development preview: https://aware-starfish-233.convex.site (separate accounts and records)
 - Repo: github.com/noopurgoel25/buildai (public)
-- Deploy: `npm run deploy`. A push never deploys by itself.
+- Deploy production: `npm run deploy`. Publish the development preview: `npm run deploy:preview`. A push never deploys by itself.
 - After I confirm a milestone: commit, push, deploy, then verify the live site at phone width with a fictional update. Don't send login emails or create permanent records during live checks.
 - Publishing before confirmation is allowed only when I explicitly approve it for phone testing (voice and native sharing need the HTTPS site).
 - Local preview: `npm run dev -- --host 0.0.0.0`; desktop http://localhost:5173, phone on the same Wi-Fi via the computer's LAN address. HTTP preview supports text and copying only.

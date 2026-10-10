@@ -1,7 +1,7 @@
 # DECISIONS.md
 
 ### 2026-10-10 - Publish to the separate Convex production deployment
-Target `peaceful-marlin-311` for production. Make `npm run deploy` use the static-hosting production deployment command; retain the previous development publishing command as `npm run deploy:preview`. Allow sign-in setup to target production with `npm run setup:auth -- --prod`, generating separate signing keys. Configure the existing Sarvam, email and EU analytics services directly in Convex without exposing credentials. Do not copy accounts or health records between deployments.
+Published to `peaceful-marlin-311` production. `npm run deploy` uses the static-hosting production deployment command; the previous development publishing command is `npm run deploy:preview`. Sign-in setup supports production with `npm run setup:auth -- --prod`, generating separate signing keys. The existing Sarvam, email and EU analytics services are configured directly in Convex without exposing credentials. No accounts or health records were copied between deployments. The production fictional-note flow, timing cancellation, eight screen states at four widths, sign-in discovery, frontend backend URL and save contracts passed verification; no login emails or saved test health records were created.
 *Why:* the builder explicitly requested production publishing. Earlier publishing used `aware-starfish-233`, which Convex identifies as development; the existing production deployment had no environment settings. A separate production database means preview testing records remain at the development link.
 
 ### 2026-10-10 - Restore date formatting in the timing editor
