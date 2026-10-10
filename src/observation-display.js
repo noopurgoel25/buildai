@@ -44,12 +44,12 @@ export function occurrenceLabel(item) {
   return timingLabel(item.when, item.timing);
 }
 
-export function recordDetails(event) {
+export function recordDetails(event, includeOriginal=true) {
   const original = event.originalText || event.text;
   return `<p class="capture-origin hint">Captured on ${escape(captureLabel(event))}</p><details class="record-details"><summary>Record details</summary>
     ${!event.observations && event.source === 'voice' ? '<p class="hint">Older entry: capture time was recorded after transcription.</p>' : ''}
     ${event.observations ? event.observations.map((item, index) => `<div class="detail-evidence"><h3>Detail ${index + 1}</h3>${observationDetails(item)}<p class="hint">Supporting words: ${escape(item.supportingWords)}</p></div>`).join('') : `<dl>${recordedAs(event)}</dl><p class="hint">Source: ${escape(event.evidence)}</p>`}
-    ${original ? `<details><summary>Your original update</summary><p class="original-update">${escape(original)}</p></details>` : ''}
+    ${original && includeOriginal ? `<details><summary>Your original update</summary><p class="original-update">${escape(original)}</p></details>` : ''}
     ${event.clarifications?.length ? `<details><summary>Your clarification</summary>${event.clarifications.map(item => `<p>${escape(item.question)}</p><p class="original-update">${escape(item.answer)}</p>`).join('')}</details>` : ''}
   </details>`;
 }

@@ -31,8 +31,8 @@ The approved emotional reference is [the daughter embracing her mature father](h
 
 | Screen | Proposed experience |
 |---|---|
-| Welcome | Explain the job; original family caricature; examples of what to record; Say / Check / Keep orientation; one Start a health note action and visible returning Sign in. No compulsory tour. |
-| Person setup | Name and relationship only; approved Person / Update / Review tracker; Continue to your update explains the next step. Signed-in empty accounts never sign in again. |
+| Welcome | Explain the job; original family caricature; Say / Check / Keep orientation; specific examples on Capture; one Start a health note action and visible returning Sign in. No compulsory tour. |
+| Person setup | Name and relationship as text fields; approved Person / Update / Review tracker; Continue to your update explains the next step. Signed-in empty accounts never sign in again. |
 | Capture | Person visible; voice and text immediately available; first-use examples for symptoms, readings and everyday changes. No category selection. Explicit recording, stop and processing states; Review available after input. Short draft warning only after input starts. |
 | Review | One capture container, related details together, individual dates retained. Source-grounded sequence, never invented causation. One Change action, primary Save, quiet Add something else. Signed-out saving explains verification; signed-in saving is direct. |
 | Timeline | Compact dated entries with supportive category icons; one tappable entry per capture. Linked details spanning dates have a clear range. Timeline and Summary stay visible tabs; account links move into the menu. Full readings can remain visible here when relevant. |
@@ -42,7 +42,7 @@ The approved emotional reference is [the daughter embracing her mature father](h
 | Menu | Support, privacy and account choices grouped; single close control; account actions absent while signed out. Preserve drafts when opening; protect changed work before navigating away. |
 | Email/code | One primary action; quiet Resend and Change email. First-note verification names the person and saving outcome; returning sign-in says Verify & continue. |
 
-All journeys use the same header and person context. Back is an accessible arrow button, at least 44px, preserving in-page work. Returning updates retain the two-step Update / Review tracker; no duplicate step count. Support copy never promises an unsaved draft survives refresh. Family switching is invisible until V2 supplies real choices.
+All journeys keep the logo in the same compact header. When needed, Back shares that row with the logo and menu; there is no separate Back row. Person context is a compact initials/name/relationship row. Back is an accessible arrow button, at least 44px, preserving in-page work. Returning updates retain the two-step Update / Review tracker; no duplicate step count. Support copy never promises an unsaved draft survives refresh. Family switching is invisible until V2 supplies real choices.
 
 Menu implementation follows [W3C disclosure navigation guidance](https://www.w3.org/WAI/ARIA/apg/patterns/disclosure/examples/disclosure-navigation/): semantic links, expanded state, Escape, keyboard access and restored focus. Do not treat ordinary site links as a complex application menu.
 

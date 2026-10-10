@@ -1,4 +1,11 @@
 const { test, expect } = require('@playwright/test');
+async function backToSetup(page){if(await page.getByRole('button',{name:'Back to review',exact:true}).count())await page.getByRole('button',{name:'Back to review',exact:true}).click();if(await page.getByRole('button',{name:'Back to capture',exact:true}).count())await page.getByRole('button',{name:'Back to capture',exact:true}).click();await page.getByRole('link',{name:'Back to person details',exact:true}).click();}
+async function reviewDetailChanges(page){if(await page.locator('#whole-form').count())await page.getByRole('button',{name:'Review changes',exact:true}).click();}
+async function applyDetailChanges(page){await page.getByRole('button',{name:await page.locator('#edit-event').count()?'Review changes':'Apply changes',exact:true}).click();await reviewDetailChanges(page);}
+async function saveReviewedChanges(page){await reviewDetailChanges(page);await page.getByRole('button',{name:'Save changes',exact:true}).click();}
+async function openLegacyEditor(page){await page.getByRole('button',{name:'Change this update',exact:true}).click();for(const selector of ['.editor-timing > summary','.editor-extra > summary'])await page.locator(selector).click();}
+
+async function openDetailEditor(page,number){if(await page.getByRole('button',{name:'Change this update',exact:true}).count())await page.getByRole('button',{name:'Change this update',exact:true}).click();await page.locator('.whole-more > summary').click();await page.getByRole('button',{name:`Change detail ${number}`,exact:true}).click();}
 async function openTiming(page) {
   const timing=page.locator('.editor-timing');
   if(!await timing.evaluate(node=>node.open))await timing.locator('summary').click();
@@ -18,17 +25,17 @@ const understood = { status: 'ready', event: update, when: 'after lunch today', 
 async function openCapture(page) {
   await page.goto('/');
   await page.getByRole('link', { name: 'Start a health note' }).click();
-  await page.getByLabel('Their name').fill('Mira Example');
-  await page.getByLabel('Your relationship to them').fill('Daughter');
+  await page.getByLabel('Name').fill('Mira Example');
+  await page.getByLabel('Relationship').fill('Daughter');
   await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Speak an update' })).toBeVisible();
-  await page.getByRole('button', { name: 'Type instead', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Tap to record' })).toBeVisible();
+
   await expect(page.getByText('Voice and text capture are coming next.')).toHaveCount(0);
 }
 
 test('opening the common menu keeps recording active and prevents leaving before stop',async({page})=>{
  const calls=await mockCapture(page);await openCapture(page);
- await page.getByRole('button',{name:'Speak an update',exact:true}).click();await expect(page.getByRole('button',{name:'Stop recording',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Tap to record',exact:true}).click();await expect(page.getByRole('button',{name:'Stop recording',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Open menu',exact:true}).click();
  await expect(page.getByText('Finish your recording before leaving this screen.',{exact:true})).toBeVisible();
  await expect(page.getByRole('link',{name:'Privacy & your choices',exact:true})).toHaveAttribute('aria-disabled','true');
@@ -60,19 +67,19 @@ async function mockCapture(page, { transcriptionFailure = false, interpretationF
 test('typed update goes through capture validation into interpretation, without saving or login', async ({ page }) => {
   const calls = await mockCapture(page);
   await openCapture(page);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await expect(page.getByRole('alert')).toHaveText('Type what happened before continuing.');
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible();
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
+  await expect(page.getByRole('heading', { name: 'Does this sound right?' })).toBeVisible();
   expect(calls.map(call => call.endpoint)).toEqual(['/api/capture-text', '/api/interpret']);
   expect(JSON.parse(calls[1].body.toString()).text).toBe(update);
   expect(JSON.parse(calls[1].body.toString()).patient.name).toBe('Mira Example');
-  await expect(page.getByText('This update hasn\u2019t been saved yet.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Yes, continue' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Save|Log in/i })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Return to capture' }).click();
-  await expect(page.getByLabel('Or type your update')).toHaveValue(update);
+  await expect(page.getByText(/This update hasn.t been saved yet.|Sign in next to save this note./)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue to save' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^(Save update|Log in)$/i })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Add something else' }).click();
+  await expect(page.getByLabel('What happened',{exact:true})).toHaveValue(update+'\n');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: '.impeccable/review/capture-mobile.png', fullPage: true });
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -83,12 +90,12 @@ test('typed update goes through capture validation into interpretation, without 
 test('real browser recorder starts and stops, uploads WAV, then hands transcript to interpretation (provider responses mocked)', async ({ page }) => {
   const calls = await mockCapture(page);
   await openCapture(page);
-  await page.getByRole('button', { name: 'Speak an update' }).click();
+  await page.getByRole('button', { name: 'Tap to record' }).click();
   await expect(page.getByRole('status')).toHaveText('Recording your update…');
   await expect(page.getByText('1 / 30 seconds', { exact: true })).toBeVisible();
   expect(calls).toHaveLength(0);
   await page.getByRole('button', { name: 'Stop recording' }).click();
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Does this sound right?' })).toBeVisible();
   expect(calls.map(call => call.endpoint)).toEqual(['/api/transcribe', '/api/interpret']);
   expect(JSON.parse(calls[1].body.toString()).source).toBe('voice');
   expect(JSON.parse(calls[1].body.toString()).text).toBe(update);
@@ -97,7 +104,7 @@ test('real browser recorder starts and stops, uploads WAV, then hands transcript
 test('transcription failure retains audio for retry and offers text fallback', async ({ page }) => {
   const calls = await mockCapture(page, { transcriptionFailure: true });
   await openCapture(page);
-  await page.getByRole('button', { name: 'Speak an update' }).click();
+  await page.getByRole('button', { name: 'Tap to record' }).click();
   await expect(page.getByText('1 / 30 seconds', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Stop recording' }).click();
   await expect(page.getByRole('alert')).toContainText('Busy right now.');
@@ -105,8 +112,8 @@ test('transcription failure retains audio for retry and offers text fallback', a
   await expect(page.getByRole('alert')).toContainText('Busy right now.');
   expect(calls.filter(call => call.endpoint.endsWith('/transcribe'))).toHaveLength(2);
   expect(calls[0].body.equals(calls[1].body)).toBe(true);
-  await expect(page.getByLabel('Or type your update')).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Speak an update' })).toBeEnabled();
+  await expect(page.getByLabel('Your health note')).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Tap to record' })).toBeEnabled();
 });
 
 test('unusable recording explains the problem and offers text without uploading', async ({ page }) => {
@@ -115,22 +122,22 @@ test('unusable recording explains the problem and offers text without uploading'
     AudioContext.prototype.decodeAudioData = () => Promise.reject(new DOMException('Unusable recording', 'EncodingError'));
   });
   await openCapture(page);
-  await page.getByRole('button', { name: 'Speak an update' }).click();
+  await page.getByRole('button', { name: 'Tap to record' }).click();
   await expect(page.getByText('1 / 30 seconds', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Stop recording' }).click();
   await expect(page.getByRole('alert')).toHaveText('I couldn’t hear anything. Try again or type it instead.');
-  await expect(page.getByLabel('Or type your update')).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Speak an update' })).toBeEnabled();
+  await expect(page.getByLabel('Your health note')).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Tap to record' })).toBeEnabled();
   expect(calls).toHaveLength(0);
 });
 
 test('interpretation failure preserves text and retry reuses the captured update', async ({ page }) => {
   const calls = await mockCapture(page, { interpretationFailure: true });
   await openCapture(page);
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await expect(page.getByRole('alert')).toContainText('Your words are still here.');
-  await expect(page.getByLabel('Or type your update')).toHaveValue(update);
+  await expect(page.getByLabel('Your health note')).toHaveValue(update);
   await page.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByRole('alert')).toContainText('Your words are still here.');
   expect(calls.map(call => call.endpoint)).toEqual(['/api/capture-text', '/api/interpret', '/api/interpret']);
@@ -139,19 +146,19 @@ test('interpretation failure preserves text and retry reuses the captured update
 test('changing patient details clears the old interpretation and rechecks the original update', async ({ page }) => {
   await mockCapture(page);
   await openCapture(page);
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible();
-  await page.getByRole('link', { name: 'Back' }).click();
-  await page.getByLabel('Their name').fill('Jamie Example');
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
+  await expect(page.getByRole('heading', { name: 'Does this sound right?' })).toBeVisible();
+  await backToSetup(page);
+  await page.getByLabel('Name').fill('Jamie Example');
   await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toHaveCount(0);
-  await expect(page.getByLabel('Or type your update')).toHaveValue(update);
+  await expect(page.getByRole('heading', { name: 'Does this sound right?' })).toHaveCount(0);
+  await expect(page.getByLabel('Your health note')).toHaveValue(update);
   await page.route('**/api/interpret', route => {
     expect(route.request().postDataJSON().patient.name).toBe('Jamie Example');
     return route.fulfill({ json: { status: 'clarification', event: '', when: '', evidence: '', question: 'Is this update about Mira or Jamie?', message: '' } });
   });
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await expect(page.getByText('Is this update about Mira or Jamie?')).toBeVisible();
 });
 
@@ -166,41 +173,41 @@ test('blocked microphone offers text, and switching away releases recording with
     };
   });
   await openCapture(page);
-  await page.getByRole('button', { name: 'Speak an update' }).click();
+  await page.getByRole('button', { name: 'Tap to record' }).click();
   await expect(page.getByRole('alert')).toContainText('Microphone permission is required');
-  await expect(page.getByLabel('Or type your update')).toBeEnabled();
-  await page.getByRole('button', { name: 'Speak an update' }).click();
+  await expect(page.getByLabel('Your health note')).toBeEnabled();
+  await page.getByRole('button', { name: 'Tap to record' }).click();
   await expect(page.getByRole('status')).toHaveText('Recording your update…');
   await page.getByRole('button', { name: 'Switch to text' }).click();
   expect(await page.evaluate(() => window.testStream.getTracks().every(track => track.readyState === 'ended'))).toBe(true);
   expect(calls).toHaveLength(0);
-  await expect(page.getByLabel('Or type your update')).toBeFocused();
+  await expect(page.getByLabel('Your health note')).toBeFocused();
 });
 
 test('30-second limit stops recording visibly and does not send a cut-off update', async ({ page }) => {
   test.setTimeout(45000);
   const calls = await mockCapture(page);
   await openCapture(page);
-  await page.getByRole('button', { name: 'Speak an update' }).click();
+  await page.getByRole('button', { name: 'Tap to record' }).click();
   await expect(page.getByRole('status')).toHaveText('Recording your update…');
   await expect(page.getByRole('alert')).toContainText('Recording stopped at the 30-second limit.', { timeout: 33000 });
   expect(calls).toHaveLength(0);
-  await expect(page.getByRole('button', { name: 'Speak an update' })).toBeEnabled();
-  await expect(page.getByLabel('Or type your update')).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Tap to record' })).toBeEnabled();
+  await expect(page.getByLabel('Your health note')).toBeEnabled();
 });
 
 test('LIVE: typed health update reaches actual Convex and Sarvam interpretation', async ({ page }) => {
   test.skip(!live, 'Run with CAPTURE_LIVE=1 after server keys are configured.');
   test.setTimeout(100000);
   await openCapture(page);
-  await page.getByLabel('Or type your update').fill(update);
+  await page.getByLabel('Your health note').fill(update);
   const interpretationResponse = page.waitForResponse(response => response.url().endsWith('/api/interpret'), { timeout: 90000 });
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByRole('button', { name: 'Review your note' }).click();
   const response = await interpretationResponse;
   expect(response.status()).toBe(200);
   expect((await response.json()).evidence).toBe('Not specified');
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible({ timeout: 90000 });
-  await expect(page.getByText('This update hasn\u2019t been saved yet.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Does this sound right?' })).toBeVisible({ timeout: 90000 });
+  await expect(page.getByText(/This update hasn.t been saved yet.|Sign in next to save this note./)).toBeVisible();
   await page.screenshot({ path: '.impeccable/review/capture-live-text.png', fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -214,7 +221,7 @@ test('LIVE: spoken fictional update reaches actual Sarvam transcription then int
   page.on('response', response => { if (/\/api\/(transcribe|interpret)$/.test(response.url())) calls.push({ url: response.url(), status: response.status() }); });
   const transcriptResponse = page.waitForResponse(response => response.url().endsWith('/api/transcribe'), { timeout: 90000 });
   await openCapture(page);
-  await page.getByRole('button', { name: 'Speak an update' }).click();
+  await page.getByRole('button', { name: 'Tap to record' }).click();
   await expect(page.getByRole('status')).toHaveText('Recording your update…');
   await expect(page.getByText('6 / 30 seconds', { exact: true })).toBeVisible({ timeout: 9000 });
   const interpretationResponse = page.waitForResponse(response => response.url().endsWith('/api/interpret'), { timeout: 90000 });
@@ -226,13 +233,13 @@ test('LIVE: spoken fictional update reaches actual Sarvam transcription then int
     expect(transcript.text).not.toMatch(/queasy|uneasy|vomit/i);
   }
   expect((await interpretationResponse).status()).toBe(200);
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible({ timeout: 90000 });
+  await expect(page.getByRole('heading', { name: 'Does this sound right?' })).toBeVisible({ timeout: 90000 });
   expect(calls.map(call => call.status)).toEqual([200, 200]);
   await page.screenshot({ path: '.impeccable/review/capture-live-voice.png', fullPage: true });
-  await page.getByRole('button', { name: 'Change detail 1' }).click();
+  await openDetailEditor(page,1);
   await openTiming(page);await page.getByLabel('Timing words', { exact: true }).fill('Today after lunch');
   await page.getByLabel('How certain is the day?').selectOption('approximate');
-  await page.getByRole('button', { name: 'Apply changes' }).click();
+  await applyDetailChanges(page);
   await expect(page.locator('.fact-time').filter({ hasText: 'Today after lunch' })).toBeVisible();
   await page.getByText('Record details', { exact: true }).click();
   await page.getByText('Your original update', { exact: true }).click();
@@ -251,9 +258,9 @@ test('LIVE: Sarvam asks about unclear patient/timing, rejects off-topic input, a
     { text: 'Mira Example seems better today, but she did not report dizziness.', status: 'ready' },
   ];
   for (const item of cases) {
-    await page.getByLabel('Or type your update').fill(item.text);
+    await page.getByLabel('Your health note').fill(item.text);
     const responsePromise = page.waitForResponse(response => response.url().endsWith('/api/interpret'), { timeout: 90000 });
-    await page.getByRole('button', { name: 'Continue with text' }).click();
+    await page.getByRole('button', { name: 'Review your note' }).click();
     const response = await responsePromise;
     expect(response.status()).toBe(200);
     const result = await response.json();
@@ -267,7 +274,7 @@ test('LIVE: Sarvam asks about unclear patient/timing, rejects off-topic input, a
       expect(result.event).toBe('');
     }
     await expect(page.getByText(/Your changes haven.+t been saved yet/)).toBeVisible();
-    await page.getByRole('button', { name: 'Return to capture' }).click();
+    if(await page.getByRole('button',{name:'Back to capture',exact:true}).count())await page.getByRole('button',{name:'Back to capture',exact:true}).click();else await page.getByRole('button',{name:'Return to capture',exact:true}).click();
   }
 });
 
@@ -277,7 +284,7 @@ test('LIVE: voice interpretation formats explicit time but retains the original 
   const spoken = 'She felt pukish at ten a m yesterday, but did not puke.';
   await page.route('**/api/transcribe', route => route.fulfill({ json: { text: spoken, source: 'voice' } }));
   await openCapture(page);
-  await page.getByRole('button', { name: 'Speak an update' }).click();
+  await page.getByRole('button', { name: 'Tap to record' }).click();
   await expect(page.getByText('1 / 30 seconds', { exact: true })).toBeVisible();
   const responsePromise = page.waitForResponse(response => response.url().endsWith('/api/interpret'), { timeout: 90000 });
   await page.getByRole('button', { name: 'Stop recording' }).click();
@@ -286,7 +293,7 @@ test('LIVE: voice interpretation formats explicit time but retains the original 
   const result = await response.json();
   expect(result.event).toBe('She felt pukish at 10 a.m. yesterday, but did not puke.');
   expect(result.observations[0].when).toContain('10 a.m.');
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Does this sound right?' })).toBeVisible();
   await page.getByText('Record details', { exact: true }).click();
   await page.getByText('Your original update', { exact: true }).click();
   await expect(page.locator('.original-update')).toHaveText(spoken);
@@ -296,9 +303,9 @@ test('LIVE: voice interpretation formats explicit time but retains the original 
 test('review edits are applied, cancellation preserves previous details, and original update remains unchanged', async ({ page }) => {
   const calls = await mockCapture(page);
   await openCapture(page);
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
-  await page.getByRole('button', { name: 'Change' }).click();
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
+  await openLegacyEditor(page);
   await page.getByLabel('What happened', { exact: true }).fill('Mira Example felt tired, not dizzy.');
   await page.getByLabel('When', { exact: true }).fill('Yesterday at 10 a.m.');
   await page.getByLabel('How do you know?').selectOption('Patient-reported');
@@ -307,42 +314,42 @@ test('review edits are applied, cancellation preserves previous details, and ori
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: '.impeccable/review/review-edit-desktop.png', fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.getByRole('button', { name: 'Apply changes' }).click();
+  await applyDetailChanges(page);
   await expect(page.getByText('Mira Example felt tired, not dizzy.', { exact: true })).toBeVisible();
   await expect(page.getByText('Yesterday at 10 a.m.', { exact: true })).toBeVisible();
   await page.getByText('Record details', { exact: true }).click();
   await expect(page.getByText('Source: Patient-reported', { exact: true })).toBeVisible();
   await page.getByText('Your original update', { exact: true }).click();
   await expect(page.getByText('Your original update', {exact:true}).locator('..').locator('.original-update')).toHaveText(update);
-  await page.getByRole('button', { name: 'Change' }).click();
+  await openLegacyEditor(page);
   await page.getByLabel('What happened', { exact: true }).fill('Discard this change.');
-  await page.getByRole('button', { name: 'Cancel editing' }).click();
+  await page.getByRole('button', { name: 'Cancel changes',exact:true }).click();
   await expect(page.getByText('Mira Example felt tired, not dizzy.', { exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Back' }).click();
+  await backToSetup(page);
   await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await expect(page.getByText('Mira Example felt tired, not dizzy.', { exact: true })).toBeVisible();
   expect(calls.map(call => call.endpoint)).toEqual(['/api/capture-text', '/api/interpret']);
-  await expect(page.getByRole('button', { name: 'Yes, continue' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue to save' })).toBeVisible();
 });
 
 test('empty edits preserve entered timing, and failed AI offers manual editing', async ({ page }) => {
   await mockCapture(page, { interpretationFailure: true });
   await openCapture(page);
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await page.getByRole('button', { name: 'Edit manually' }).click();
   await page.getByLabel('What happened', { exact: true }).fill('');
   await openTiming(page);await page.getByLabel('Timing words', { exact: true }).fill('Yesterday');
-  await page.getByRole('button', { name: 'Apply changes' }).click();
+  await applyDetailChanges(page);
   await expect(page.getByRole('alert')).toHaveText('Check the description and timing before applying changes.');
   await expect(page.getByLabel('Timing words', { exact: true })).toHaveValue('Yesterday');
   await page.getByLabel('What happened', { exact: true }).fill('Mira Example reported tiredness.');
-  await page.getByRole('button', { name: 'Apply changes' }).click();
+  await applyDetailChanges(page);
   await page.getByText('Record details', { exact: true }).click();
   await expect(page.getByText('Edited by you.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: /Does this look right/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Does this sound right/ })).toBeVisible();
   await page.screenshot({ path: '.impeccable/review/review-manual-mobile.png', fullPage: true });
-  await expect(page.getByText('This update hasn\u2019t been saved yet.')).toBeVisible();
+  await expect(page.getByText(/This update hasn.t been saved yet.|Sign in next to save this note./)).toBeVisible();
 });
 
 test('clarification requires an answer and retains the original update when interpretation is retried', async ({ page }) => {
@@ -355,13 +362,13 @@ test('clarification requires an answer and retains the original update when inte
     return route.fulfill({ json: { ...understood, when: 'Yesterday' } });
   });
   await openCapture(page);
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await page.getByRole('button', { name: 'Update interpretation' }).click();
   await expect(page.getByRole('alert')).toHaveText('Answer the question before continuing.');
   await page.getByLabel('Your answer').fill('Yesterday');
   await page.getByRole('button', { name: 'Update interpretation' }).click();
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Does this sound right?' })).toBeVisible();
   await page.getByText('Record details', { exact: true }).click();
   await page.getByText('Your original update', { exact: true }).click();
   await expect(page.getByText('Your original update', {exact:true}).locator('..').locator('.original-update')).toHaveText(update);
@@ -371,18 +378,18 @@ test('LIVE: unclear date can be answered and the resulting interpretation edited
   test.skip(!live, 'Requires the actual Sarvam backend.'); test.setTimeout(150000);
   await openCapture(page);
   const original = 'Mira Example felt tired last Monday or Tuesday; I am not sure which day.';
-  await page.getByLabel('Or type your update').fill(original);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByLabel('Your health note').fill(original);
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await expect(page.getByRole('heading',{name:'A little more about the timing'})).toBeVisible({timeout:90000});
-  await expect(page.getByRole('button',{name:'Yes, continue'})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Continue to save'})).toHaveCount(0);
   await page.getByRole('button',{name:'Choose a date'}).click();
   await page.getByLabel('Date for this detail').fill('05/10/2026');
   await page.getByRole('button',{name:'Use this date'}).click();
-  await page.getByRole('button',{name:'Change detail 1'}).click();
+  await openDetailEditor(page,1);
   await page.getByLabel('What happened',{exact:true}).fill('Mira Example felt tired.');
-  await page.getByRole('button',{name:'Apply changes'}).click();
+  await applyDetailChanges(page);
   await expect(page.locator('.fact-text')).toHaveText('Mira Example felt tired.');
-  await page.getByRole('button',{name:'Yes, continue'}).click();
+  await page.getByRole('button',{name:'Continue to save'}).click();
   await page.getByText('Record details',{exact:true}).click();
   await page.getByText('Your original update',{exact:true}).click();
   await expect(page.getByText('Your original update',{exact:true}).locator('..').locator('.original-update')).toHaveText(original);
@@ -392,22 +399,23 @@ test('LIVE: unclear date can be answered and the resulting interpretation edited
 test('unfinished review edits and clarification answers survive Back without saving', async ({ page }) => {
   await mockCapture(page);
   await openCapture(page);
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
-  await page.getByRole('button', { name: 'Change' }).click();
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
+  await openLegacyEditor(page);
   await page.getByLabel('What happened', { exact: true }).fill('Mira Example reported tiredness.');
   await page.getByLabel('When', { exact: true }).fill('Yesterday');
-  await page.getByRole('link', { name: 'Back' }).click();
+  await backToSetup(page);
   await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await expect(page.getByLabel('What happened', { exact: true })).toHaveValue('Mira Example reported tiredness.');
   await expect(page.getByLabel('When', { exact: true })).toHaveValue('Yesterday');
-  await page.getByRole('button', { name: 'Cancel editing' }).click();
+  await page.getByRole('button', { name: 'Cancel changes',exact:true }).click();
   await expect(page.locator('.fact-text').first()).toHaveText(update);
-  await page.getByRole('button', { name: 'Return to capture' }).click();
+  await page.getByRole('button', { name: 'Back to capture',exact:true }).click();
+  await page.getByLabel('Your health note').fill(update+' Timing unclear.');
   await page.route('**/api/interpret', route => route.fulfill({ json: { status: 'clarification', event: '', when: '', evidence: '', question: 'What day did this happen?', message: '' } }));
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await page.getByLabel('Your answer').fill('Yesterday');
-  await page.getByRole('link', { name: 'Back' }).click();
+  await backToSetup(page);
   await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await expect(page.getByLabel('Your answer')).toHaveValue('Yesterday');
 });
@@ -415,22 +423,22 @@ test('unfinished review edits and clarification answers survive Back without sav
 test('confirmation shows the corrected first event, preserves its evidence and original update, and makes no saving call', async ({ page }) => {
   const calls = await mockCapture(page);
   await openCapture(page);
-  await expect(page.getByRole('button', { name: 'Yes, continue' })).toHaveCount(0);
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
-  await page.getByRole('button', { name: 'Change' }).click();
+  await expect(page.getByRole('button', { name: 'Continue to save' })).toHaveCount(0);
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
+  await openLegacyEditor(page);
   await page.getByLabel('What happened', { exact: true }).fill('Mira Example said she felt tired, not dizzy.');
   await page.getByLabel('When', { exact: true }).fill('Yesterday after lunch');
   await page.getByLabel('How do you know?').selectOption('Patient-reported');
-  await page.getByRole('button', { name: 'Apply changes' }).click();
-  await page.getByRole('button', { name: 'Yes, continue' }).click();
+  await applyDetailChanges(page);
+  await page.getByRole('button', { name: 'Continue to save' }).click();
   await expect(page.getByRole('heading', { name: 'Your update is ready.' })).toBeVisible();
   await expect(page.getByText('Mira Example said she felt tired, not dizzy.', { exact: true })).toBeVisible();
   await expect(page.getByText('Yesterday after lunch', { exact: true })).toBeVisible();
   await page.getByText('Record details', { exact: true }).click();
   await expect(page.getByText('Source: Patient-reported', { exact: true })).toBeVisible();
-  await expect(page.getByText('Keep this for next time')).toBeVisible();
-  await expect(page.getByText('Sign in to save it to Mira Example’s record. Until then, it stays only in this open page; refreshing or closing clears it.')).toBeVisible();
+  await expect(page.getByRole('link',{name:'Save this update'})).toBeVisible();
+  await expect(page.getByText('Sign in to save this note to Mira Example’s record.')).toBeVisible();
   await page.getByText('Your original update', { exact: true }).click();
   await expect(page.locator('.original-update')).toHaveText(update);
   expect(calls.map(call => call.endpoint)).toEqual(['/api/capture-text', '/api/interpret']);
@@ -445,11 +453,11 @@ test('confirmation shows the corrected first event, preserves its evidence and o
   await page.screenshot({ path: '.impeccable/review/first-value-desktop.png', fullPage: true });
   await page.getByRole('link', { name: 'Back to review' }).click();
   await expect(page.getByText('Mira Example said she felt tired, not dizzy.', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Yes, continue' }).click();
-  await expect(page.getByRole('heading', { name: 'Mira Example’s update' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Continue to save' }).click();
+  await expect(page.getByRole('heading', { name: 'Your update is ready.' })).toHaveCount(1);
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Who are you caring for?' })).toBeVisible();
-  await expect(page.getByLabel('Their name')).toHaveValue('');
+  await expect(page.getByLabel('Name')).toHaveValue('');
 });
 
 test('unresolved or rejected interpretations cannot be confirmed, and a direct first-value link cannot invent an event', async ({ page }) => {
@@ -458,36 +466,36 @@ test('unresolved or rejected interpretations cannot be confirmed, and a direct f
   await expect(page.getByRole('heading', { name: 'Who are you caring for?' })).toBeVisible();
   await openCapture(page);
   await page.evaluate(() => { location.hash = '#first-value'; });
-  await expect(page.getByRole('button', { name: 'Speak an update' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tap to record' })).toBeVisible();
   await page.route('**/api/interpret', route => route.fulfill({ json: { status: 'clarification', question: 'What day did this happen?', event: '', when: '', evidence: '', message: '' } }));
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await expect(page.getByLabel('Your answer')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Yes, continue' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Return to capture' }).click();
+  await expect(page.getByRole('button', { name: 'Continue to save' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Add something else' }).click();
   await page.route('**/api/interpret', route => route.fulfill({ json: { status: 'rejected', question: '', event: '', when: '', evidence: '', message: 'Tell me what happened to the person you care for.' } }));
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await expect(page.getByText('Tell me what happened to the person you care for.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Yes, continue' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Continue to save' })).toHaveCount(0);
 });
 
 test('a manually reviewed update needs explicit confirmation, and changing patient identity clears the confirmed event', async ({ page }) => {
   await mockCapture(page, { interpretationFailure: true });
   await openCapture(page);
-  await page.getByLabel('Or type your update').fill(update);
-  await page.getByRole('button', { name: 'Continue with text' }).click();
+  await page.getByLabel('Your health note').fill(update);
+  await page.getByRole('button', { name: 'Review your note' }).click();
   await page.getByRole('button', { name: 'Edit manually' }).click();
-  await expect(page.getByRole('button', { name: 'Yes, continue' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Apply changes' }).click();
-  await expect(page.getByRole('heading', { name: /Does this look right/ })).toBeVisible();
-    await page.getByRole('button', { name: 'Yes, continue', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Continue to save' })).toHaveCount(0);
+  await applyDetailChanges(page);
+  await expect(page.getByRole('heading', { name: /Does this sound right/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Continue to save', exact: true }).click();
   await expect(page.locator('.fact-text').first()).toHaveText(update);
   await expect(page.getByText('Timing not known', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Back to review' }).click();
   await page.getByRole('link', { name: 'Back to person details', exact: true }).click();
-  await page.getByLabel('Their name').fill('Jamie Example');
+  await page.getByLabel('Name').fill('Jamie Example');
   await page.getByRole('button', { name: 'Continue to your update', exact: true }).click();
   await page.evaluate(() => { location.hash = '#first-value'; });
-  await expect(page.getByRole('button', { name: 'Speak an update' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Mira Example’s update' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Tap to record' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your update is ready.' })).toHaveCount(0);
 });

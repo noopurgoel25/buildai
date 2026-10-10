@@ -7,12 +7,12 @@ test.beforeEach(async ({ page }) => {
 });
 test('I can see the welcome page and start without signing up', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'A place for the details you want to remember.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'A little note. A clearer picture.' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Start a health note' })).toBeVisible();
   await expect(page.getByRole('list', { name: 'How a health note works' })).toContainText('Say');
   await expect(page.getByRole('list', { name: 'How a health note works' })).toContainText('Check');
-  await expect(page.getByRole('list', { name: 'How a health note works' })).toContainText('Save with an email code.');
-  await expect(page.getByText('“BP was 142/88 this morning.”', {exact:true})).toBeVisible();
+  await expect(page.getByRole('list', { name: 'How a health note works' })).toContainText('Ready for your visit');
+  await expect(page.getByText('“BP was 142/88 this morning.”', {exact:true})).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: '.impeccable/review/mobile.png', fullPage: true });
   await page.getByRole('link', { name: 'Start a health note' }).click();
@@ -41,7 +41,7 @@ test('welcome illustration, start and returning sign-in work at every screen wid
     expect((await start.boundingBox()).height).toBeGreaterThanOrEqual(44);
     await page.screenshot({path:`.impeccable/review/welcome-m23-${width}.png`,fullPage:true});
   }
-  await page.getByRole('link',{name:'Already started? Sign in',exact:true}).click();
+  await page.getByRole('link',{name:'Already have a record? Sign in',exact:true}).click();
   await expect(page.getByLabel('Your email')).toBeVisible();
-  await expect(page.getByLabel('Their name')).toHaveCount(0);
+  await expect(page.getByLabel('Name')).toHaveCount(0);
 });

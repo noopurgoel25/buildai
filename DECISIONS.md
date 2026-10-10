@@ -1,5 +1,10 @@
 # DECISIONS.md
 
+### 2026-10-10 - Match the approved boards and keep compact identity on every screen
+Use the board copy and components throughout Welcome, setup, capture, review, timeline/details, editing, Summary, menu and code verification. Relationship remains a text box, as the builder confirmed. Combine contextual Back, logo/wordmark and Menu in one header instead of a separate Back row; use initials person context and thin journey segments. Keep specific examples on Capture, reduce duplicate links and use whole-update editing with a visible difference review and preserved unchanged facts.
+*Why:* phone screenshots showed that earlier milestones kept old layouts and wording despite the new palette. Functional/layout tests did not prove board fidelity. Read-only hosted function metadata confirms that the local date-certainty/grouping fields are not accepted by the old backend; the local preview now explains this mismatch without losing the note. Matching frontend/backend publishing still requires explicit phone-testing approval.
+
+
 ### 2026-10-10 - Check the combined release against the approved designs
 Continue Milestone 27 from `c06baca` on `milestone-27-release-checks`. Keep the approved Desert Dusk identity and existing journeys. A fictional end-to-end release check inspects live DOM layout, text contrast and touch areas at 320, 390, 768 and 1440 px, including long names, original-source disclosures, code errors and edited sharing drafts. Fix the observed long-name overflow by allowing screen text to wrap, enlarge Summary's View source disclosure to 44 px, and use the approved darker terracotta for Privacy's On/Off text so it meets text contrast requirements. No backend migration or existing-note rewrite is needed.
 *Why:* the builder requested the next milestone with scope confirmation and design review first. These checks found three concrete violations of the approved layout/accessibility rules. Phone confirmation and authorised publishing remain separate release steps; simulated checks cannot prove real provider, sign-in or physical device behaviour.

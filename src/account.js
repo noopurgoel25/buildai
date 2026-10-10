@@ -1,21 +1,23 @@
+import { warmNote } from './ui.js';
 const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
-export function mountSignIn(root, draft, session, hasUpdate) {
+export function mountSignIn(root, draft, session, hasUpdate, patient = {}) {
   let disposed = false, busy = false, error = '';
   function draw() {
     if (disposed) return;
     root.innerHTML = `<section class="screen setup" aria-labelledby="title">
       <a class="back" href="${hasUpdate ? '#first-value' : '#'}">${hasUpdate ? 'Back to your update' : 'Back'}</a>
-      <h1 id="title" tabindex="-1">${draft.codeSent ? 'Check your email' : hasUpdate ? 'Save your update for next time.' : 'Welcome back.'}</h1>
-      <p>${draft.codeSent ? `Enter the 6-digit code sent to ${escape(draft.email)}. It expires in 15 minutes.` : 'Use your email to keep these notes safe. No password needed.'}</p>
+      <h1 id="title" tabindex="-1">${draft.codeSent ? (hasUpdate ? 'Keep this note safe for later' : 'Welcome back.') : hasUpdate ? 'Save your update for next time.' : 'Welcome back.'}</h1>
+      <p>${draft.codeSent ? `Enter the 6-digit code sent to <strong>${escape(draft.email)}</strong>. It expires in 15 minutes.` : 'Use your email to keep these notes safe. No password needed.'}</p>
       <form id="signin-form" novalidate>
-        ${draft.codeSent ? `<div class="field"><label for="signin-code">Email code</label><input id="signin-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="${escape(draft.code || '')}" ${busy ? 'disabled' : ''}></div>` : `<div class="field"><label for="signin-email">Your email</label><input id="signin-email" name="email" type="email" autocomplete="email" maxlength="254" value="${escape(draft.email || '')}" ${busy ? 'disabled' : ''}></div>`}
+        ${draft.codeSent ? `<div class="field"><label for="signin-code">Email code</label><input id="signin-code" class="six-digit-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" value="${escape(draft.code || '')}" ${busy ? 'disabled' : ''}></div>` : `<div class="field"><label for="signin-email">Your email</label><input id="signin-email" name="email" type="email" autocomplete="email" maxlength="254" value="${escape(draft.email || '')}" ${busy ? 'disabled' : ''}></div>`}
         ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
-        <button class="primary" type="submit" ${busy || session.isLoading ? 'disabled' : ''}>${busy ? draft.codeSent ? 'Verifying code…' : 'Sending code…' : draft.codeSent ? 'Verify code' : 'Continue'}</button>
+        <button class="primary" type="submit" ${busy || session.isLoading ? 'disabled' : ''}>${busy ? draft.codeSent ? 'Verifying code…' : 'Sending code…' : draft.codeSent ? (hasUpdate ? 'Verify &amp; save update' : 'Verify &amp; continue') : 'Continue'}</button>
       </form>
-      ${draft.codeSent ? `<button class="secondary" id="resend" type="button" ${busy ? 'disabled' : ''}>Send another code</button><button class="secondary" id="change-email" type="button" ${busy ? 'disabled' : ''}>Use a different email</button>` : ''}
-      <p class="hint reassurance">The login email contains only your code, never health information.</p>
-      ${hasUpdate ? '<p class="hint">Your confirmed update stays in this open page until sign-in and saving succeed. Refreshing or closing clears it.</p>' : ''}
+      ${draft.codeSent && hasUpdate ? `<p class="hint action-caption">Your update will be saved to ${escape(patient.name)}&#8217;s record.</p>` : ''}
+      ${draft.codeSent ? `<div class="signin-actions"><button class="text-action" id="resend" type="button" ${busy ? 'disabled' : ''}>Resend code</button><button class="text-action" id="change-email" type="button" ${busy ? 'disabled' : ''}>Change email</button></div>` : ''}
+      ${warmNote('Only you can access this record. You choose what to share.', 'lock')}
+      ${hasUpdate ? '<p class="hint">Unsaved &middot; Closing or refreshing clears this note.</p>' : ''}
     </section>`;
     const input = root.querySelector('input');
     input.oninput = event => { draft[event.target.name] = event.target.value; };

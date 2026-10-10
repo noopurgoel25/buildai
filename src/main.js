@@ -6,13 +6,14 @@ import { mountCapture } from './capture.js';
 import { startSession } from './session.js';
 import { mountSignIn } from './account.js';
 import { mountTimeline } from './timeline.js';
-import { savedObservationDetails } from './observation-display.js';
+import { savedObservationDetails, recordDetails } from './observation-display.js';
 import { createRecordId } from './record-id.js';
 import { mountPrivacy } from './privacy.js';
 import { configureAnalytics,resetAnalytics,track } from './analytics.js';
 import { mountNavigation } from './navigation.js';
 import { mountAccountDeletion } from './account-deletion.js';
-import { noteOrientation, noteExamples } from './onboarding.js';
+import { noteOrientation } from './onboarding.js';
+import { personContext, storyCard, warmNote } from './ui.js';
 
 const app = document.querySelector('#app');
 // Unsaved capture details stay only in this open page.
@@ -40,7 +41,7 @@ function render() {
   }
   if (location.hash === '#signin') {
     if (session.isAuthenticated) { location.replace('#record'); return; }
-    disposeAccount = mountSignIn(app, loginDraft, session, Boolean(captureDraft.confirmed));
+    disposeAccount = mountSignIn(app, loginDraft, session, Boolean(captureDraft.confirmed), patient);
     return;
   }
   if (location.hash === '#record') {
@@ -75,21 +76,20 @@ function render() {
       <a class="back" href="#capture">Back to review</a>
       <h1 id="title" tabindex="-1">Your update is ready.</h1>
       <p>You’ve checked the details for ${escapeHtml(patient.name)}.</p>
-      <article class="capture-result confirmed-event" aria-labelledby="confirmed-title">
-        <h2 id="confirmed-title">${escapeHtml(patient.name)}’s update</h2>
-        ${savedObservationDetails(confirmed)}
-      </article>
+      ${personContext(patient)}
+      ${storyCard(confirmed)}
+      ${recordDetails(confirmed)}
       <div class="temporary-notice">
-        <h2>Keep this for next time</h2>
-        <p>Sign in to save it to ${escapeHtml(patient.name)}’s record. Until then, it stays only in this open page; refreshing or closing clears it.</p>
+        <p>Sign in to save this note to ${escapeHtml(patient.name)}&#8217;s record.</p>
+        <p class="hint">Unsaved &middot; Closing or refreshing clears this note.</p>
         <a class="primary account-start" href="${session.isAuthenticated ? '#record' : '#signin'}">Save this update</a>
       </div>
     </section>` : capture ? `
     <section class="screen setup" aria-labelledby="title">
       <a class="back" id="capture-back" href="${captureDraft.existingPatient ? '#record' : '#patient-setup'}">${captureDraft.existingPatient ? 'Back to timeline' : 'Back to person details'}</a>
+      ${personContext(patient)}
       <div id="journey-progress">${journeyProgress(captureDraft.existingPatient ? ['Update','Review'] : ['Person','Update','Review'],captureDraft.existingPatient ? 0 : 1)}</div>
-      <div class="patient-context"><h2>${escapeHtml(patient.name)}</h2><p>${escapeHtml(patient.relationship)}</p></div>
-      <div class="capture-intro"><h1 id="title" tabindex="-1">What would you like to note about ${escapeHtml(patient.name)}?</h1><p>Say it in your own words.</p></div>
+      <div class="capture-intro"><h1 id="title" tabindex="-1">What would you like to remember?</h1><p>Tell us what happened to ${escapeHtml(patient.name)}.<br>It doesn&#8217;t need to sound medical.</p></div>
       <div id="capture-controls"></div>
     </section>` : setup ? `
     <section class="screen setup" aria-labelledby="title">
@@ -97,28 +97,29 @@ function render() {
       ${journeyProgress(['Person','Update','Review'],0)}
       <div class="intro">
         <h1 id="title" tabindex="-1">Who are you caring for?</h1>
-        ${session.isAuthenticated ? '<p>A name and your relationship are enough to start.</p>' : '<p class="hint">For now, each account keeps notes for one person. If you already have a record, sign in to continue their timeline.</p><a class="text-action" href="#signin">Already have a record? Sign in</a><p class="hint">Person, update, then review. An email code is needed to save your first update.</p>'}
+        <p>Just a name and your relationship.<br>No medical profile needed.</p>
         <form id="patient-form" novalidate>
-          <div class="field"><label for="patient-name">Their name</label><input id="patient-name" name="name" autocomplete="off" value="${escapeHtml(patient.name)}" aria-describedby="name-error" required><p id="name-error" class="error" hidden></p></div>
-          <div class="field"><label for="relationship">Your relationship to them</label><input id="relationship" name="relationship" autocomplete="off" value="${escapeHtml(patient.relationship)}" aria-describedby="relationship-hint relationship-error" required><p id="relationship-hint" class="hint">For example, daughter, son or partner.</p><p id="relationship-error" class="error" hidden></p></div>
-          <p class="reassurance">${session.isAuthenticated ? 'No medical profile needed.' : 'A name and your relationship are enough to start.'}</p>
-          <p class="hint temporary">These details will be saved with your first update. Until then, refreshing this page will clear them.</p>
+          <div class="field"><label for="patient-name">Name</label><input id="patient-name" name="name" autocomplete="off" value="${escapeHtml(patient.name)}" aria-describedby="name-error" required><p id="name-error" class="error" hidden></p></div>
+          <div class="field"><label for="relationship">Relationship</label><input id="relationship" name="relationship" autocomplete="off" value="${escapeHtml(patient.relationship)}" aria-describedby="relationship-hint relationship-error" required><p id="relationship-hint" class="hint">For example, father, mother or partner.</p><p id="relationship-error" class="error" hidden></p></div>
+          ${warmNote('A small note today can help you remember what mattered later.')}
+          <p class="hint temporary" id="setup-draft-note" ${patient.name || patient.relationship ? '' : 'hidden'}>Unsaved &middot; Refreshing clears these details.</p>
           <button class="primary" type="submit">Continue to your update</button>
+          <p class="hint action-caption">Next: say or type what happened.</p>
         </form>
       </div>
     </section>` : `
     <section class="screen welcome" aria-labelledby="title">
       ${accountDeleted?'<p role="status">Your account and health record have been permanently deleted.</p>':''}<div class="intro">
-        <h1 id="title" tabindex="-1">A place for the details you want to remember.</h1>
-        <p>Health notes for someone you care for, in your own words.</p>
+        <h1 id="title" tabindex="-1">A little note.<br>A clearer picture.</h1>
+        <p>Keep track of someone you care for, one health update at a time.</p>
       </div>
       <img class="welcome-family" src="/images/welcome-family-caricature.png" width="1672" height="941" alt="Illustration of an adult daughter embracing her father." fetchpriority="high">
-      ${noteOrientation()}
+      <p class="welcome-explanation">A symptom, a reading or a change in their day.<br>Say it in your own words. We&#8217;ll help you organise it.</p>
       <div class="welcome-actions">
         <a class="primary" href="#patient-setup">Start a health note</a>
-        <a class="returning-signin" href="#signin">Already started? Sign in</a>
+        <a class="returning-signin" href="#signin">Already have a record? Sign in</a>
       </div>
-      ${noteExamples()}
+      ${noteOrientation()}
     </section>`;
   if (setup || capture || firstValue) document.querySelector('h1').focus();
   if(capture) captureDraft.saveDirectly=session.isAuthenticated;
@@ -153,10 +154,12 @@ function render() {
         captureDraft.confirmed = null;
         captureDraft.editDraft = null;
         captureDraft.observationEdit = null;
+        for(const key of ['wholeEditing','wholeBaseline','wholeText','rewriteDifference','timingOnly'])delete captureDraft[key];
         captureDraft.clarificationAnswer = '';
         captureDraft.clarifications = [];
       }
       patient[event.target.name] = event.target.value;
+      document.querySelector('#setup-draft-note').hidden = !patient.name && !patient.relationship;
       event.target.removeAttribute('aria-invalid');
       document.querySelector(event.target.name === 'name' ? '#name-error' : '#relationship-error').hidden = true;
     });
@@ -185,10 +188,12 @@ window.addEventListener('hashchange', render);
 function canLeaveScreen() { return app.dispatchEvent(new CustomEvent('carenama:before-navigate',{cancelable:true})); }
 mountNavigation(app, {
   getSession:()=>session,
-  isLocked:()=>!authResolved || accountDeleting,
+  isLocked:()=>!authResolved || accountDeleting || Boolean(app.querySelector('.whole-update-editor textarea:disabled')),
   isRecording:()=>app.querySelector('#voice')?.textContent === 'Stop recording',
   onPrivacy:()=>{if(!canLeaveScreen())return;privacyReturn=location.hash || '#';location.hash='#privacy';},
   onDelete:()=>{if(!canLeaveScreen())return;deletionReturn=location.hash || '#record';location.hash='#delete-account';},
+  onSummary:()=>{if(!canLeaveScreen())return false;if(location.hash==='#record'){app.dispatchEvent(new CustomEvent('carenama:open-summary'));return true;}if((captureDraft.text || captureDraft.audio) && !captureDraft.persisted && !confirm('Leave this unsaved update and open Summary?'))return false;sessionStorage.setItem('carenama.open-summary','1');location.hash='#record';return true;},
+  getPatient:()=>location.hash==='#capture'||location.hash==='#first-value'?patient:app.carenamaPatient,
   onTimeline:()=>{if(!canLeaveScreen())return false;if(location.hash==='#record'){app.dispatchEvent(new CustomEvent('carenama:open-timeline'));return true;}if(location.hash==='#capture' && captureDraft.text && !captureDraft.persisted && !confirm('Leave this unsaved update and return to the timeline? Adding another update will replace this draft.'))return false;location.hash='#record';return true;},
   onSignOut:async()=>{if(!canLeaveScreen())return false;if((captureDraft.text || captureDraft.audio || captureDraft.confirmed) && !captureDraft.persisted && !confirm('Sign out and discard your unsaved update?'))return false;await session.signOut();return true;},
 });

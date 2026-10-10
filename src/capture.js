@@ -2,13 +2,15 @@ import { noteExamples } from './onboarding.js';
 import { toWav } from './audio.js';
 import { mountObservationReview } from './observation-review.js';
 import { createRecordId } from './record-id.js';
-import { updateFacts, recordDetails } from './observation-display.js';
+import { recordDetails } from './observation-display.js';
 import { track } from './analytics.js';
+import { icon, storyCard } from './ui.js';
 
 const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const BUSY = 'Busy right now. Try again in a few minutes.';
 
 export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
+  draft.patient={name:patient.name,relationship:patient.relationship};
   let state = draft.editDraft ? 'editing' : draft.interpretation ? 'ready' : 'idle';
   let error = '';
   let recorder, stream, timer, startedAt;
@@ -57,7 +59,7 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
     draw();
     try {
       const result = await request('interpret', JSON.stringify({
-        text: draft.text, source: draft.source, patient: { ...patient },
+        text: draft.text, source: draft.source, patient: draft.patient,
         timeZone: draft.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
         capturedAt: draft.capturedAt,
       }));
@@ -81,6 +83,7 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
       if (disposed) return;
       draft.text = result.text;
       draft.originalText = result.text;
+      draft.captureText = result.text;
       draft.clarifications = [];
       draft.clarificationAnswer = '';
       draft.source = 'voice';
@@ -112,7 +115,7 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
         try {
           const wav = await toWav(new Blob(chunks, { type: recorder.mimeType }));
           if (disposed || generation !== recordingGeneration) return;
-          draft.audio = wav; draft.interpretation = null;
+          clearReviewWork(); draft.audio = wav; draft.interpretation = null;
           await transcribe();
         } catch (cause) {
           fail(cause.name === 'EncodingError'
@@ -146,6 +149,10 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
     track('capture_started',{method:'text',is_first:!draft.existingPatient});
     draft.text = root.querySelector('textarea').value;
     if (!draft.text.trim()) { fail(new Error('Type what happened before continuing.')); root.querySelector('textarea').focus(); return; }
+    if (draft.captureText === draft.text && draft.interpretation?.status === 'ready') {
+      state = draft.editDraft ? 'editing' : 'ready'; error = ''; draw(); return;
+    }
+    clearReviewWork();
     draft.source = 'text'; draft.interpretation = null;
     draft.aiInterpretation = null;
     if (draft.captureText !== draft.text || !draft.capturedAt) stampCapture();
@@ -164,6 +171,11 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
     } catch (cause) { fail(cause); }
   }
 
+  function clearReviewWork() {
+    for (const key of ['wholeEditing','wholeBaseline','wholeText','rewriteDifference','timingOnly','observationEdit','editDraft','confirmed','observationTimingForId','observationTimingOpen']) delete draft[key];
+    editDraft = null;
+  }
+
   function draw() {
     if (disposed) return;
     onStage(state==='ready' || state==='editing' ? 'review' : 'update');
@@ -176,15 +188,16 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
     if(result?.status==='clarification'&&!draft.analyticsLegacyClarification){draft.analyticsLegacyClarification=true;track('clarification_asked');}
     if (state === 'editing') {
       root.innerHTML = `<div class="capture-result">
-        <h2 tabindex="-1">Edit what happened</h2>
-        <p>Keep the details you know. Leave uncertain timing as written.</p>
+        <button class="back" id="legacy-edit-back" type="button">Back to review</button>
+        <h2 tabindex="-1">Change your update</h2>
+        <p>Keep what’s right. Change what isn’t.</p>
         <form id="edit-event" novalidate>
           <div class="field"><label for="event-description">What happened</label><textarea id="event-description" rows="4" maxlength="5000">${escape(editDraft.event)}</textarea></div>
-          <div class="field"><label for="event-time">When</label><input id="event-time" maxlength="5000" value="${escape(editDraft.when)}"><p class="hint">For example, yesterday at 10 a.m., or Not specified.</p></div>
-          <div class="field"><label for="event-evidence">How do you know?</label><select id="event-evidence">${['Not specified', 'Measured', 'Patient-reported', 'Caregiver-observed'].map(value => `<option ${value === editDraft.evidence ? 'selected' : ''}>${value}</option>`).join('')}</select></div>
+          <details class="editor-timing"><summary>When it happened · ${escape(editDraft.when)}</summary><div class="field"><label for="event-time">When</label><input id="event-time" maxlength="5000" value="${escape(editDraft.when)}"><p class="hint">Only change this if it needs correcting.</p></div></details>
+          <details class="editor-extra"><summary>More record details</summary><div class="field"><label for="event-evidence">How do you know?</label><select id="event-evidence">${['Not specified', 'Measured', 'Patient-reported', 'Caregiver-observed'].map(value => `<option ${value === editDraft.evidence ? 'selected' : ''}>${value}</option>`).join('')}</select></div></details>
           ${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
-          <button class="primary" type="submit">Apply changes</button>
-          <button class="secondary" id="cancel-edit" type="button">Cancel editing</button>
+          <button class="primary" type="submit">Review changes</button>
+          <button class="text-action" id="cancel-edit" type="button">Cancel changes</button>
         </form>
         <p class="hint">Your changes haven&#8217;t been saved yet.</p>
       </div>`;
@@ -202,23 +215,26 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
         state = 'ready'; error = ''; draw(); root.querySelector('h2').focus();
       };
       root.querySelector('#cancel-edit').onclick = () => { draft.editDraft = null; state = draft.interpretation ? 'ready' : 'idle'; error = ''; draw(); };
+      root.querySelector('#legacy-edit-back').onclick=()=>{state='ready';draw();};
       return;
     }
     if (state === 'ready') {
       if (result.status === 'ready' && result.observations?.length) {
-        mountObservationReview(root, draft, onConfirm, () => { draft.confirmed=null; draft.interpretation=null; draft.observationEdit=null; draft.sharedDateSelected=false; draft.sharedDateForId=null; state='idle'; draw(); });
+        mountObservationReview(root, draft, onConfirm, () => { draft.confirmed=null; draft.interpretation=null; draft.observationEdit=null; draft.sharedDateSelected=false; draft.sharedDateForId=null; state='idle'; draw(); },()=>{draft.confirmed=null;state='idle';draw();});
         return;
       }
       root.innerHTML = `<div class="capture-result">
-        <h2 tabindex="-1">${result.status === 'ready' ? 'Does this look right?' : 'A little more detail'}</h2>
-        ${result.status === 'ready' ? `<div class="review-surface">${updateFacts(result)}</div>` : `<p>${escape(result.question || result.message)}</p>`}
+        <button class="back" id="legacy-review-back" type="button">Back to capture</button>
+        <h2 tabindex="-1">${result.status === 'ready' ? 'Does this sound right?' : 'A little more detail'}</h2>
+        ${result.status === 'ready' ? `<p class="review-intro">Your words, organised into one update.</p><div class="review-surface">${storyCard(result)}</div>` : `<p>${escape(result.question || result.message)}</p>`}
         ${recordDetails({...draft,...result})}
+        ${result.status === 'ready' && error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}
         <p class="hint">This update hasn&#8217;t been saved yet.</p>
-        ${result.status === 'ready' ? `<button class="primary" id="confirm" type="button">${draft.saveDirectly ? 'Save update' : 'Yes, continue'}</button><button class="secondary" id="edit" type="button">Change</button>` : result.status === 'clarification' ? `<form id="clarify" novalidate><label for="clarification-answer">Your answer</label><textarea id="clarification-answer" rows="2" maxlength="1000">${escape(draft.clarificationAnswer || '')}</textarea>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}<button class="primary" type="submit">Update interpretation</button></form>` : ''}
-        <button class="secondary" id="revise" type="button">Return to capture</button>
+        ${result.status === 'ready' ? `<button class="text-action story-change" id="edit" type="button">${icon('pencil')}Change this update</button><button class="primary" id="confirm" type="button">${draft.saveDirectly ? 'Save update' : 'Continue to save'}</button>` : result.status === 'clarification' ? `<form id="clarify" novalidate><label for="clarification-answer">Your answer</label><textarea id="clarification-answer" rows="2" maxlength="1000">${escape(draft.clarificationAnswer || '')}</textarea>${error ? `<p class="error" role="alert">${escape(error)}</p>` : ''}<button class="primary" type="submit">Update interpretation</button></form>` : ''}
+        <button class="text-action" id="revise" type="button">Add something else</button>
       </div>`;
-      root.querySelector('#confirm')?.addEventListener('click', onConfirm);
-      root.querySelector('#edit')?.addEventListener('click', () => { draft.confirmed = null; editDraft = draft.editDraft = { ...result }; state = 'editing'; error = ''; draw(); root.querySelector('textarea').focus(); });
+      root.querySelector('#confirm')?.addEventListener('click', () => { if(draft.editDraft){error='Finish or cancel your changes before saving.';draw();return;}onConfirm(); });
+      root.querySelector('#edit')?.addEventListener('click', () => { draft.confirmed = null; editDraft = draft.editDraft ||= { ...result }; state = 'editing'; error = ''; draw(); root.querySelector('textarea').focus(); });
       root.querySelector('#clarification-answer')?.addEventListener('input', event => { draft.clarificationAnswer = event.target.value; });
       root.querySelector('#clarify')?.addEventListener('submit', event => {
         event.preventDefault();
@@ -230,25 +246,30 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
         draft.clarificationAnswer = '';
         draft.interpretation = null; error = ''; interpret();
       });
-      root.querySelector('#revise').onclick = () => { draft.confirmed = null; draft.interpretation = null; state = 'idle'; draw(); };
+      root.querySelector('#revise').onclick = () => {
+        draft.confirmed=null;error='';
+        if(result.status==='ready'){editDraft=draft.editDraft ||= {...result};editDraft.event+='\n';state='editing';draw();root.querySelector('textarea').focus();}
+        else {draft.interpretation=null;state='idle';draw();}
+      };
+      root.querySelector('#legacy-review-back').onclick=()=>{draft.confirmed=null;state='idle';draw();};
       return;
     }
     const statuses = { permission: 'Waiting for microphone permission…', recording: 'Recording your update…', processing: 'Preparing your recording…', transcribing: 'Turning your recording into text…', submitting: 'Preparing your update…', understanding: 'Preparing your update…' };
     root.innerHTML = `<div class="capture-actions">
-      <p class="capture-status" role="status">${statuses[state] || 'A short note is enough. Voice updates can be up to 30 seconds.'}</p>
-      ${!busy && !recording && !permission ? '<p class="hint">You can note a symptom, a reading, a doctor visit, a reported medicine change, or a change in appetite, sleep or energy.</p>' : ''}
+      ${busy || recording || permission ? `<p class="capture-status" role="status">${statuses[state]}</p>` : ''}
+      ${!draft.text.trim() && !draft.audio && !busy && !recording && !permission ? noteExamples() : ''}
       ${recording ? '<p id="recording-time" class="hint">0 / 30 seconds</p>' : ''}
-      <button class="${draft.textMode && !recording ? 'secondary' : 'primary voice-button'}" id="voice" type="button" ${busy || permission ? 'disabled' : ''}>${recording ? 'Stop recording' : 'Speak an update'}</button>
-      ${recording || permission ? '<button class="text-action" id="switch-text" type="button">Switch to text</button>' : `<button class="text-action" id="type-instead" type="button" aria-expanded="${Boolean(draft.textMode)}" aria-controls="capture-text-form">Type instead</button>`}
-      ${!draft.existingPatient && !draft.text.trim() && !draft.audio && !busy && !recording && !permission ? noteExamples() : ''}
+      <button class="record-control" id="voice" type="button" aria-label="${recording ? 'Stop recording' : 'Tap to record'}" ${busy || permission ? 'disabled' : ''}>${icon('microphone')}<span><strong>${recording ? 'Stop recording' : 'Tap to record'}</strong>${!recording?'<small>Up to 30 seconds</small>':''}</span></button>
+      ${recording || permission ? '<button class="text-action" id="switch-text" type="button">Switch to text</button>' : '<p class="type-divider">or type a note</p>'}
       ${error ? `<p class="error" role="alert">${escape(error === BUSY && retryStep === 'interpret' ? 'We couldn’t prepare your update just now. Your words are still here.' : error)}</p>` : ''}
       ${error && retryStep ? '<button class="secondary" id="retry" type="button">Try again</button>' : ''}
       ${error && retryStep === 'interpret' ? '<button class="secondary" id="manual-edit" type="button">Edit manually</button>' : ''}
       ${state === 'understanding' && draft.source === 'voice' ? `<p class="hint">Your transcript</p><p class="original-update">${escape(draft.text)}</p>` : ''}
-      <form id="capture-text-form" novalidate ${draft.textMode ? '' : 'hidden'}>
-        <label for="health-update">Or type your update</label>
-        <textarea id="health-update" rows="4" maxlength="5000" ${busy || recording || permission ? 'disabled' : ''} aria-describedby="capture-draft-note">${escape(draft.text)}</textarea>
-        <button class="primary" type="submit" ${busy || recording || permission ? 'disabled' : ''}>Continue with text</button>
+      <form id="capture-text-form" novalidate>
+        <label class="visually-hidden" for="health-update">Your health note</label>
+        <textarea id="health-update" rows="3" maxlength="5000" placeholder="What happened? When, if you remember." ${busy || recording || permission ? 'disabled' : ''} aria-describedby="capture-draft-note">${escape(draft.text)}</textarea>
+        <button class="primary" type="submit" ${busy || recording || permission ? 'disabled' : ''}>Review your note</button>
+        <p class="hint action-caption">You’ll check this before saving.</p>
       </form>
       <p id="capture-draft-note" class="hint" ${draft.text.trim() || draft.audio || recording ? '' : 'hidden'}>Unsaved draft &middot; Refreshing clears it</p>
     </div>`;
@@ -259,7 +280,6 @@ export function mountCapture(root, patient, draft, onConfirm, onStage=()=>{}) {
       } else startRecording();
     };
     root.querySelector('#switch-text')?.addEventListener('click', () => { cancelRecording(); state = 'idle'; draft.textMode=true; error = ''; draw(); root.querySelector('textarea').focus(); });
-    root.querySelector('#type-instead')?.addEventListener('click',()=>{draft.textMode=true;draw();root.querySelector('textarea').focus();});
     root.querySelector('textarea').oninput = (event) => { draft.text = event.target.value; retryStep = ''; root.querySelector('#capture-draft-note').hidden=!draft.text.trim() && !draft.audio; };
     root.querySelector('form').onsubmit = submitText;
     root.querySelector('#retry')?.addEventListener('click', () => {
