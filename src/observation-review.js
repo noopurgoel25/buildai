@@ -1,5 +1,5 @@
 import { escape, recordDetails, occurrenceLabel } from './observation-display.js';
-import { resolveTiming, parseDisplayDate, timingCertainty } from '../convex/lib/observationTiming.ts';
+import { resolveTiming, parseDisplayDate, timingCertainty, formatDate } from '../convex/lib/observationTiming.ts';
 import { dateInput, bindDateInput } from './date-input.js';
 import { createRecordId } from './record-id.js';
 import { track } from './analytics.js';

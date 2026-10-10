@@ -8,6 +8,20 @@ async function openLegacyEditor(page){await page.getByRole('button',{name:'Chang
 async function openDetailEditor(page,number){if(await page.getByRole('button',{name:'Change this update',exact:true}).count())await page.getByRole('button',{name:'Change this update',exact:true}).click();await page.locator('.whole-more > summary').click();await page.getByRole('button',{name:`Change detail ${number}`,exact:true}).click();}
 const {checkReleaseScreen}=require('./release-screen-check.cjs');
 
+test('a reviewed dated note opens its timing editor and cancellation keeps the reviewed date',async({page})=>{
+ const interpretation=connectedInterpretation(),errors=[];
+ page.on('pageerror',error=>errors.push(error.message));
+ await mockSession(page,{interpretation});await openMulti(page,interpretation.event);
+ await page.getByRole('button',{name:'Change this update',exact:true}).click();
+ await page.getByRole('button',{name:'Change timing for detail 1',exact:true}).click();
+ await expect(page.getByLabel('Event date',{exact:true})).toHaveValue('06/10/2026');
+ await page.getByLabel('Event date',{exact:true}).fill('07/10/2026');
+ await page.getByRole('button',{name:'Cancel editing',exact:true}).click();
+ await page.getByRole('button',{name:'Cancel changes',exact:true}).click();
+ await expect(page.locator('.fact-time').first()).toHaveText('06/10/2026');
+ expect(errors).toEqual([]);
+});
+
 async function openTiming(page) {
  const timing=page.locator('.editor-timing');
  if(await timing.count() && !await timing.evaluate(node=>node.open))await timing.locator('summary').click();

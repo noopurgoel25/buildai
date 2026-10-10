@@ -1,5 +1,9 @@
 # DECISIONS.md
 
+### 2026-10-10 - Restore date formatting in the timing editor
+Import the existing date formatter in observation review. A reviewed note with a known day must open its timing editor with the date populated; cancelling a date change keeps the reviewed date. Add a browser check for that path.
+*Why:* the first live release check exposed a missing helper import that stopped the editor before it opened. The new check reproduced the failure, then passed with three related timing and edit checks after the fix. Republish under the builder's existing publishing approval.
+
 ### 2026-10-10 - Publish the corrected combined release
 Publish Milestones 22-27 from `milestone-27-release-checks` using `npm run deploy`, releasing the matching Convex backend and approved screens together. Keep Relationship as a text box and existing saved records unchanged. Verify the hosted app at phone width with a fictional temporary note, without sending login emails or saving permanent test records.
 *Why:* the builder confirmed the restarted corrected preview is working and explicitly requested publishing. Publishing both parts resolves the older hosted backend's rejection of the new timing/grouping fields. Physical phone voice and native sharing checks remain separate from automated checks.
